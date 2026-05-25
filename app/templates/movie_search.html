@@ -25,9 +25,7 @@
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    <form action="{{ url_for('main.add_movie', tmdb_id=movie.id) }}" method="POST">
-                        <button type="submit" class="btn btn-secondary">Track Movie</button>
-                    </form>
+                    <button class="btn btn-secondary" onclick="openTrackModal('{{ movie.id }}', '{{ movie.title | replace("'", "\\'") }}')">Track Movie</button>
                 </div>
             </div>
             {% endfor %}
@@ -35,4 +33,64 @@
             <p style="margin-top: 2rem;">No movies found for "{{ query }}".</p>
         {% endif %}
     </div>
+
+    <!-- Tracking Modal -->
+    <div id="trackModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle" style="margin: 0; font-size: 1.2rem;">Track Movie</h2>
+                <span class="close" onclick="closeTrackModal()">&times;</span>
+            </div>
+            <form id="trackForm" method="POST">
+                <div class="form-group">
+                    <label for="date_watched">Watched On:</label>
+                    <input type="date" id="date_watched" name="date_watched" required>
+                </div>
+                <div class="form-group">
+                    <label for="watched_at">Watched At:</label>
+                    <select id="watched_at" name="watched_at">
+                        <option value="">Select Location...</option>
+                        {% for loc in ['Theater', 'Netflix', 'Paramount+', 'Hulu', 'Disney Plus', 'VOD', 'Prime Video', 'Peacock', 'Shudder', 'HBO Max', 'Other'] %}
+                            <option value="{{ loc }}">{{ loc }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px; font-weight: normal;">
+                        <input type="checkbox" name="is_rewatch" style="width: auto;"> This is a rewatch
+                    </label>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success" style="flex: 1;">Confirm & Track</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeTrackModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById("trackModal");
+        const trackForm = document.getElementById("trackForm");
+        const modalTitle = document.getElementById("modalTitle");
+        const dateInput = document.getElementById("date_watched");
+
+        function openTrackModal(tmdbId, title) {
+            modalTitle.innerText = `Track "${title}"`;
+            trackForm.action = `/movies/add/${tmdbId}`;
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+            modal.style.display = "block";
+        }
+
+        function closeTrackModal() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closeTrackModal();
+            }
+        }
+    </script>
 {% endblock %}

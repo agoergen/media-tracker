@@ -39,6 +39,16 @@ def search_movie():
 def add_movie(tmdb_id):
     details = TMDBService.get_movie_details(tmdb_id)
     if details:
+        # Get inputs from modal form
+        date_watched_str = request.form.get('date_watched')
+        watched_at = request.form.get('watched_at')
+        is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+        
+        try:
+            date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
+        except ValueError:
+            date_watched = datetime.now().date()
+
         # Extract release year
         release_date = details.get('release_date', '')
         year = int(release_date[:4]) if release_date else None
@@ -91,7 +101,9 @@ def add_movie(tmdb_id):
             revenue=details.get('revenue'),
             trailer_url=trailer_url,
             wikipedia_url=wiki_url,
-            date_watched=datetime.now().date()
+            provider=watched_at,
+            is_revisit=is_rewatch,
+            date_watched=date_watched
         )
         db.session.add(new_movie)
         db.session.commit()
