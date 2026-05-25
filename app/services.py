@@ -74,3 +74,39 @@ class TMDBService:
         except requests.exceptions.RequestException as e:
             print(f"Error fetching TMDB details: {e}")
             return None
+
+    @classmethod
+    def search_tv(cls, query):
+        url = f"{cls.BASE_URL}/search/tv"
+        params = {"query": query}
+        try:
+            response = requests.get(url, headers=cls.get_headers(), params=params)
+            response.raise_for_status()
+            return response.json().get('results', [])
+        except requests.exceptions.RequestException as e:
+            print(f"Error searching TMDB TV: {e}")
+            return []
+
+    @classmethod
+    def get_tv_show_details(cls, series_id):
+        url = f"{cls.BASE_URL}/tv/{series_id}"
+        # Append 'external_ids' to get IMDB ID if possible
+        params = {"append_to_response": "external_ids,videos"}
+        try:
+            response = requests.get(url, headers=cls.get_headers(), params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching TMDB TV show details: {e}")
+            return None
+
+    @classmethod
+    def get_tv_season_details(cls, series_id, season_number):
+        url = f"{cls.BASE_URL}/tv/{series_id}/season/{season_number}"
+        try:
+            response = requests.get(url, headers=cls.get_headers())
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching TMDB TV season details: {e}")
+            return None

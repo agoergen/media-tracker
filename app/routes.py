@@ -193,3 +193,157 @@ def delete_movie(movie_id):
     db.session.commit()
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.movies_list'))
+
+# TV ROUTES
+@main.route('/tv')
+def tv_list():
+    all_seasons = TVSeason.query.order_by(TVSeason.date_watched.asc()).all()
+    
+    # Group by year
+    grouped = OrderedDict()
+    for season in all_seasons:
+        year = season.date_watched.year if season.date_watched else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(season)
+    
+    return render_template('tv.html', grouped_seasons=grouped, total_count=len(all_seasons), now=datetime.now())
+
+@main.route('/tv/search', methods=['GET', 'POST'])
+def search_tv():
+    results = []
+    query = request.args.get('query', '')
+    replace_id = request.args.get('replace_id')
+    pre_date = request.args.get('pre_date', '')
+    pre_loc = request.args.get('pre_loc', '')
+    pre_rewatch = request.args.get('pre_rewatch', 'false')
+    
+    if request.method == 'POST':
+        query = request.form.get('query')
+        replace_id = request.form.get('replace_id')
+    
+    if query:
+        results = TMDBService.search_tv(query)
+        
+    return render_template('tv_search.html', 
+                         results=results, 
+                         query=query, 
+                         replace_id=replace_id,
+                         pre_date=pre_date,
+                         pre_loc=pre_loc,
+                         pre_rewatch=pre_rewatch)
+
+@main.route('/tv/add/<int:series_id>', methods=['POST'])
+def add_tv_season(series_id):
+    season_number = request.form.get('season_number', type=int)
+    replace_id = request.form.get('replace_id')
+    
+    show_details = TMDBService.get_tv_show_details(series_id)
+    season_details = TMDBService.get_tv_season_details(series_id, season_number)
+    
+    if show_details and season_details:
+        # Get inputs from modal form
+        date_watched_str = request.form.get('date_watched')
+        watched_at = request.form.get('watched_at')
+        is_rewatch_input = request.form.get('is_rewatch') == 'on'
+        
+        try:
+            date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
+        except ValueError:
+            date_watched = datetime.now().date()
+
+        # Trailer (from series level usually)
+        trailer_url = None
+        videos = show_details.get('videos', {}).get('results', [])
+        for video in videos:
+            if video.get('site') == 'YouTube' and video.get('type') == 'Trailer':
+                trailer_url = f"https://www.youtube.com/embed/{video.get('key')}"
+                break
+
+        # IMDB ID (from series level)
+        imdb_id = show_details.get('external_ids', {}).get('imdb_id')
+
+        if replace_id:
+            season = TVSeason.query.get_or_404(replace_id)
+            season.series_title = show_details.get('name')
+            season.season_number = season_number
+            season.release_year = int(season_details.get('air_date', '')[:4]) if season_details.get('air_date') else None
+            season.external_id = str(series_id)
+            season.network = show_details.get('networks', [{}])[0].get('name')
+            season.episode_count = len(season_details.get('episodes', []))
+            season.poster_path = season_details.get('poster_path') or show_details.get('poster_path')
+            season.user_score = show_details.get('vote_average')
+            season.plot = season_details.get('overview') or show_details.get('overview')
+            season.trailer_url = trailer_url
+            season.imdb_id = imdb_id
+            
+            if date_watched_str:
+                season.date_watched = date_watched
+            if watched_at:
+                season.network = watched_at # Using network as provider for TV consistency in UI
+            if request.form.get('is_rewatch'):
+                season.is_revisit = is_rewatch_input
+                
+            flash(f"Refreshed details for {season.series_title} Season {season_number}!")
+        else:
+            new_season = TVSeason(
+                series_title=show_details.get('name'),
+                season_number=season_number,
+                date_watched=date_watched,
+                release_year=int(season_details.get('air_date', '')[:4]) if season_details.get('air_date') else None,
+                is_revisit=is_rewatch_input,
+                external_id=str(series_id),
+                network=watched_at or (show_details.get('networks', [{}])[0].get('name') if show_details.get('networks') else None),
+                episode_count=len(season_details.get('episodes', [])),
+                poster_path=season_details.get('poster_path') or show_details.get('poster_path'),
+                user_score=show_details.get('vote_average'),
+                plot=season_details.get('overview') or show_details.get('overview'),
+                trailer_url=trailer_url,
+                imdb_id=imdb_id
+            )
+            db.session.add(new_season)
+            flash(f"Added {new_season.series_title} Season {season_number} to your tracker!")
+        
+        db.session.commit()
+        return redirect(url_for('main.tv_list'))
+    
+    flash("Error fetching TV details from TMDB.")
+    return redirect(url_for('main.search_tv'))
+
+@main.route('/tv/edit/<int:season_id>', methods=['POST'])
+def edit_tv_season(season_id):
+    season = TVSeason.query.get_or_404(season_id)
+    
+    new_date_str = request.form.get('date_watched')
+    if new_date_str:
+        try:
+            season.date_watched = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Invalid date format.")
+            return redirect(url_for('main.tv_list'))
+
+    season.network = request.form.get('watched_at')
+    season.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
+    
+    db.session.commit()
+    flash(f"Updated tracking for {season.series_title} S{season.season_number}.")
+    return redirect(url_for('main.tv_list'))
+
+@main.route('/tv/delete/<int:season_id>', methods=['POST'])
+def delete_tv_season(season_id):
+    season = TVSeason.query.get_or_404(season_id)
+    title = f"{season.series_title} S{season.season_number}"
+    db.session.delete(season)
+    db.session.commit()
+    flash(f"Removed {title} from your tracker.")
+    return redirect(url_for('main.tv_list'))
+
+@main.route('/backfill-tv')
+def trigger_backfill_tv():
+    from app.backfill_tv import run_backfill_tv
+    try:
+        count = run_backfill_tv()
+        flash(f"Successfully backfilled {count} TV seasons!")
+    except Exception as e:
+        flash(f"Error during TV backfill: {str(e)}")
+    return redirect(url_for('main.tv_list'))

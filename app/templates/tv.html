@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+        <h1>My TV Shows ({{ total_count }})</h1>
+        <a href="{{ url_for('main.search_tv') }}" class="btn">Add TV Season</a>
+    </div>
+
+    <!-- TV Filter Search -->
+    <div style="margin-top: 1rem; margin-bottom: 1rem;">
+        <input type="text" id="tvFilter" placeholder="Search my shows by title, network..." 
+               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem;">
+    </div>
+
+    {% set global_count = namespace(value=0) %}
+    {% set current_year = now.year %}
+    
+    {% for year, seasons in grouped_seasons.items() %}
+    <div class="year-group" data-year="{{ year }}">
+        <div class="year-header" onclick="toggleYear('year-{{ year }}')">
+            <span>{{ year }}</span>
+            <span class="year-count">{{ seasons|length }} seasons</span>
+        </div>
+        <div id="year-{{ year }}" class="year-content {% if year != current_year %}collapsed{% endif %}">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Poster</th>
+                            <th>Series & Season</th>
+                            <th class="hide-mobile">Score</th>
+                            <th>Tracking Info</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for season in seasons %}
+                        {% set global_count.value = global_count.value + 1 %}
+                        <tr class="movie-row" data-search="{{ season.series_title|lower }} {{ season.network|lower }}">
+                            <td style="color: #999; font-size: 0.8rem; vertical-align: middle;">{{ global_count.value }}</td>
+                            <td>
+                                {% if season.poster_path %}
+                                    <img src="https://image.tmdb.org/t/p/w45{{ season.poster_path }}" alt="{{ season.series_title }} poster" style="border-radius: 2px; width: 45px;" loading="lazy">
+                                {% else %}
+                                    <div style="width: 45px; height: 68px; background: #ddd; border-radius: 2px;"></div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="toggle-details" data-id="{{ season.id }}" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">
+                                    {{ season.series_title }} (Season {{ season.season_number }})
+                                </span>
+                                <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
+                                    {{ season.episode_count }} Episodes
+                                </div>
+                            </td>
+                            <td class="hide-mobile">{{ "%.1f"|format(season.user_score) if season.user_score else 'N/A' }}</td>
+                            <td>
+                                <form action="{{ url_for('main.edit_tv_season', season_id=season.id) }}" method="POST" class="date-form" style="display: flex; flex-direction: column; gap: 5px;">
+                                    <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                                        <input type="date" name="date_watched" value="{{ season.date_watched.strftime('%Y-%m-%d') if season.date_watched else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
+                                        <select name="watched_at" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px;">
+                                            <option value="">Watched At...</option>
+                                            {% for loc in ['Theater', 'Netflix', 'Paramount+', 'Paramount Plus', 'Hulu', 'Disney Plus', 'Apple TV+', 'Prime Video', 'Peacock', 'HBO Max', 'Max', 'Shudder', 'YouTube', 'Google TV', 'VOD', 'Plex', 'Crackle', 'Roku Channel', 'Tubi', 'Patreon', 'AMC', 'Showtime', 'CBS', 'Blu-Ray', 'Other'] %}
+                                                <option value="{{ loc }}" {% if season.network == loc %}selected{% endif %}>{{ loc }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;">
+                                            <input type="checkbox" name="is_rewatch" {% if season.is_revisit %}checked{% endif %}> Rewatch?
+                                        </label>
+                                        <button type="submit" class="btn btn-success" style="padding: 2px 8px; font-size: 0.75rem;">Save</button>
+                                    </div>
+                                </form>
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                    <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 0.75rem;" onclick="researchTV('{{ season.id }}', '{{ season.series_title | replace("'", "\\'") }}', '{{ season.season_number }}', '{{ season.date_watched.strftime('%Y-%m-%d') if season.date_watched else '' }}', '{{ season.network | replace("'", "\\'") if season.network else '' }}', {{ 'true' if season.is_revisit else 'false' }})">Re-search</button>
+                                    <form action="{{ url_for('main.delete_tv_season', season_id=season.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this season?');">
+                                        <button type="submit" class="btn btn-delete">Del</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="movie-details" id="details-{{ season.id }}">
+                            <td colspan="6">
+                                <div class="details-content" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                    <div style="flex: 0 0 185px; margin: 0 auto;">
+                                        {% if season.poster_path %}
+                                            <img src="https://image.tmdb.org/t/p/w185{{ season.poster_path }}" alt="{{ season.series_title }} poster" style="border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%;" loading="lazy">
+                                        {% endif %}
+                                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                                            {% if season.imdb_id %}
+                                                <a href="https://www.imdb.com/title/{{ season.imdb_id }}/" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #f3ce13; color: #000; font-weight: bold; padding: 6px;">IMDB</a>
+                                            {% endif %}
+                                            {% if season.trailer_url %}
+                                                <a href="{{ season.trailer_url.replace('embed/', 'watch?v=') }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #c0392b; color: #fff; padding: 6px;">Watch Trailer</a>
+                                            {% endif %}
+                                            <a href="https://www.google.com/search?q=What+are+some+TV+shows+I+might+enjoy+if+I+enjoyed+{{ season.series_title | urlencode }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #8e44ad; color: #fff; padding: 6px; font-size: 0.75rem; line-height: 1.2;">Ask Google for Similar</a>
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1; min-width: 250px;">
+                                        <p><strong>Series:</strong> {{ season.series_title }}</p>
+                                        <p><strong>Season:</strong> {{ season.season_number }}</p>
+                                        <p><strong>Network:</strong> {{ season.network }}</p>
+                                        <p><strong>Episodes:</strong> {{ season.episode_count }}</p>
+                                        <p><strong>Summary:</strong> {{ season.plot }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p>No TV shows tracked yet. <a href="{{ url_for('main.search_tv') }}">Add one!</a></p>
+    {% endfor %}
+
+    <script>
+        function toggleYear(id) {
+            const content = document.getElementById(id);
+            content.classList.toggle('collapsed');
+        }
+
+        function researchTV(id, title, seasonNum, date, provider, isRewatch) {
+            let newTitle = prompt("Re-search TV show:", title);
+            if (newTitle) {
+                window.location.href = `/tv/search?query=${encodeURIComponent(newTitle)}&replace_id=${id}&pre_date=${date}&pre_loc=${encodeURIComponent(provider)}&pre_rewatch=${isRewatch}&pre_season=${seasonNum}`;
+            }
+        }
+
+        // Search/Filter Logic
+        const filterInput = document.getElementById('tvFilter');
+        filterInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const yearGroups = document.querySelectorAll('.year-group');
+            const allYearContents = document.querySelectorAll('.year-content');
+            
+            if (query.length > 0) {
+                allYearContents.forEach(content => content.classList.remove('collapsed'));
+                document.querySelectorAll('.movie-row').forEach(row => {
+                    const searchData = row.getAttribute('data-search');
+                    if (searchData.includes(query)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                        const detailId = row.querySelector('.toggle-details').getAttribute('data-id');
+                        const detailRow = document.getElementById(`details-${detailId}`);
+                        if (detailRow) detailRow.classList.remove('active');
+                    }
+                });
+                yearGroups.forEach(group => {
+                    const visibleMovies = group.querySelectorAll('.movie-row:not([style*="display: none"])');
+                    group.style.display = visibleMovies.length > 0 ? '' : 'none';
+                });
+            } else {
+                const currentYear = new Date().getFullYear();
+                allYearContents.forEach(content => {
+                    const yearId = content.id.replace('year-', '');
+                    if (yearId == currentYear) {
+                        content.classList.remove('collapsed');
+                    } else {
+                        content.classList.add('collapsed');
+                    }
+                });
+                document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
+                yearGroups.forEach(group => group.style.display = '');
+            }
+        });
+
+        document.querySelectorAll('.toggle-details').forEach(item => {
+            item.addEventListener('click', event => {
+                const id = item.getAttribute('data-id');
+                const detailsRow = document.getElementById(`details-${id}`);
+                detailsRow.classList.toggle('active');
+            });
+        });
+    </script>
+{% endblock %}

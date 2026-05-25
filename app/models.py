@@ -64,6 +64,11 @@ class TVSeason(db.Model):
     external_id = db.Column(db.String(100))
     network = db.Column(db.String(100))
     episode_count = db.Column(db.Integer)
+    poster_path = db.Column(db.String(255))
+    user_score = db.Column(db.Float)
+    plot = db.Column(db.Text)
+    trailer_url = db.Column(db.String(255))
+    imdb_id = db.Column(db.String(20))
 
 class Goal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
