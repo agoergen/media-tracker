@@ -51,7 +51,7 @@
                                         <input type="date" name="date_watched" value="{{ movie.date_watched.strftime('%Y-%m-%d') if movie.date_watched else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
                                         <select name="watched_at" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px;">
                                             <option value="">Watched At...</option>
-                                            {% for loc in ['Theater', 'Netflix', 'Paramount+', 'Hulu', 'Disney Plus', 'VOD', 'Prime Video', 'Peacock', 'Shudder', 'HBO Max', 'Other'] %}
+                                            {% for loc in ['Theater', 'Netflix', 'Paramount+', 'Hulu', 'Disney Plus', 'Apple TV+', 'Prime Video', 'Peacock', 'HBO Max', 'Max', 'Shudder', 'YouTube', 'VOD', 'Plex', 'Crackle', 'Roku Channel', 'Tubi', 'Patreon', 'Blu-Ray', 'Other'] %}
                                                 <option value="{{ loc }}" {% if movie.provider == loc %}selected{% endif %}>{{ loc }}</option>
                                             {% endfor %}
                                         </select>

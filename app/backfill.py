@@ -204,6 +204,12 @@ def run_backfill():
         year_of_release = row['Year of Release']
         date_watched = parse_date(row['Date Watched'])
         provider = row['Provider']
+        # Normalize providers
+        if provider == 'Disney+':
+            provider = 'Disney Plus'
+        elif provider == 'HBO Max': # Some older entries might be Max
+            provider = 'HBO Max' 
+        
         is_rewatch = True if row['Rewatch'] == 'X' else False
 
         print(f"Processing: {title} ({year_of_release})...")
