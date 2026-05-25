@@ -110,3 +110,32 @@ class TMDBService:
         except requests.exceptions.RequestException as e:
             print(f"Error fetching TMDB TV season details: {e}")
             return None
+
+    @classmethod
+    def download_poster(cls, poster_path):
+        if not poster_path:
+            return None
+        
+        # Clean the path to use as a filename
+        filename = poster_path.lstrip('/')
+        local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        
+        # If it already exists, don't download again
+        if os.path.exists(local_path):
+            return filename
+            
+        url = f"https://image.tmdb.org/t/p/original{poster_path}"
+        try:
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            
+            # Ensure subdirectories exist if poster_path has them (unlikely with TMDB but safe)
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            
+            with open(local_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return filename
+        except Exception as e:
+            print(f"Error downloading poster: {e}")
+            return None

@@ -22,3 +22,6 @@ class Config:
     OMDB_API_KEY = os.environ.get('OMDB_API_KEY')
     TMDB_API_KEY = os.environ.get('TMDB_API_KEY')
     TMDB_READ_TOKEN = os.environ.get('TMDB_READ_TOKEN')
+    
+    # Persistent storage for posters
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(os.path.abspath(os.path.dirname(__file__)), 'app', 'static', 'posters')

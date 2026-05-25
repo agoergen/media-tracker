@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from app.services import TMDBService
 from app.models import Movie, TVSeason
 from app import db
@@ -6,6 +6,10 @@ from datetime import datetime
 from collections import OrderedDict
 
 main = Blueprint('main', __name__)
+
+@main.route('/posters/<path:filename>')
+def serve_poster(filename):
+    return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
 
 @main.route('/')
 def index():
@@ -95,6 +99,10 @@ def add_movie(tmdb_id):
         external_ids = details.get('external_ids', {})
         wiki_id = external_ids.get('wikidata_id')
         wiki_url = f"https://www.wikidata.org/wiki/{wiki_id}" if wiki_id else None
+
+        # Download poster for local storage
+        if details.get('poster_path'):
+            TMDBService.download_poster(details.get('poster_path'))
 
         if replace_id:
             # Update existing movie
@@ -262,6 +270,10 @@ def add_tv_season(series_id):
 
         # IMDB ID (from series level)
         imdb_id = show_details.get('external_ids', {}).get('imdb_id')
+
+        # Download poster for local storage
+        if details.get('poster_path'):
+            TMDBService.download_poster(details.get('poster_path'))
 
         if replace_id:
             season = TVSeason.query.get_or_404(replace_id)
