@@ -36,7 +36,12 @@
                 <td>{{ "%.1f"|format(movie.user_score) if movie.user_score else 'N/A' }}</td>
                 <td>{{ movie.certification or 'N/A' }}</td>
                 <td>{{ movie.runtime }} min</td>
-                <td>{{ movie.date_watched.strftime('%Y-%m-%d') if movie.date_watched else '' }}</td>
+                <td>
+                    <form action="{{ url_for('main.edit_movie', movie_id=movie.id) }}" method="POST" style="display: flex; align-items: center; gap: 5px;">
+                        <input type="date" name="date_watched" value="{{ movie.date_watched.strftime('%Y-%m-%d') if movie.date_watched else '' }}" style="padding: 2px; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 3px;">
+                        <button type="submit" class="btn" style="padding: 2px 5px; font-size: 0.75rem; background: #27ae60;">Save</button>
+                    </form>
+                </td>
                 <td>
                     <form action="{{ url_for('main.delete_movie', movie_id=movie.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this movie?');">
                         <button type="submit" class="btn btn-delete">Delete</button>
@@ -50,9 +55,12 @@
                             {% if movie.poster_path %}
                                 <img src="https://image.tmdb.org/t/p/w185{{ movie.poster_path }}" alt="{{ movie.title }} poster" style="border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%;">
                             {% endif %}
-                            <div style="margin-top: 10px;">
+                            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
                                 {% if movie.imdb_id %}
-                                    <a href="https://www.imdb.com/title/{{ movie.imdb_id }}/" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box;">IMDB Profile</a>
+                                    <a href="https://www.imdb.com/title/{{ movie.imdb_id }}/" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #f3ce13; color: #000; font-weight: bold;">IMDB</a>
+                                {% endif %}
+                                {% if movie.wikipedia_url %}
+                                    <a href="{{ movie.wikipedia_url }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #e0e0e0; color: #000;">Wikidata</a>
                                 {% endif %}
                             </div>
                         </div>

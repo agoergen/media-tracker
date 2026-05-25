@@ -58,6 +58,11 @@ def add_movie(tmdb_id):
                 trailer_url = f"https://www.youtube.com/embed/{video.get('key')}"
                 break
         
+        # Get external IDs (Wikipedia)
+        external_ids = details.get('external_ids', {})
+        wiki_id = external_ids.get('wikidata_id')
+        wiki_url = f"https://www.wikidata.org/wiki/{wiki_id}" if wiki_id else None
+        
         new_movie = Movie(
             title=details.get('title'),
             release_year=year,
@@ -73,6 +78,7 @@ def add_movie(tmdb_id):
             budget=details.get('budget'),
             revenue=details.get('revenue'),
             trailer_url=trailer_url,
+            wikipedia_url=wiki_url,
             date_watched=datetime.now().date()
         )
         db.session.add(new_movie)
@@ -82,6 +88,19 @@ def add_movie(tmdb_id):
     
     flash("Error fetching movie details from TMDB.")
     return redirect(url_for('main.search_movie'))
+
+@main.route('/movies/edit/<int:movie_id>', methods=['POST'])
+def edit_movie(movie_id):
+    movie = Movie.query.get_or_404(movie_id)
+    new_date_str = request.form.get('date_watched')
+    if new_date_str:
+        try:
+            movie.date_watched = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+            db.session.commit()
+            flash(f"Updated watch date for {movie.title}.")
+        except ValueError:
+            flash("Invalid date format.")
+    return redirect(url_for('main.movies_list'))
 
 @main.route('/movies/delete/<int:movie_id>', methods=['POST'])
 def delete_movie(movie_id):

@@ -65,8 +65,8 @@ class TMDBService:
     @classmethod
     def get_movie_details(cls, tmdb_id):
         url = f"{cls.BASE_URL}/movie/{tmdb_id}"
-        # Append 'credits', 'videos', and 'release_dates'
-        params = {"append_to_response": "credits,videos,release_dates"}
+        # Append 'credits', 'videos', 'release_dates', and 'external_ids'
+        params = {"append_to_response": "credits,videos,release_dates,external_ids"}
         try:
             response = requests.get(url, headers=cls.get_headers(), params=params)
             response.raise_for_status()

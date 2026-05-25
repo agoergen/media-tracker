@@ -19,6 +19,7 @@ class Movie(db.Model):
     budget = db.Column(db.BigInteger)
     revenue = db.Column(db.BigInteger)
     trailer_url = db.Column(db.String(255))
+    wikipedia_url = db.Column(db.String(255))
 
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
