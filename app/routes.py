@@ -29,26 +29,29 @@ def movies_list():
 @main.route('/movies/search', methods=['GET', 'POST'])
 def search_movie():
     results = []
-    query = ""
+    query = request.args.get('query', '')
+    replace_id = request.args.get('replace_id')
+    
     if request.method == 'POST':
         query = request.form.get('query')
+        replace_id = request.form.get('replace_id')
+    
+    if query:
         results = TMDBService.search_movies(query)
-    return render_template('movie_search.html', results=results, query=query)
+        
+    return render_template('movie_search.html', results=results, query=query, replace_id=replace_id)
 
 @main.route('/movies/add/<int:tmdb_id>', methods=['POST'])
 def add_movie(tmdb_id):
+    replace_id = request.form.get('replace_id')
     details = TMDBService.get_movie_details(tmdb_id)
+    
     if details:
-        # Get inputs from modal form
+        # Get inputs from modal form (or use existing if replacing)
         date_watched_str = request.form.get('date_watched')
         watched_at = request.form.get('watched_at')
-        is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+        is_rewatch_input = request.form.get('is_rewatch') == 'on'
         
-        try:
-            date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
-        except ValueError:
-            date_watched = datetime.now().date()
-
         # Extract release year
         release_date = details.get('release_date', '')
         year = int(release_date[:4]) if release_date else None
@@ -83,31 +86,68 @@ def add_movie(tmdb_id):
         external_ids = details.get('external_ids', {})
         wiki_id = external_ids.get('wikidata_id')
         wiki_url = f"https://www.wikidata.org/wiki/{wiki_id}" if wiki_id else None
+
+        if replace_id:
+            # Update existing movie
+            movie = Movie.query.get_or_404(replace_id)
+            movie.title = details.get('title')
+            movie.release_year = year
+            movie.external_id = str(tmdb_id)
+            movie.imdb_id = details.get('imdb_id')
+            movie.director = directors
+            movie.writer = writers
+            movie.leading_actors = cast
+            movie.plot = details.get('overview')
+            movie.poster_path = details.get('poster_path')
+            movie.user_score = details.get('vote_average')
+            movie.runtime = details.get('runtime')
+            movie.certification = certification
+            movie.budget = details.get('budget')
+            movie.revenue = details.get('revenue')
+            movie.trailer_url = trailer_url
+            movie.wikipedia_url = wiki_url
+            
+            # Keep original date/location unless explicitly provided in modal
+            if date_watched_str:
+                movie.date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date()
+            if watched_at:
+                movie.provider = watched_at
+            if request.form.get('is_rewatch'): # If form exists, update rewatch
+                movie.is_revisit = is_rewatch_input
+                
+            flash(f"Refreshed details for {movie.title}!")
+        else:
+            # Add new movie
+            try:
+                date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
+            except ValueError:
+                date_watched = datetime.now().date()
+
+            new_movie = Movie(
+                title=details.get('title'),
+                release_year=year,
+                external_id=str(tmdb_id),
+                imdb_id=details.get('imdb_id'),
+                director=directors,
+                writer=writers,
+                leading_actors=cast,
+                plot=details.get('overview'),
+                poster_path=details.get('poster_path'),
+                user_score=details.get('vote_average'),
+                runtime=details.get('runtime'),
+                certification=certification,
+                budget=details.get('budget'),
+                revenue=details.get('revenue'),
+                trailer_url=trailer_url,
+                wikipedia_url=wiki_url,
+                provider=watched_at,
+                is_revisit=is_rewatch_input,
+                date_watched=date_watched
+            )
+            db.session.add(new_movie)
+            flash(f"Added {new_movie.title} to your tracker!")
         
-        new_movie = Movie(
-            title=details.get('title'),
-            release_year=year,
-            external_id=str(tmdb_id),
-            imdb_id=details.get('imdb_id'),
-            director=directors,
-            writer=writers,
-            leading_actors=cast,
-            plot=details.get('overview'),
-            poster_path=details.get('poster_path'),
-            user_score=details.get('vote_average'),
-            runtime=details.get('runtime'),
-            certification=certification,
-            budget=details.get('budget'),
-            revenue=details.get('revenue'),
-            trailer_url=trailer_url,
-            wikipedia_url=wiki_url,
-            provider=watched_at,
-            is_revisit=is_rewatch,
-            date_watched=date_watched
-        )
-        db.session.add(new_movie)
         db.session.commit()
-        flash(f"Added {new_movie.title} to your tracker!")
         return redirect(url_for('main.movies_list'))
     
     flash("Error fetching movie details from TMDB.")

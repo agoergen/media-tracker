@@ -65,9 +65,12 @@
                                 </form>
                             </td>
                             <td>
-                                <form action="{{ url_for('main.delete_movie', movie_id=movie.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this movie?');">
-                                    <button type="submit" class="btn btn-delete">Del</button>
-                                </form>
+                                <div style="display: flex; flex-direction: column; gap: 5px;">
+                                    <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 0.75rem;" onclick="researchMovie('{{ movie.id }}', '{{ movie.title | replace("'", "\\'") }}')">Research</button>
+                                    <form action="{{ url_for('main.delete_movie', movie_id=movie.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this movie?');">
+                                        <button type="submit" class="btn btn-delete">Del</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         <tr class="movie-details" id="details-{{ movie.id }}">
@@ -122,6 +125,13 @@
         function toggleYear(id) {
             const content = document.getElementById(id);
             content.classList.toggle('collapsed');
+        }
+
+        function researchMovie(id, title) {
+            let newTitle = prompt("Research movie:", title);
+            if (newTitle) {
+                window.location.href = `/movies/search?query=${encodeURIComponent(newTitle)}&replace_id=${id}`;
+            }
         }
 
         document.querySelectorAll('.toggle-details').forEach(item => {
