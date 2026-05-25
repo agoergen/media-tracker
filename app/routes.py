@@ -104,14 +104,24 @@ def add_movie(tmdb_id):
 @main.route('/movies/edit/<int:movie_id>', methods=['POST'])
 def edit_movie(movie_id):
     movie = Movie.query.get_or_404(movie_id)
+    
+    # Update Date
     new_date_str = request.form.get('date_watched')
     if new_date_str:
         try:
             movie.date_watched = datetime.strptime(new_date_str, '%Y-%m-%d').date()
-            db.session.commit()
-            flash(f"Updated watch date for {movie.title}.")
         except ValueError:
             flash("Invalid date format.")
+            return redirect(url_for('main.movies_list'))
+
+    # Update Provider (Watched At)
+    movie.provider = request.form.get('watched_at')
+    
+    # Update Rewatch (is_revisit)
+    movie.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
+    
+    db.session.commit()
+    flash(f"Updated tracking for {movie.title}.")
     return redirect(url_for('main.movies_list'))
 
 @main.route('/movies/delete/<int:movie_id>', methods=['POST'])

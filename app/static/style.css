@@ -186,11 +186,14 @@ th {
     margin-top: 1rem;
 }
 
-.search-form input {
-    flex: 1;
+.search-form input, select {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
+}
+
+.date-form select {
+    padding: 2px !important;
 }
 
 .result-card {

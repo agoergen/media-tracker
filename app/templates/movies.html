@@ -22,7 +22,7 @@
                             <th>Poster</th>
                             <th>Title</th>
                             <th class="hide-mobile">Score</th>
-                            <th>Watched</th>
+                            <th>Tracking Info</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -41,14 +41,27 @@
                             <td>
                                 <span class="toggle-details" data-id="{{ movie.id }}" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ movie.title }}</span>
                                 <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
-                                    Dir: {{ movie.director.split(',')[0] }}
+                                    Dir: {{ movie.director.split(',')[0] if movie.director else 'N/A' }}
                                 </div>
                             </td>
                             <td class="hide-mobile">{{ "%.1f"|format(movie.user_score) if movie.user_score else 'N/A' }}</td>
                             <td>
-                                <form action="{{ url_for('main.edit_movie', movie_id=movie.id) }}" method="POST" class="date-form" style="display: flex; align-items: center; gap: 5px;">
-                                    <input type="date" name="date_watched" value="{{ movie.date_watched.strftime('%Y-%m-%d') if movie.date_watched else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
-                                    <button type="submit" class="btn btn-success" style="padding: 2px 5px; font-size: 0.7rem;">Save</button>
+                                <form action="{{ url_for('main.edit_movie', movie_id=movie.id) }}" method="POST" class="date-form" style="display: flex; flex-direction: column; gap: 5px;">
+                                    <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                                        <input type="date" name="date_watched" value="{{ movie.date_watched.strftime('%Y-%m-%d') if movie.date_watched else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
+                                        <select name="watched_at" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px;">
+                                            <option value="">Watched At...</option>
+                                            {% for loc in ['Theater', 'Netflix', 'Paramount+', 'Hulu', 'Disney Plus', 'VOD', 'Prime Video', 'Peacock', 'Shudder', 'HBO Max', 'Other'] %}
+                                                <option value="{{ loc }}" {% if movie.provider == loc %}selected{% endif %}>{{ loc }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;">
+                                            <input type="checkbox" name="is_rewatch" {% if movie.is_revisit %}checked{% endif %}> Rewatch?
+                                        </label>
+                                        <button type="submit" class="btn btn-success" style="padding: 2px 8px; font-size: 0.75rem;">Save</button>
+                                    </div>
                                 </form>
                             </td>
                             <td>
