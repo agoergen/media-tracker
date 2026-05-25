@@ -3,7 +3,9 @@
 {% block content %}
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
         <h1>My TV Shows ({{ total_count }})</h1>
-        <a href="{{ url_for('main.search_tv') }}" class="btn">Add TV Season</a>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.search_tv') }}" class="btn">Add TV Season</a>
+        {% endif %}
     </div>
 
     <!-- TV Filter Search -->
@@ -30,8 +32,10 @@
                             <th>Poster</th>
                             <th>Series & Season</th>
                             <th class="hide-mobile">Score</th>
-                            <th>Tracking Info</th>
-                            <th>Actions</th>
+                            <th>{% if current_user.is_authenticated %}Tracking Info{% else %}Date Finished{% endif %}</th>
+                            {% if current_user.is_authenticated %}
+                                <th>Actions</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -56,35 +60,45 @@
                             </td>
                             <td class="hide-mobile">{{ "%.1f"|format(season.user_score) if season.user_score else 'N/A' }}</td>
                             <td>
-                                <form action="{{ url_for('main.edit_tv_season', season_id=season.id) }}" method="POST" class="date-form" style="display: flex; flex-direction: column; gap: 5px;">
-                                    <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
-                                        <input type="date" name="date_watched" value="{{ season.date_watched.strftime('%Y-%m-%d') if season.date_watched else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
-                                        <select name="watched_at" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px;">
-                                            <option value="">Watched At...</option>
-                                            {% for loc in ['Theater', 'Netflix', 'Paramount+', 'Paramount Plus', 'Hulu', 'Disney Plus', 'Apple TV+', 'Prime Video', 'Peacock', 'HBO Max', 'Max', 'Shudder', 'YouTube', 'Google TV', 'VOD', 'Plex', 'Crackle', 'Roku Channel', 'Tubi', 'Patreon', 'AMC', 'Showtime', 'CBS', 'Blu-Ray', 'Other'] %}
-                                                <option value="{{ loc }}" {% if season.network == loc %}selected{% endif %}>{{ loc }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div style="display: flex; align-items: center; justify-content: space-between;">
-                                        <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;">
-                                            <input type="checkbox" name="is_rewatch" {% if season.is_revisit %}checked{% endif %}> Rewatch?
-                                        </label>
-                                        <button type="submit" class="btn btn-success" style="padding: 2px 8px; font-size: 0.75rem;">Save</button>
-                                    </div>
-                                </form>
-                            </td>
-                            <td>
-                                <div style="display: flex; flex-direction: column; gap: 5px;">
-                                    <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 0.75rem;" onclick="researchTV('{{ season.id }}', '{{ season.series_title | replace("'", "\\'") }}', '{{ season.season_number }}', '{{ season.date_watched.strftime('%Y-%m-%d') if season.date_watched else '' }}', '{{ season.network | replace("'", "\\'") if season.network else '' }}', {{ 'true' if season.is_revisit else 'false' }})">Re-search</button>
-                                    <form action="{{ url_for('main.delete_tv_season', season_id=season.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this season?');">
-                                        <button type="submit" class="btn btn-delete">Del</button>
+                                {% if current_user.is_authenticated %}
+                                    <form action="{{ url_for('main.edit_tv_season', season_id=season.id) }}" method="POST" class="date-form" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                                            <input type="date" name="date_watched" value="{{ season.date_watched.strftime('%Y-%m-%d') if season.date_watched else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
+                                            <select name="watched_at" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px;">
+                                                <option value="">Watched At...</option>
+                                                {% for loc in ['Theater', 'Netflix', 'Paramount+', 'Paramount Plus', 'Hulu', 'Disney Plus', 'Apple TV+', 'Prime Video', 'Peacock', 'HBO Max', 'Max', 'Shudder', 'YouTube', 'Google TV', 'VOD', 'Plex', 'Crackle', 'Roku Channel', 'Tubi', 'Patreon', 'AMC', 'Showtime', 'CBS', 'Blu-Ray', 'Other'] %}
+                                                    <option value="{{ loc }}" {% if season.network == loc %}selected{% endif %}>{{ loc }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                                            <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;">
+                                                <input type="checkbox" name="is_rewatch" {% if season.is_revisit %}checked{% endif %}> Rewatch?
+                                            </label>
+                                            <button type="submit" class="btn btn-success" style="padding: 2px 8px; font-size: 0.75rem;">Save</button>
+                                        </div>
                                     </form>
-                                </div>
+                                {% else %}
+                                    <div style="font-size: 0.9rem;">
+                                        {{ season.date_watched.strftime('%Y-%m-%d') if season.date_watched else '' }}
+                                        {% if season.network %}<br><small style="color: #666;">via {{ season.network }}</small>{% endif %}
+                                        {% if season.is_revisit %}<br><small style="color: #27ae60;">(Rewatch)</small>{% endif %}
+                                    </div>
+                                {% endif %}
                             </td>
+                            {% if current_user.is_authenticated %}
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                                        <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 0.75rem;" onclick="researchTV('{{ season.id }}', '{{ season.series_title | replace("'", "\\'") }}', '{{ season.season_number }}', '{{ season.date_watched.strftime('%Y-%m-%d') if season.date_watched else '' }}', '{{ season.network | replace("'", "\\'") if season.network else '' }}', {{ 'true' if season.is_revisit else 'false' }})">Re-search</button>
+                                        <form action="{{ url_for('main.delete_tv_season', season_id=season.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this season?');">
+                                            <button type="submit" class="btn btn-delete">Del</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            {% endif %}
                         </tr>
                         <tr class="movie-details" id="details-{{ season.id }}">
-                            <td colspan="6">
+                            <td colspan="{% if current_user.is_authenticated %}6{% else %}5{% endif %}">
                                 <div class="details-content" style="display: flex; gap: 20px; flex-wrap: wrap;">
                                     <div style="flex: 0 0 185px; margin: 0 auto;">
                                         {% if season.poster_path %}

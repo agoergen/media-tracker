@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
+from flask_login import login_user, logout_user, current_user, login_required
 from app.services import TMDBService
-from app.models import Movie, TVSeason
+from app.models import Movie, TVSeason, User
 from app import db
 from datetime import datetime
 from collections import OrderedDict
@@ -10,6 +11,24 @@ main = Blueprint('main', __name__)
 @main.route('/posters/<path:filename>')
 def serve_poster(filename):
     return send_from_directory(current_app.config['UPLOAD_FOLDER'], filename)
+
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    if request.method == 'POST':
+        user = User.query.filter_by(username=request.form.get('username')).first()
+        if user is None or not user.check_password(request.form.get('password')):
+            flash('Invalid username or password')
+            return redirect(url_for('main.login'))
+        login_user(user)
+        return redirect(url_for('main.index'))
+    return render_template('login.html')
+
+@main.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('main.index'))
 
 @main.route('/')
 def index():
@@ -31,6 +50,7 @@ def movies_list():
     return render_template('movies.html', grouped_movies=grouped, total_count=len(all_movies), now=datetime.now())
 
 @main.route('/movies/search', methods=['GET', 'POST'])
+@login_required
 def search_movie():
     results = []
     query = request.args.get('query', '')
@@ -55,6 +75,7 @@ def search_movie():
                          pre_rewatch=pre_rewatch)
 
 @main.route('/movies/add/<int:tmdb_id>', methods=['POST'])
+@login_required
 def add_movie(tmdb_id):
     replace_id = request.form.get('replace_id')
     details = TMDBService.get_movie_details(tmdb_id)
@@ -171,6 +192,7 @@ def add_movie(tmdb_id):
     return redirect(url_for('main.search_movie'))
 
 @main.route('/movies/edit/<int:movie_id>', methods=['POST'])
+@login_required
 def edit_movie(movie_id):
     movie = Movie.query.get_or_404(movie_id)
     
@@ -194,6 +216,7 @@ def edit_movie(movie_id):
     return redirect(url_for('main.movies_list'))
 
 @main.route('/movies/delete/<int:movie_id>', methods=['POST'])
+@login_required
 def delete_movie(movie_id):
     movie = Movie.query.get_or_404(movie_id)
     title = movie.title
@@ -218,6 +241,7 @@ def tv_list():
     return render_template('tv.html', grouped_seasons=grouped, total_count=len(all_seasons), now=datetime.now())
 
 @main.route('/tv/search', methods=['GET', 'POST'])
+@login_required
 def search_tv():
     results = []
     query = request.args.get('query', '')
@@ -242,6 +266,7 @@ def search_tv():
                          pre_rewatch=pre_rewatch)
 
 @main.route('/tv/add/<int:series_id>', methods=['POST'])
+@login_required
 def add_tv_season(series_id):
     season_number = request.form.get('season_number', type=int)
     replace_id = request.form.get('replace_id')
@@ -325,6 +350,7 @@ def add_tv_season(series_id):
     return redirect(url_for('main.search_tv'))
 
 @main.route('/tv/edit/<int:season_id>', methods=['POST'])
+@login_required
 def edit_tv_season(season_id):
     season = TVSeason.query.get_or_404(season_id)
     
@@ -344,6 +370,7 @@ def edit_tv_season(season_id):
     return redirect(url_for('main.tv_list'))
 
 @main.route('/tv/delete/<int:season_id>', methods=['POST'])
+@login_required
 def delete_tv_season(season_id):
     season = TVSeason.query.get_or_404(season_id)
     title = f"{season.series_title} S{season.season_number}"
