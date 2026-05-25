@@ -191,6 +191,10 @@ def parse_date(date_str):
         return None
 
 def run_backfill():
+    # Clear existing movies to ensure a clean start and no duplicates from partial runs
+    Movie.query.delete()
+    db.session.commit()
+    
     f = io.StringIO(DATA)
     reader = csv.DictReader(f, delimiter='\t')
     
@@ -201,13 +205,11 @@ def run_backfill():
         date_watched = parse_date(row['Date Watched'])
         provider = row['Provider']
         is_rewatch = True if row['Rewatch'] == 'X' else False
-        
-        # Check if already exists
-        existing = Movie.query.filter_by(title=title, date_watched=date_watched).first()
-        if existing:
-            continue
+
+        print(f"Processing: {title} ({year_of_release})...")
 
         # Attempt TMDB Enrichment
+
         tmdb_id = None
         search_results = TMDBService.search_movies(title)
         
