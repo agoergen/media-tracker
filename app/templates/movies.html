@@ -99,7 +99,7 @@
                                             {% if movie.trailer_url %}
                                                 <a href="{{ movie.trailer_url.replace('embed/', 'watch?v=') }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #c0392b; color: #fff; padding: 6px;">Watch Trailer</a>
                                             {% endif %}
-                                            <a href="https://www.google.com/search?q=What+are+some+movies+I+might+enjoy+if+I+enjoyed+{{ movie.title | urlencode }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #8e44ad; color: #fff; padding: 6px; font-size: 0.75rem; line-height: 1.2;">Ask Gemini for Similar</a>
+                                            <a href="https://www.google.com/search?q=What+are+some+movies+I+might+enjoy+if+I+enjoyed+{{ movie.title | urlencode }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #8e44ad; color: #fff; padding: 6px; font-size: 0.75rem; line-height: 1.2;">Ask Google for Similar</a>
                                         </div>
                                     </div>
                                     <div style="flex: 1; min-width: 250px;">
