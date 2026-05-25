@@ -185,16 +185,6 @@ def edit_movie(movie_id):
     flash(f"Updated tracking for {movie.title}.")
     return redirect(url_for('main.movies_list'))
 
-@main.route('/backfill-movies')
-def trigger_backfill():
-    from app.backfill import run_backfill
-    try:
-        count = run_backfill()
-        flash(f"Successfully backfilled {count} movies!")
-    except Exception as e:
-        flash(f"Error during backfill: {str(e)}")
-    return redirect(url_for('main.movies_list'))
-
 @main.route('/movies/delete/<int:movie_id>', methods=['POST'])
 def delete_movie(movie_id):
     movie = Movie.query.get_or_404(movie_id)
