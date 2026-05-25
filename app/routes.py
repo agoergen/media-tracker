@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from app.services import OMDBService
+from app.services import TMDBService
 from app.models import Movie
 from app import db
 from datetime import datetime
@@ -22,32 +22,38 @@ def search_movie():
     query = ""
     if request.method == 'POST':
         query = request.form.get('query')
-        results = OMDBService.search_movies(query)
+        results = TMDBService.search_movies(query)
     return render_template('movie_search.html', results=results, query=query)
 
-@main.route('/movies/add/<imdb_id>', methods=['POST'])
-def add_movie(imdb_id):
-    details = OMDBService.get_movie_details(imdb_id)
+@main.route('/movies/add/<int:tmdb_id>', methods=['POST'])
+def add_movie(tmdb_id):
+    details = TMDBService.get_movie_details(tmdb_id)
     if details:
-        # Basic parsing of year (OMDB sometimes returns ranges for TV, but we filtered for 'movie')
-        year_str = details.get('Year', '')[:4]
-        year = int(year_str) if year_str.isdigit() else None
+        # Extract release year
+        release_date = details.get('release_date', '')
+        year = int(release_date[:4]) if release_date else None
+        
+        # Get director and cast from credits
+        credits = details.get('credits', {})
+        cast = ", ".join([member.get('name') for member in credits.get('cast', [])[:5]])
+        directors = ", ".join([member.get('name') for member in credits.get('crew', []) if member.get('job') == 'Director'])
         
         new_movie = Movie(
-            title=details.get('Title'),
+            title=details.get('title'),
             release_year=year,
-            external_id=imdb_id,
-            director=details.get('Director'),
-            leading_actors=details.get('Actors'),
-            plot=details.get('Plot'),
-            date_watched=datetime.now().date() # Default to today
+            external_id=str(tmdb_id),
+            director=directors,
+            leading_actors=cast,
+            plot=details.get('overview'),
+            poster_path=details.get('poster_path'),
+            date_watched=datetime.now().date()
         )
         db.session.add(new_movie)
         db.session.commit()
         flash(f"Added {new_movie.title} to your tracker!")
         return redirect(url_for('main.movies_list'))
     
-    flash("Error fetching movie details.")
+    flash("Error fetching movie details from TMDB.")
     return redirect(url_for('main.search_movie'))
 
 @main.route('/movies/delete/<int:movie_id>', methods=['POST'])

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Search Movies</h1>
+    <h1>Search Movies (via TMDB)</h1>
     
     <form method="POST">
         <input type="text" name="query" placeholder="Enter movie title..." value="{{ query }}" required style="padding: 10px; width: 300px; border-radius: 4px; border: 1px solid #ccc;">
@@ -12,10 +12,18 @@
         {% if results %}
             {% for movie in results %}
             <div class="result-card">
-                <div>
-                    <strong>{{ movie.Title }}</strong> ({{ movie.Year }})
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if movie.poster_path %}
+                        <img src="https://image.tmdb.org/t/p/w92{{ movie.poster_path }}" alt="{{ movie.title }} poster" style="border-radius: 4px;">
+                    {% else %}
+                        <div style="width: 92px; height: 138px; background: #ddd; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem;">No Poster</div>
+                    {% endif %}
+                    <div>
+                        <strong>{{ movie.title }}</strong> ({{ movie.release_date[:4] if movie.release_date else 'N/A' }})
+                        <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">{{ movie.overview[:150] }}...</p>
+                    </div>
                 </div>
-                <form action="{{ url_for('main.add_movie', imdb_id=movie.imdbID) }}" method="POST">
+                <form action="{{ url_for('main.add_movie', tmdb_id=movie.id) }}" method="POST">
                     <button type="submit" class="btn btn-secondary">Track Movie</button>
                 </form>
             </div>

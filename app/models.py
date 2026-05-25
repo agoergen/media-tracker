@@ -11,6 +11,7 @@ class Movie(db.Model):
     director = db.Column(db.String(255))
     leading_actors = db.Column(db.Text)
     plot = db.Column(db.Text)
+    poster_path = db.Column(db.String(255))
 
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)

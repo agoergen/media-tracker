@@ -37,3 +37,40 @@ class OMDBService:
         except requests.exceptions.RequestException as e:
             print(f"Error fetching details from OMDB: {e}")
             return None
+
+class TMDBService:
+    BASE_URL = "https://api.themoviedb.org/3"
+    IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w200"
+
+    @staticmethod
+    def get_headers():
+        token = current_app.config.get('TMDB_READ_TOKEN')
+        return {
+            "Authorization": f"Bearer {token}",
+            "accept": "application/json"
+        }
+
+    @classmethod
+    def search_movies(cls, query):
+        url = f"{cls.BASE_URL}/search/movie"
+        params = {"query": query}
+        try:
+            response = requests.get(url, headers=cls.get_headers(), params=params)
+            response.raise_for_status()
+            return response.json().get('results', [])
+        except requests.exceptions.RequestException as e:
+            print(f"Error searching TMDB: {e}")
+            return []
+
+    @classmethod
+    def get_movie_details(cls, tmdb_id):
+        url = f"{cls.BASE_URL}/movie/{tmdb_id}"
+        # Append 'credits' to get cast
+        params = {"append_to_response": "credits"}
+        try:
+            response = requests.get(url, headers=cls.get_headers(), params=params)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching TMDB details: {e}")
+            return None
