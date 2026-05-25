@@ -24,7 +24,7 @@ def movies_list():
             grouped[year] = []
         grouped[year].append(movie)
     
-    return render_template('movies.html', grouped_movies=grouped, total_count=len(all_movies))
+    return render_template('movies.html', grouped_movies=grouped, total_count=len(all_movies), now=datetime.now())
 
 @main.route('/movies/search', methods=['GET', 'POST'])
 def search_movie():
