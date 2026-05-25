@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from app.services import TMDBService
-from app.models import Movie
+from app.models import Movie, TVSeason
 from app import db
 from datetime import datetime
 from collections import OrderedDict
