@@ -9,6 +9,7 @@ class Movie(db.Model):
     external_id = db.Column(db.String(100))
     provider = db.Column(db.String(100))
     director = db.Column(db.String(255))
+    writer = db.Column(db.String(255))
     leading_actors = db.Column(db.Text)
     plot = db.Column(db.Text)
     poster_path = db.Column(db.String(255))

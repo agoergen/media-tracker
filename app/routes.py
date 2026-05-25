@@ -3,6 +3,7 @@ from app.services import TMDBService
 from app.models import Movie
 from app import db
 from datetime import datetime
+from collections import OrderedDict
 
 main = Blueprint('main', __name__)
 
@@ -13,8 +14,17 @@ def index():
 
 @main.route('/movies')
 def movies_list():
-    movies = Movie.query.order_by(Movie.date_watched.asc()).all()
-    return render_template('movies.html', movies=movies)
+    all_movies = Movie.query.order_by(Movie.date_watched.asc()).all()
+    
+    # Group movies by year
+    grouped = OrderedDict()
+    for movie in all_movies:
+        year = movie.date_watched.year if movie.date_watched else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(movie)
+    
+    return render_template('movies.html', grouped_movies=grouped, total_count=len(all_movies))
 
 @main.route('/movies/search', methods=['GET', 'POST'])
 def search_movie():
@@ -37,6 +47,7 @@ def add_movie(tmdb_id):
         credits = details.get('credits', {})
         cast = ", ".join([member.get('name') for member in credits.get('cast', [])[:5]])
         directors = ", ".join([member.get('name') for member in credits.get('crew', []) if member.get('job') == 'Director'])
+        writers = ", ".join([member.get('name') for member in credits.get('crew', []) if member.get('department') == 'Writing'])
         
         # Get certification (MPAA rating)
         certification = "N/A"
@@ -69,6 +80,7 @@ def add_movie(tmdb_id):
             external_id=str(tmdb_id),
             imdb_id=details.get('imdb_id'),
             director=directors,
+            writer=writers,
             leading_actors=cast,
             plot=details.get('overview'),
             poster_path=details.get('poster_path'),
