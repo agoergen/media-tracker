@@ -79,13 +79,38 @@
         const trackForm = document.getElementById("trackForm");
         const modalTitle = document.getElementById("modalTitle");
         const dateInput = document.getElementById("date_watched");
+        const watchedAtSelect = document.getElementById("watched_at");
+        const rewatchCheckbox = document.querySelector('input[name="is_rewatch"]');
 
         function openTrackModal(tmdbId, title) {
             modalTitle.innerText = `Track "${title}"`;
             trackForm.action = `/movies/add/${tmdbId}`;
-            // Set default date to today
-            const today = new Date().toISOString().split('T')[0];
-            dateInput.value = today;
+            
+            // Check for pre-filled data (from Re-search)
+            const urlParams = new URLSearchParams(window.location.search);
+            const preDate = urlParams.get('pre_date');
+            const preLoc = urlParams.get('pre_loc');
+            const preRewatch = urlParams.get('pre_rewatch');
+
+            if (preDate) {
+                dateInput.value = preDate;
+            } else {
+                const today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
+            }
+
+            if (preLoc) {
+                watchedAtSelect.value = preLoc;
+            } else {
+                watchedAtSelect.value = "";
+            }
+
+            if (preRewatch === 'true') {
+                rewatchCheckbox.checked = true;
+            } else {
+                rewatchCheckbox.checked = false;
+            }
+
             modal.style.display = "block";
         }
 

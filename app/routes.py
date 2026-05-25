@@ -31,6 +31,9 @@ def search_movie():
     results = []
     query = request.args.get('query', '')
     replace_id = request.args.get('replace_id')
+    pre_date = request.args.get('pre_date', '')
+    pre_loc = request.args.get('pre_loc', '')
+    pre_rewatch = request.args.get('pre_rewatch', 'false')
     
     if request.method == 'POST':
         query = request.form.get('query')
@@ -39,7 +42,13 @@ def search_movie():
     if query:
         results = TMDBService.search_movies(query)
         
-    return render_template('movie_search.html', results=results, query=query, replace_id=replace_id)
+    return render_template('movie_search.html', 
+                         results=results, 
+                         query=query, 
+                         replace_id=replace_id,
+                         pre_date=pre_date,
+                         pre_loc=pre_loc,
+                         pre_rewatch=pre_rewatch)
 
 @main.route('/movies/add/<int:tmdb_id>', methods=['POST'])
 def add_movie(tmdb_id):
