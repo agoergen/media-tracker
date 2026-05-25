@@ -8,12 +8,12 @@ main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
-    movies = Movie.query.order_by(Movie.date_watched.desc()).limit(5).all()
+    movies = Movie.query.order_by(Movie.date_watched.asc()).limit(5).all()
     return render_template('index.html', movies=movies)
 
 @main.route('/movies')
 def movies_list():
-    movies = Movie.query.order_by(Movie.date_watched.desc()).all()
+    movies = Movie.query.order_by(Movie.date_watched.asc()).all()
     return render_template('movies.html', movies=movies)
 
 @main.route('/movies/search', methods=['GET', 'POST'])

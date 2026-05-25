@@ -3,8 +3,8 @@
 {% block content %}
     <h1>Search Movies (via TMDB)</h1>
     
-    <form method="POST">
-        <input type="text" name="query" placeholder="Enter movie title..." value="{{ query }}" required style="padding: 10px; width: 300px; border-radius: 4px; border: 1px solid #ccc;">
+    <form method="POST" class="search-form">
+        <input type="text" name="query" placeholder="Enter movie title..." value="{{ query }}" required>
         <button type="submit" class="btn">Search</button>
     </form>
 
@@ -12,24 +12,27 @@
         {% if results %}
             {% for movie in results %}
             <div class="result-card">
-                <div style="display: flex; gap: 15px; align-items: center;">
+                <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
                     {% if movie.poster_path %}
-                        <img src="https://image.tmdb.org/t/p/w92{{ movie.poster_path }}" alt="{{ movie.title }} poster" style="border-radius: 4px;">
+                        <img src="https://image.tmdb.org/t/p/w92{{ movie.poster_path }}" alt="{{ movie.title }} poster" style="border-radius: 4px; width: 92px; flex-shrink: 0;">
                     {% else %}
-                        <div style="width: 92px; height: 138px; background: #ddd; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem;">No Poster</div>
+                        <div style="width: 92px; height: 138px; background: #ddd; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem; flex-shrink: 0;">No Poster</div>
                     {% endif %}
                     <div>
-                        <strong>{{ movie.title }}</strong> ({{ movie.release_date[:4] if movie.release_date else 'N/A' }})
-                        <p style="font-size: 0.85rem; color: #666; margin-top: 5px;">{{ movie.overview[:150] }}...</p>
+                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ movie.title }}</strong>
+                        <span style="color: #666; font-size: 0.9rem;">({{ movie.release_date[:4] if movie.release_date else 'N/A' }})</span>
+                        <p class="hide-mobile" style="font-size: 0.85rem; color: #444; margin-top: 10px; line-height: 1.4;">{{ movie.overview[:200] }}...</p>
                     </div>
                 </div>
-                <form action="{{ url_for('main.add_movie', tmdb_id=movie.id) }}" method="POST">
-                    <button type="submit" class="btn btn-secondary">Track Movie</button>
-                </form>
+                <div style="margin-left: auto;">
+                    <form action="{{ url_for('main.add_movie', tmdb_id=movie.id) }}" method="POST">
+                        <button type="submit" class="btn btn-secondary">Track Movie</button>
+                    </form>
+                </div>
             </div>
             {% endfor %}
         {% elif query %}
-            <p>No movies found for "{{ query }}".</p>
+            <p style="margin-top: 2rem;">No movies found for "{{ query }}".</p>
         {% endif %}
     </div>
 {% endblock %}
