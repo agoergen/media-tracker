@@ -39,6 +39,7 @@ def add_movie(imdb_id):
             external_id=imdb_id,
             director=details.get('Director'),
             leading_actors=details.get('Actors'),
+            plot=details.get('Plot'),
             date_watched=datetime.now().date() # Default to today
         )
         db.session.add(new_movie)
@@ -48,3 +49,12 @@ def add_movie(imdb_id):
     
     flash("Error fetching movie details.")
     return redirect(url_for('main.search_movie'))
+
+@main.route('/movies/delete/<int:movie_id>', methods=['POST'])
+def delete_movie(movie_id):
+    movie = Movie.query.get_or_404(movie_id)
+    title = movie.title
+    db.session.delete(movie)
+    db.session.commit()
+    flash(f"Removed {title} from your tracker.")
+    return redirect(url_for('main.movies_list'))

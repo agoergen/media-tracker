@@ -88,6 +88,34 @@ th, td {
 
 th { background: #ecf0f1; }
 
+.movie-details {
+    display: none;
+    padding: 15px;
+    background: #fdfdfd;
+    border-top: 1px solid #eee;
+}
+
+.movie-details.active {
+    display: table-row;
+}
+
+.details-content {
+    padding: 10px;
+    font-size: 0.9rem;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    font-size: 0.8rem;
+    padding: 5px 10px;
+}
+
+.toggle-details {
+    color: #3498db;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));

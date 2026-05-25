@@ -13,21 +13,47 @@
                 <th>Year</th>
                 <th>Director</th>
                 <th>Date Watched</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for movie in movies %}
-            <tr>
-                <td>{{ movie.title }}</td>
+            <tr class="movie-row">
+                <td>
+                    <span class="toggle-details" data-id="{{ movie.id }}">{{ movie.title }}</span>
+                </td>
                 <td>{{ movie.release_year }}</td>
                 <td>{{ movie.director }}</td>
                 <td>{{ movie.date_watched.strftime('%Y-%m-%d') if movie.date_watched else '' }}</td>
+                <td>
+                    <form action="{{ url_for('main.delete_movie', movie_id=movie.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this movie?');">
+                        <button type="submit" class="btn btn-delete">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            <tr class="movie-details" id="details-{{ movie.id }}">
+                <td colspan="5">
+                    <div class="details-content">
+                        <p><strong>Cast:</strong> {{ movie.leading_actors }}</p>
+                        <p><strong>Summary:</strong> {{ movie.plot }}</p>
+                    </div>
+                </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="4">No movies tracked yet. <a href="{{ url_for('main.search_movie') }}">Add one!</a></td>
+                <td colspan="5">No movies tracked yet. <a href="{{ url_for('main.search_movie') }}">Add one!</a></td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <script>
+        document.querySelectorAll('.toggle-details').forEach(item => {
+            item.addEventListener('click', event => {
+                const id = item.getAttribute('data-id');
+                const detailsRow = document.getElementById(`details-${id}`);
+                detailsRow.classList.toggle('active');
+            });
+        });
+    </script>
 {% endblock %}

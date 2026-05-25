@@ -10,6 +10,7 @@ class Movie(db.Model):
     provider = db.Column(db.String(100))
     director = db.Column(db.String(255))
     leading_actors = db.Column(db.Text)
+    plot = db.Column(db.Text)
 
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
