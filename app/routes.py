@@ -369,3 +369,13 @@ def trigger_scrape_movie_posters():
     except Exception as e:
         flash(f"Error during poster scrape: {str(e)}")
     return redirect(url_for('main.movies_list'))
+
+@main.route('/scrape-tv-posters')
+def trigger_scrape_tv_posters():
+    from scrape_tv_posters import scrape_tv_posters
+    try:
+        scrape_tv_posters()
+        flash("Successfully scraped all TV posters!")
+    except Exception as e:
+        flash(f"Error during TV poster scrape: {str(e)}")
+    return redirect(url_for('main.tv_list'))
