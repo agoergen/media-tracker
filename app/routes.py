@@ -272,8 +272,10 @@ def add_tv_season(series_id):
         imdb_id = show_details.get('external_ids', {}).get('imdb_id')
 
         # Download poster for local storage
-        if details.get('poster_path'):
-            TMDBService.download_poster(details.get('poster_path'))
+        if season_details.get('poster_path'):
+            TMDBService.download_poster(season_details.get('poster_path'))
+        elif show_details.get('poster_path'):
+            TMDBService.download_poster(show_details.get('poster_path'))
 
         if replace_id:
             season = TVSeason.query.get_or_404(replace_id)
