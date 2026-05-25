@@ -10,9 +10,19 @@
     <nav>
         <div class="container">
             <a href="{{ url_for('main.index') }}" class="brand">Media Tracker</a>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('main.movies_list') }}">Movies</a></li>
+            </ul>
         </div>
     </nav>
     <main class="container">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="flash">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </main>
 </body>

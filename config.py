@@ -19,3 +19,4 @@ class Config:
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-for-media-tracker'
+    OMDB_API_KEY = os.environ.get('OMDB_API_KEY')
