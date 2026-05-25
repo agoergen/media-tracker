@@ -12,6 +12,13 @@ class Movie(db.Model):
     leading_actors = db.Column(db.Text)
     plot = db.Column(db.Text)
     poster_path = db.Column(db.String(255))
+    imdb_id = db.Column(db.String(20))
+    user_score = db.Column(db.Float)
+    runtime = db.Column(db.Integer)
+    certification = db.Column(db.String(20))
+    budget = db.Column(db.BigInteger)
+    revenue = db.Column(db.BigInteger)
+    trailer_url = db.Column(db.String(255))
 
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)

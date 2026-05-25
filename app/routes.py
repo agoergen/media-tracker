@@ -38,14 +38,41 @@ def add_movie(tmdb_id):
         cast = ", ".join([member.get('name') for member in credits.get('cast', [])[:5]])
         directors = ", ".join([member.get('name') for member in credits.get('crew', []) if member.get('job') == 'Director'])
         
+        # Get certification (MPAA rating)
+        certification = "N/A"
+        release_dates = details.get('release_dates', {}).get('results', [])
+        for rd in release_dates:
+            if rd.get('iso_3166_1') == 'US':
+                for release in rd.get('release_dates', []):
+                    cert = release.get('certification')
+                    if cert:
+                        certification = cert
+                        break
+                break
+        
+        # Get YouTube trailer URL
+        trailer_url = None
+        videos = details.get('videos', {}).get('results', [])
+        for video in videos:
+            if video.get('site') == 'YouTube' and video.get('type') == 'Trailer':
+                trailer_url = f"https://www.youtube.com/embed/{video.get('key')}"
+                break
+        
         new_movie = Movie(
             title=details.get('title'),
             release_year=year,
             external_id=str(tmdb_id),
+            imdb_id=details.get('imdb_id'),
             director=directors,
             leading_actors=cast,
             plot=details.get('overview'),
             poster_path=details.get('poster_path'),
+            user_score=details.get('vote_average'),
+            runtime=details.get('runtime'),
+            certification=certification,
+            budget=details.get('budget'),
+            revenue=details.get('revenue'),
+            trailer_url=trailer_url,
             date_watched=datetime.now().date()
         )
         db.session.add(new_movie)
