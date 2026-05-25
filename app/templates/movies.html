@@ -89,13 +89,17 @@
                                         {% if movie.poster_path %}
                                             <img src="https://image.tmdb.org/t/p/w185{{ movie.poster_path }}" alt="{{ movie.title }} poster" style="border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%;" loading="lazy">
                                         {% endif %}
-                                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+                                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
                                             {% if movie.imdb_id %}
-                                                <a href="https://www.imdb.com/title/{{ movie.imdb_id }}/" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #f3ce13; color: #000; font-weight: bold;">IMDB</a>
+                                                <a href="https://www.imdb.com/title/{{ movie.imdb_id }}/" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #f3ce13; color: #000; font-weight: bold; padding: 6px;">IMDB</a>
                                             {% endif %}
                                             {% if movie.wikipedia_url %}
-                                                <a href="{{ movie.wikipedia_url }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #e0e0e0; color: #000;">Wikidata</a>
+                                                <a href="{{ movie.wikipedia_url }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #e0e0e0; color: #000; padding: 6px;">Wikidata</a>
                                             {% endif %}
+                                            {% if movie.trailer_url %}
+                                                <a href="{{ movie.trailer_url.replace('embed/', 'watch?v=') }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #c0392b; color: #fff; padding: 6px;">Watch Trailer</a>
+                                            {% endif %}
+                                            <a href="https://www.google.com/search?q=What+are+some+movies+I+might+enjoy+if+I+enjoyed+{{ movie.title | urlencode }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #8e44ad; color: #fff; padding: 6px; font-size: 0.75rem; line-height: 1.2;">Ask Gemini for Similar</a>
                                         </div>
                                     </div>
                                     <div style="flex: 1; min-width: 250px;">
@@ -107,12 +111,6 @@
                                         <p><strong>Revenue:</strong> ${{ "{:,}".format(movie.revenue) if movie.revenue else 'N/A' }}</p>
                                         <p><strong>Runtime:</strong> {{ movie.runtime }} min</p>
                                         <p><strong>Summary:</strong> {{ movie.plot }}</p>
-                                        
-                                        {% if movie.trailer_url %}
-                                        <div style="margin-top: 20px;">
-                                            <a href="{{ movie.trailer_url.replace('embed/', 'watch?v=') }}" target="_blank" class="btn btn-secondary" style="background: #c0392b;">Watch Trailer on YouTube</a>
-                                        </div>
-                                        {% endif %}
                                     </div>
                                 </div>
                             </td>
