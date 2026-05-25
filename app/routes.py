@@ -359,3 +359,13 @@ def trigger_backfill_tv():
     except Exception as e:
         flash(f"Error during TV backfill: {str(e)}")
     return redirect(url_for('main.tv_list'))
+
+@main.route('/scrape-movie-posters')
+def trigger_scrape_movie_posters():
+    from scrape_movie_posters import scrape_posters
+    try:
+        scrape_posters()
+        flash("Successfully scraped all movie posters!")
+    except Exception as e:
+        flash(f"Error during poster scrape: {str(e)}")
+    return redirect(url_for('main.movies_list'))
