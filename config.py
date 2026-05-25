@@ -4,9 +4,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
-    # Handle Railway's postgres:// prefix
-    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+    # Railway provides DATABASE_URL. We also check for fallback names.
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
+    
+    if not SQLALCHEMY_DATABASE_URI:
+        # Fallback for local development if no DB is configured
+        basedir = os.path.abspath(os.path.dirname(__file__))
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app.db')
+        print("WARNING: DATABASE_URL not found. Falling back to local SQLite database.")
+    
+    # Handle Railway's older postgres:// prefix which SQLAlchemy 1.4+ doesn't support
+    if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
