@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService
-from app.models import Movie, TVSeason, User, Game, Book
+from app.models import Movie, TVSeason, User, Game, Book, Theater, TheaterReference
 from app import db
 from datetime import datetime
 from collections import OrderedDict
@@ -750,6 +750,71 @@ def delete_book(book_id):
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.books_list'))
 
+# THEATER ROUTES
+@main.route('/theater')
+def theater_list():
+    all_shows = Theater.query.order_by(Theater.date_watched.asc()).all()
+    grouped = OrderedDict()
+    for show in all_shows:
+        year = show.date_watched.year if show.date_watched else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(show)
+    return render_template('theater.html', grouped_shows=grouped, total_count=len(all_shows), now=datetime.now())
+
+@main.route('/theater/search', methods=['GET', 'POST'])
+@login_required
+def search_theater():
+    results = []
+    query = request.args.get('query', '')
+    if request.method == 'POST':
+        query = request.form.get('query', '').strip()
+    
+    if query:
+        results = TheaterReference.query.filter(TheaterReference.show_name.ilike(f'%{query}%')).limit(20).all()
+        
+    return render_template('theater_search.html', results=results, query=query)
+
+@main.route('/theater/add/<int:ref_id>', methods=['POST'])
+@login_required
+def add_theater(ref_id):
+    ref = TheaterReference.query.get_or_404(ref_id)
+    date_watched_str = request.form.get('date_watched')
+    location = request.form.get('location')
+    is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+    
+    try:
+        date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
+    except ValueError:
+        date_watched = datetime.now().date()
+
+    release_year = int(ref.date_open[:4]) if ref.date_open and len(ref.date_open) >= 4 else None
+
+    new_show = Theater(
+        title=ref.show_name,
+        date_watched=date_watched,
+        location=location,
+        is_revisit=is_rewatch,
+        release_year=release_year,
+        original_theater=ref.theatre,
+        run_time=ref.run_time_minutes,
+        show_type=ref.show_type
+    )
+    db.session.add(new_show)
+    db.session.commit()
+    flash(f"Added {new_show.title} to your tracker!")
+    return redirect(url_for('main.theater_list'))
+
+@main.route('/theater/delete/<int:show_id>', methods=['POST'])
+@login_required
+def delete_theater(show_id):
+    show = Theater.query.get_or_404(show_id)
+    title = show.title
+    db.session.delete(show)
+    db.session.commit()
+    flash(f"Removed {title} from your tracker.")
+    return redirect(url_for('main.theater_list'))
+
 @main.route('/backfill-games')
 def trigger_backfill_games():
     from app.backfill_games import run_backfill_games
@@ -769,3 +834,14 @@ def trigger_backfill_books():
     except Exception as e:
         flash(f"Error during book backfill: {str(e)}")
     return redirect(url_for('main.books_list'))
+
+@main.route('/import-broadway')
+@login_required
+def import_broadway():
+    from app.import_broadway import run_import_broadway
+    try:
+        count = run_import_broadway()
+        flash(f"Successfully imported {count} Broadway shows!")
+    except Exception as e:
+        flash(f"Error during Broadway import: {str(e)}")
+    return redirect(url_for('main.index'))

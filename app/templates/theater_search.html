@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}LeisureLedger: Search Theater{% endblock %}
+
+{% block content %}
+    <div style="margin-top: 2rem;">
+        <h1>Search Broadway Reference</h1>
+        
+        <form method="POST" class="search-form" id="mainSearchForm">
+            <input type="text" name="query" placeholder="Enter show name..." value="{{ query }}" required>
+            <button type="submit" class="btn">Search</button>
+        </form>
+    </div>
+
+    <!-- Results Container -->
+    <div class="search-results" id="resultsContainer">
+        {% if results %}
+            {% for ref in results %}
+            <div class="result-card">
+                <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
+                    <div style="width: 60px; height: 60px; background: #eee; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 1.5rem; flex-shrink: 0;">🎭</div>
+                    <div>
+                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ ref.show_name }}</strong>
+                        <span style="color: #666; font-size: 0.9rem;">
+                            {{ ref.show_type or 'Unknown Type' }} 
+                            {% if ref.date_open %}({{ ref.date_open[:4] }}){% endif %}
+                        </span>
+                        <div style="font-size: 0.85rem; color: #888; margin-top: 5px;">
+                            Original House: {{ ref.theatre or 'N/A' }}
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-left: auto;">
+                    <button class="btn btn-secondary" onclick="selectShow('{{ ref.id }}', '{{ ref.show_name | replace("'", "\\'") }}')">
+                        Track Show
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% elif query %}
+            <p style="margin-top: 2rem;">No Broadway matches found for "{{ query }}".</p>
+        {% endif %}
+    </div>
+
+    <!-- Selection Confirmation Container -->
+    <div id="confirmationContainer" style="display: none; margin-top: 2rem; background: var(--white); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 id="confirmTitle" style="margin: 0; font-size: 1.5rem;">Confirm Tracking</h2>
+            <button class="btn btn-secondary" onclick="cancelSelection()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;">&larr; Back to results</button>
+        </div>
+
+        <form id="trackForm" method="POST">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+                <div class="form-group">
+                    <label for="date_watched">Watched On:</label>
+                    <input type="date" id="date_watched" name="date_watched" required 
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Venue Watched:</label>
+                    <input type="text" id="location" name="location" placeholder="e.g. Orpheum Theatre"
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer;">
+                    <input type="checkbox" name="is_rewatch" style="width: 20px; height: 20px;"> This is a revisit
+                </label>
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">
+                    Confirm & Track
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const resultsContainer = document.getElementById("resultsContainer");
+        const confirmationContainer = document.getElementById("confirmationContainer");
+        const mainSearchForm = document.getElementById("mainSearchForm");
+        const trackForm = document.getElementById("trackForm");
+        const confirmTitle = document.getElementById("confirmTitle");
+        const dateInput = document.getElementById("date_watched");
+
+        function selectShow(refId, title) {
+            resultsContainer.style.display = "none";
+            mainSearchForm.style.display = "none";
+            
+            confirmTitle.innerText = `Tracking: ${title}`;
+            trackForm.action = `/theater/add/${refId}`;
+            
+            dateInput.value = new Date().toISOString().split('T')[0];
+
+            confirmationContainer.style.display = "block";
+            window.scrollTo(0, 0);
+        }
+
+        function cancelSelection() {
+            confirmationContainer.style.display = "none";
+            resultsContainer.style.display = "block";
+            mainSearchForm.style.display = "block";
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}LeisureLedger: Theater{% endblock %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+        <h1>My Theater ({{ total_count }})</h1>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.search_theater') }}" class="btn">Add Theater Show</a>
+        {% endif %}
+    </div>
+
+    <!-- Theater Filter Search -->
+    <div style="margin-top: 1rem; margin-bottom: 1rem;">
+        <input type="text" id="theaterFilter" placeholder="Search my theater by title, venue..." 
+               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem;">
+    </div>
+
+    {% set global_count = namespace(value=0) %}
+    
+    {% for year, year_shows in grouped_shows.items() %}
+    <div class="year-group" id="group-year-{{ year }}">
+        <div class="year-header" onclick="toggleYear('year-{{ year }}')">
+            <span>{{ year }}</span>
+            <span class="year-count">{{ year_shows|length }} shows</span>
+        </div>
+        <div id="year-{{ year }}" class="year-content {% if year != now.year %}collapsed{% endif %}">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Title</th>
+                            <th>Venue Watched</th>
+                            <th class="hide-mobile">Type</th>
+                            <th>{% if current_user.is_authenticated %}Tracking Info{% else %}Date Watched{% endif %}</th>
+                            {% if current_user.is_authenticated %}
+                                <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for show in year_shows %}
+                        {% set global_count.value = global_count.value + 1 %}
+                        <tr class="movie-row" id="row-{{ show.id }}" data-search="{{ show.title|lower }} {{ show.location|lower if show.location else '' }}">
+                            <td style="color: #999; font-size: 0.8rem; vertical-align: middle;">{{ global_count.value }}</td>
+                            <td>
+                                <span class="toggle-details" onclick="toggleDetails('{{ show.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ show.title }}</span>
+                                <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
+                                    {{ show.release_year or 'N/A' }}
+                                </div>
+                            </td>
+                            <td>{{ show.location or 'N/A' }}</td>
+                            <td class="hide-mobile">{{ show.show_type or 'N/A' }}</td>
+                            <td>
+                                <div style="font-size: 0.9rem;">
+                                    {{ show.date_watched.strftime('%Y-%m-%d') if show.date_watched else '' }}
+                                    {% if show.is_revisit %}<br><small style="color: #27ae60;">(Revisit)</small>{% endif %}
+                                </div>
+                            </td>
+                            {% if current_user.is_authenticated %}
+                                <td>
+                                    <form action="{{ url_for('main.delete_theater', show_id=show.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this show?');">
+                                        <button type="submit" class="btn btn-delete">Del</button>
+                                    </form>
+                                </td>
+                            {% endif %}
+                        </tr>
+                        <tr class="movie-details" id="details-{{ show.id }}">
+                            <td colspan="{% if current_user.is_authenticated %}6{% else %}5{% endif %}">
+                                <div class="details-content">
+                                    <p><strong>Original Broadway House:</strong> {{ show.original_theater or 'N/A' }}</p>
+                                    <p><strong>Show Type:</strong> {{ show.show_type or 'N/A' }}</p>
+                                    <p><strong>Run Time:</strong> {{ show.run_time or 'N/A' }} minutes</p>
+                                    <p><strong>Original Opening Year:</strong> {{ show.release_year or 'N/A' }}</p>
+                                    <p><strong>Venue Attended:</strong> {{ show.location or 'N/A' }}</p>
+                                    <div style="margin-top: 15px;">
+                                        <a href="https://www.google.com/search?q=What+are+some+theater+shows+I+might+enjoy+if+I+enjoyed+{{ show.title | urlencode }}" target="_blank" class="btn btn-secondary" style="background: #8e44ad; color: #fff; padding: 6px 12px; font-size: 0.85rem;">Ask Google for Similar</a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p>No theater shows tracked yet. <a href="{{ url_for('main.search_theater') }}">Add one!</a></p>
+    {% endfor %}
+
+    <script>
+        function toggleYear(id) {
+            const content = document.getElementById(id);
+            if (content) content.classList.toggle('collapsed');
+        }
+
+        function toggleDetails(id) {
+            const detailRow = document.getElementById('details-' + id);
+            if (detailRow) {
+                detailRow.classList.toggle('active');
+            }
+        }
+
+        const filterInput = document.getElementById('theaterFilter');
+        filterInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const yearGroups = document.querySelectorAll('.year-group');
+            
+            if (query.length > 0) {
+                document.querySelectorAll('.movie-row').forEach(row => {
+                    const searchData = row.getAttribute('data-search') || '';
+                    const show_id = row.id.replace('row-', '');
+                    const detailRow = document.getElementById('details-' + show_id);
+
+                    if (searchData.includes(query)) {
+                        row.style.display = '';
+                    } else if (row.classList.contains('movie-row')) {
+                        row.style.display = 'none';
+                        if (detailRow) detailRow.classList.remove('active');
+                    }
+                });
+
+                yearGroups.forEach(group => {
+                    const yearId = group.id.replace('group-', '');
+                    const content = document.getElementById(yearId);
+                    const visibleRows = group.querySelectorAll('.movie-row:not([style*="display: none"])');
+                    
+                    if (visibleRows.length > 0) {
+                        group.style.display = '';
+                        if (content) content.classList.remove('collapsed');
+                    } else {
+                        group.style.display = 'none';
+                    }
+                });
+            } else {
+                const currentYear = new Date().getFullYear().toString();
+                yearGroups.forEach(group => {
+                    group.style.display = '';
+                    const yearId = group.id.replace('group-', '');
+                    const content = document.getElementById(yearId);
+                    if (content) {
+                        if (yearId.includes(currentYear)) {
+                            content.classList.remove('collapsed');
+                        } else {
+                            content.classList.add('collapsed');
+                        }
+                    }
+                });
+                document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
+            }
+        });
+    </script>
+{% endblock %}

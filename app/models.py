@@ -75,9 +75,21 @@ class Theater(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     date_watched = db.Column(db.Date)
-    release_year = db.Column(db.Integer)
     is_revisit = db.Column(db.Boolean, default=False)
-    location = db.Column(db.String(255))
+    location = db.Column(db.String(255)) # Where you saw it
+    release_year = db.Column(db.Integer) # Original opening year
+    original_theater = db.Column(db.String(255)) # Original Broadway house
+    run_time = db.Column(db.Integer) # In minutes
+    show_type = db.Column(db.String(100)) # Play, Musical
+
+class TheaterReference(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    show_name = db.Column(db.String(255), nullable=False)
+    show_type = db.Column(db.String(100))
+    theatre = db.Column(db.String(255))
+    date_open = db.Column(db.String(50))
+    date_close = db.Column(db.String(50))
+    run_time_minutes = db.Column(db.Integer)
 
 class TVSeason(db.Model):
     id = db.Column(db.Integer, primary_key=True)
