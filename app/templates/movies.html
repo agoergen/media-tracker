@@ -23,8 +23,8 @@
             <span>{{ year }}</span>
             <span class="year-count">{{ movies|length }} movies</span>
         </div>
-        <!-- All years collapsed by default -->
-        <div id="year-{{ year }}" class="year-content collapsed">
+        <!-- Expand only the current year by default -->
+        <div id="year-{{ year }}" class="year-content {% if year != now.year %}collapsed{% endif %}">
             <div class="table-responsive">
                 <table>
                     <thead>

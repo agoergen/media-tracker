@@ -23,7 +23,7 @@
             <span>{{ year }}</span>
             <span class="year-count">{{ seasons|length }} seasons</span>
         </div>
-        <div id="year-{{ year }}" class="year-content collapsed">
+        <div id="year-{{ year }}" class="year-content {% if year != now.year %}collapsed{% endif %}">
             <div class="table-responsive">
                 <table>
                     <thead>
