@@ -70,7 +70,7 @@
                             style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                         <option value="">Select Format...</option>
                         {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
-                            <option value="{{ f }}">{{ f }}</option>
+                            <option value="{{ f }}" {% if f == 'Audiobook' %}selected{% endif %}>{{ f }}</option>
                         {% endfor %}
                     </select>
                 </div>
