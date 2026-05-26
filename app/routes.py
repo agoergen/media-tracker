@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_user, logout_user, current_user, login_required
-from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService
+from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService
 from app.models import Movie, TVSeason, User, Game, Book, Theater, TheaterReference
 from app import db
 from datetime import datetime
@@ -42,13 +42,15 @@ def index():
     recent_tv = TVSeason.query.order_by(TVSeason.date_watched.desc()).limit(5).all()
     tv_count = TVSeason.query.count()
 
-    # Counts by current year
     current_year = datetime.now().year
     movies_this_year = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year).count()
     games_this_year = Game.query.filter(db.extract('year', Game.date_finished) == current_year).count()
     tv_this_year = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == current_year).count()
     books_this_year = Book.query.filter(db.extract('year', Book.date_finished) == current_year).count()
+    theater_this_year = Theater.query.filter(db.extract('year', Theater.date_watched) == current_year).count()
     
+    recent_theater = Theater.query.order_by(Theater.date_watched.desc()).limit(5).all()
+
     return render_template('index.html', 
                          recent_movies=recent_movies, 
                          movie_count=movie_count,
@@ -59,7 +61,9 @@ def index():
                          recent_tv=recent_tv,
                          tv_count=tv_count,
                          tv_this_year=tv_this_year,
-                         books_this_year=books_this_year)
+                         books_this_year=books_this_year,
+                         theater_this_year=theater_this_year,
+                         recent_theater=recent_theater)
 
 # MOVIE ROUTES
 @main.route('/movies')
@@ -782,6 +786,7 @@ def add_theater(ref_id):
     date_watched_str = request.form.get('date_watched')
     location = request.form.get('location')
     is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+    selected_image = request.form.get('poster_url')
     
     try:
         date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
@@ -789,6 +794,11 @@ def add_theater(ref_id):
         date_watched = datetime.now().date()
 
     release_year = int(ref.date_open[:4]) if ref.date_open and len(ref.date_open) >= 4 else None
+
+    # Download selected poster if provided
+    poster_filename = None
+    if selected_image:
+        poster_filename = ImageSearchService.download_image(selected_image, 'theater', ref_id)
 
     new_show = Theater(
         title=ref.show_name,
@@ -798,12 +808,22 @@ def add_theater(ref_id):
         release_year=release_year,
         original_theater=ref.theatre,
         run_time=ref.run_time_minutes,
-        show_type=ref.show_type
+        show_type=ref.show_type,
+        poster_path=poster_filename
     )
     db.session.add(new_show)
     db.session.commit()
     flash(f"Added {new_show.title} to your tracker!")
     return redirect(url_for('main.theater_list'))
+
+@main.route('/theater/get-posters')
+@login_required
+def get_theater_posters():
+    query = request.args.get('query')
+    if not query:
+        return {"images": []}
+    images = ImageSearchService.search_images(query)
+    return {"images": images}
 
 @main.route('/theater/delete/<int:show_id>', methods=['POST'])
 @login_required
@@ -813,6 +833,17 @@ def delete_theater(show_id):
     db.session.delete(show)
     db.session.commit()
     flash(f"Removed {title} from your tracker.")
+    return redirect(url_for('main.theater_list'))
+
+@main.route('/backfill-theater')
+@login_required
+def trigger_backfill_theater():
+    from app.backfill_theater import run_backfill_theater
+    try:
+        count = run_backfill_theater()
+        flash(f"Successfully backfilled {count} theater shows!")
+    except Exception as e:
+        flash(f"Error during theater backfill: {str(e)}")
     return redirect(url_for('main.theater_list'))
 
 @main.route('/backfill-games')

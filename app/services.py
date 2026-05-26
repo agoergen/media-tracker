@@ -365,3 +365,47 @@ class GoogleBooksService:
         except Exception as e:
             print(f"Error downloading Google Books cover: {e}")
             return None
+
+class ImageSearchService:
+    @classmethod
+    def search_images(cls, query):
+        key = current_app.config.get('GOOGLE_SEARCH_KEY')
+        cx = current_app.config.get('GOOGLE_SEARCH_ID')
+        
+        if not key or not cx:
+            print("Google Search API Key or CX not configured.")
+            return []
+            
+        url = "https://www.googleapis.com/customsearch/v1"
+        params = {
+            "q": query + " theater poster",
+            "searchType": "image",
+            "key": key,
+            "cx": cx,
+            "num": 8
+        }
+        
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            items = response.json().get('items', [])
+            return [item['link'] for item in items]
+        except Exception as e:
+            print(f"Image search error for '{query}': {e}")
+            return []
+
+    @classmethod
+    def download_image(cls, image_url, prefix, item_id):
+        filename = f"{prefix}_{item_id}.jpg"
+        local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        
+        try:
+            response = requests.get(image_url, stream=True, timeout=30)
+            response.raise_for_status()
+            with open(local_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return filename
+        except Exception as e:
+            print(f"Error downloading image from {image_url}: {e}")
+            return None

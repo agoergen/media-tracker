@@ -81,6 +81,7 @@ class Theater(db.Model):
     original_theater = db.Column(db.Text) # Original Broadway house
     run_time = db.Column(db.Integer) # In minutes
     show_type = db.Column(db.String(100)) # Play, Musical
+    poster_path = db.Column(db.String(255))
 
 class TheaterReference(db.Model):
     id = db.Column(db.Integer, primary_key=True)
