@@ -41,7 +41,7 @@
                     <tbody>
                         {% for game in games %}
                         {% set global_count.value = global_count.value + 1 %}
-                        <tr class="movie-row" id="row-{{ game.id }}" data-search="{{ game.title|lower }} {{ game.platform_played|lower }} {{ game.franchise|lower if game.franchise else '' }}">
+                        <tr class="movie-row" id="row-{{ game.id }}" data-search="{{ game.title|lower }} {{ game.platform_played|lower if game.platform_played else '' }} {{ game.franchise|lower if game.franchise else '' }}">
                             <td style="color: #999; font-size: 0.8rem; vertical-align: middle;">{{ global_count.value }}</td>
                             <td>
                                 {% if game.poster_path %}
@@ -136,14 +136,12 @@
     <script>
         function toggleYear(id) {
             const content = document.getElementById(id);
-            content.classList.toggle('collapsed');
+            if (content) content.classList.toggle('collapsed');
         }
 
         function toggleDetails(id) {
             const detailRow = document.getElementById('details-' + id);
-            if (detailRow) {
-                detailRow.classList.toggle('active');
-            }
+            if (detailRow) detailRow.classList.toggle('active');
         }
 
         function researchGame(id, title, date, plat, variant, isRewatch) {
@@ -155,39 +153,56 @@
 
         const filterInput = document.getElementById('gameFilter');
         filterInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase();
+            const query = this.value.toLowerCase().trim();
             const yearGroups = document.querySelectorAll('.year-group');
             const allYearContents = document.querySelectorAll('.year-content');
             
             if (query.length > 0) {
+                // Expand all years to reveal matches
                 allYearContents.forEach(content => content.classList.remove('collapsed'));
+                
                 document.querySelectorAll('.movie-row').forEach(row => {
-                    const searchData = row.getAttribute('data-search');
-                    const game_id = row.id.replace('row-', '');
-                    const detailRow = document.getElementById('details-' + game_id);
+                    const searchData = row.getAttribute('data-search') || '';
+                    const gameId = row.id.replace('row-', '');
+                    const detailRow = document.getElementById('details-' + gameId);
 
-                    if (searchData && searchData.includes(query)) {
+                    if (searchData.includes(query)) {
                         row.style.display = '';
-                    } else if (row.classList.contains('movie-row')) {
+                    } else {
                         row.style.display = 'none';
-                        if (detailRow) detailRow.classList.remove('active');
+                        if (detailRow) {
+                            detailRow.classList.remove('active');
+                            detailRow.style.display = 'none'; // Explicitly hide details sibling
+                        }
                     }
                 });
+
+                // Hide year groups with zero visible results
                 yearGroups.forEach(group => {
-                    const visibleRows = group.querySelectorAll('.movie-row:not([style*="display: none"])');
-                    group.style.display = visibleRows.length > 0 ? '' : 'none';
+                    const hasVisibleRows = Array.from(group.querySelectorAll('.movie-row')).some(r => r.style.display !== 'none');
+                    group.style.display = hasVisibleRows ? '' : 'none';
                 });
+
             } else {
-                const currentYear = new Date().getFullYear();
+                // Reset to default: only current year expanded, all details hidden
+                const currentYear = new Date().getFullYear().toString();
                 allYearContents.forEach(content => {
-                    const yearId = content.id.replace('year-', '');
-                    if (yearId == currentYear) {
+                    if (content.id.includes(currentYear)) {
                         content.classList.remove('collapsed');
                     } else {
                         content.classList.add('collapsed');
                     }
                 });
-                document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
+
+                document.querySelectorAll('.movie-row').forEach(row => {
+                    row.style.display = '';
+                    const gameId = row.id.replace('row-', '');
+                    const detailRow = document.getElementById('details-' + gameId);
+                    if (detailRow) {
+                        detailRow.classList.remove('active');
+                        detailRow.style.display = ''; // Reset to CSS default (display:none)
+                    }
+                });
                 yearGroups.forEach(group => group.style.display = '');
             }
         });

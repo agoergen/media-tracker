@@ -233,3 +233,11 @@ td {
 }
 
 .collapsed { display: none; }
+
+.movie-details {
+    display: none;
+}
+
+.movie-details.active {
+    display: table-row;
+}
