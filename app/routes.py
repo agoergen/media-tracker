@@ -537,6 +537,7 @@ def edit_game(game_id):
 
     game.platform_played = request.form.get('platform_played')
     game.variant = request.form.get('variant')
+    game.franchise = request.form.get('franchise')
     game.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
     
     db.session.commit()
