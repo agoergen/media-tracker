@@ -24,8 +24,12 @@ def create_app(config_class=Config):
         return User.query.get(int(id))
 
     # Ensure upload folder exists
+    print(f"DEBUG: UPLOAD_FOLDER is set to: {app.config['UPLOAD_FOLDER']}")
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
+        print(f"DEBUG: Creating upload folder at {app.config['UPLOAD_FOLDER']}")
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    else:
+        print("DEBUG: Upload folder already exists.")
 
     from app import models
     from app.routes import main

@@ -803,11 +803,27 @@ def add_theater_ibdb(slug_id):
 
     if poster_file and poster_file.filename != '':
         # Handle manual upload (Highest priority)
+        print(f"DEBUG: Manual upload detected for {title}. Filename: {poster_file.filename}")
+
+        # Ensure directory exists in case of runtime issues
+        if not os.path.exists(current_app.config['UPLOAD_FOLDER']):
+            print(f"DEBUG: Re-creating UPLOAD_FOLDER at {current_app.config['UPLOAD_FOLDER']}")
+            os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
+
         filename = secure_filename(f"theater_manual_{slug_id}_{poster_file.filename}")
-        poster_file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
-        poster_filename = filename
+        save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+
+        try:
+            poster_file.save(save_path)
+            print(f"DEBUG: Manual poster saved to {save_path}")
+            poster_filename = filename
+        except Exception as e:
+            print(f"DEBUG: Error saving manual poster: {e}")
+            flash(f"Error saving your uploaded image: {str(e)}")
+
     elif selected_image:
         # Handle Wikipedia selection (Second priority)
+
         poster_filename = ImageSearchService.download_image(selected_image, 'theater', slug_id.split('-')[-1])
 
     # 1. Fetch extra details from IBDB (Opening date, Original Theater)
