@@ -807,15 +807,18 @@ def add_theater_ibdb(slug_id):
     poster_filename = None
 
     if poster_file and poster_file.filename != '':
-        print(f"DEBUG: Manual upload detected. Filename: {poster_file.filename}")
-
+        # Handle manual upload (Highest priority)
+        ext = poster_file.filename.split('.')[-1].lower()
+        if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+            ext = 'jpg' # Default extension if weird
+            
+        filename = secure_filename(f"theater_manual_{slug_id}.{ext}")
+        save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        
         # Ensure directory exists
         if not os.path.exists(current_app.config['UPLOAD_FOLDER']):
             os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-        filename = secure_filename(f"theater_manual_{slug_id}_{poster_file.filename}")
-        save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-
+            
         try:
             poster_file.save(save_path)
             print(f"DEBUG: Manual poster saved to {save_path}")
@@ -829,9 +832,7 @@ def add_theater_ibdb(slug_id):
     else:
         print("DEBUG: No poster file or selected image found.")
 
-
     # 1. Fetch extra details from IBDB (Opening date, Original Theater)
-
     details = IBDBService.get_show_details(slug_id)
     opening_date_str = details.get('opening_date')
     original_theater = details.get('theater')
@@ -852,12 +853,7 @@ def add_theater_ibdb(slug_id):
             release_year = int(opening_date_str.split(',')[-1].strip())
         except: pass
 
-    # Download selected poster
-    poster_filename = None
-    if selected_image:
-        poster_filename = ImageSearchService.download_image(selected_image, 'theater', slug_id.split('-')[-1])
-
-    if update_id:
+    if update_id and update_id.strip():
         # SYNC MODE: Update existing record
         show = Theater.query.get_or_404(int(update_id))
         show.title = title
@@ -869,12 +865,14 @@ def add_theater_ibdb(slug_id):
         show.run_time = runtime
         show.show_type = show_type
         if poster_filename:
+            print(f"DEBUG: Updating existing show {update_id} with poster: {poster_filename}")
             show.poster_path = poster_filename
         show.summary = summary
         db.session.commit()
         flash(f"Synchronized {show.title} with live metadata!")
     else:
         # ADD MODE: Create new record
+        print(f"DEBUG: Creating new show with poster: {poster_filename}")
         new_show = Theater(
             title=title,
             date_watched=date_watched,
