@@ -43,10 +43,17 @@ class Game(db.Model):
     is_revisit = db.Column(db.Boolean, default=False)
     external_id = db.Column(db.String(100))
     publisher = db.Column(db.String(255))
+    developer = db.Column(db.String(255))
     platform_played = db.Column(db.String(100))
     original_platform = db.Column(db.String(100))
     franchise = db.Column(db.String(255))
     status = db.Column(db.String(50)) # Backlog, In Progress, Finished, DNF
+    variant = db.Column(db.String(100)) # Modded, Hard Mode, etc.
+    summary = db.Column(db.Text)
+    genres = db.Column(db.String(255))
+    user_score = db.Column(db.Float)
+    critic_score = db.Column(db.Float)
+    poster_path = db.Column(db.String(255)) # Local path to cover art
 
 class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)

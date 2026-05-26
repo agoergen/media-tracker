@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+        <h1>My Games ({{ total_count }})</h1>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.search_game') }}" class="btn">Add Game</a>
+        {% endif %}
+    </div>
+
+    <!-- Game Filter Search -->
+    <div style="margin-top: 1rem; margin-bottom: 1rem;">
+        <input type="text" id="gameFilter" placeholder="Search my games by title, platform, franchise..." 
+               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem;">
+    </div>
+
+    {% set global_count = namespace(value=0) %}
+    {% set current_year = now.year %}
+    
+    {% for year, games in grouped_games.items() %}
+    <div class="year-group" data-year="{{ year }}">
+        <div class="year-header" onclick="toggleYear('year-{{ year }}')">
+            <span>{{ year }}</span>
+            <span class="year-count">{{ games|length }} games</span>
+        </div>
+        <div id="year-{{ year }}" class="year-content {% if year != current_year %}collapsed{% endif %}">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Cover</th>
+                            <th>Title & Platform</th>
+                            <th class="hide-mobile">User</th>
+                            <th class="hide-mobile">Critic</th>
+                            <th>{% if current_user.is_authenticated %}Tracking Info{% else %}Finished{% endif %}</th>
+                            {% if current_user.is_authenticated %}
+                                <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for game in games %}
+                        {% set global_count.value = global_count.value + 1 %}
+                        <tr class="movie-row" data-search="{{ game.title|lower }} {{ game.platform_played|lower }} {{ game.franchise|lower if game.franchise else '' }}">
+                            <td style="color: #999; font-size: 0.8rem; vertical-align: middle;">{{ global_count.value }}</td>
+                            <td>
+                                {% if game.poster_path %}
+                                    <img src="{{ url_for('main.serve_poster', filename=game.poster_path.lstrip('/')) }}" alt="{{ game.title }} cover" style="border-radius: 2px; width: 45px;" loading="lazy">
+                                {% else %}
+                                    <div style="width: 45px; height: 60px; background: #ddd; border-radius: 2px;"></div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="toggle-details" data-id="{{ game.id }}" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ game.title }}</span>
+                                <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
+                                    {{ game.platform_played }}
+                                    {% if game.variant %}<span style="color: #e67e22;"> ({{ game.variant }})</span>{% endif %}
+                                </div>
+                            </td>
+                            <td class="hide-mobile">{{ "%.0f"|format(game.user_score) if game.user_score else 'N/A' }}</td>
+                            <td class="hide-mobile">{{ "%.0f"|format(game.critic_score) if game.critic_score else 'N/A' }}</td>
+                            <td>
+                                {% if current_user.is_authenticated %}
+                                    <form action="{{ url_for('main.edit_game', game_id=game.id) }}" method="POST" class="date-form" style="display: flex; flex-direction: column; gap: 5px;">
+                                        <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+                                            <input type="date" name="date_finished" value="{{ game.date_finished.strftime('%Y-%m-%d') if game.date_finished else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
+                                            <select name="platform_played" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px;">
+                                                {% for plat in ['PC / Steam Deck', 'Playstation 5', 'Playstation 4', 'Playstation 3', 'Nintendo Switch', 'Switch 2', 'Analogue Pocket', 'Retro Handheld', 'SNES', 'NES', 'Arcade', 'Genesis', 'Other'] %}
+                                                    <option value="{{ plat }}" {% if game.platform_played == plat %}selected{% endif %}>{{ plat }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                                            <select name="variant" style="padding: 2px; font-size: 0.75rem; border: 1px solid #ccc; border-radius: 3px;">
+                                                <option value="">Standard</option>
+                                                {% for v in ['Modded', 'Completionist Run', 'Hard Mode', 'Best Ending', 'Abbreviated'] %}
+                                                    <option value="{{ v }}" {% if game.variant == v %}selected{% endif %}>{{ v }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;">
+                                                <input type="checkbox" name="is_rewatch" {% if game.is_revisit %}checked{% endif %}> Replay?
+                                            </label>
+                                            <button type="submit" class="btn btn-success" style="padding: 2px 8px; font-size: 0.75rem;">Save</button>
+                                        </div>
+                                    </form>
+                                {% else %}
+                                    <div style="font-size: 0.9rem;">
+                                        {{ game.date_finished.strftime('%Y-%m-%d') if game.date_finished else '' }}
+                                        {% if game.is_revisit %}<br><small style="color: #27ae60;">(Replay)</small>{% endif %}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            {% if current_user.is_authenticated %}
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                                        <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 0.75rem;" onclick="researchGame('{{ game.id }}', '{{ game.title | replace("'", "\\'") }}', '{{ game.date_finished.strftime('%Y-%m-%d') if game.date_finished else '' }}', '{{ game.platform_played }}', '{{ game.variant or '' }}', {{ 'true' if game.is_revisit else 'false' }})">Re-search</button>
+                                        <form action="{{ url_for('main.delete_game', game_id=game.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this game?');">
+                                            <button type="submit" class="btn btn-delete">Del</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            {% endif %}
+                        </tr>
+                        <tr class="movie-details" id="details-{{ game.id }}">
+                            <td colspan="{% if current_user.is_authenticated %}7{% else %}5{% endif %}">
+                                <div class="details-content" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                    <div style="flex: 0 0 185px; margin: 0 auto;">
+                                        {% if game.poster_path %}
+                                            <img src="{{ url_for('main.serve_poster', filename=game.poster_path.lstrip('/')) }}" alt="{{ game.title }} cover" style="border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%;" loading="lazy">
+                                        {% endif %}
+                                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                                            <a href="https://www.google.com/search?q=What+are+some+games+I+might+enjoy+if+I+enjoyed+{{ game.title | urlencode }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #8e44ad; color: #fff; padding: 6px; font-size: 0.75rem; line-height: 1.2;">Ask Google for Similar</a>
+                                        </div>
+                                    </div>
+                                    <div style="flex: 1; min-width: 250px;">
+                                        <p><strong>Developer:</strong> {{ game.developer or 'N/A' }}</p>
+                                        <p><strong>Publisher:</strong> {{ game.publisher or 'N/A' }}</p>
+                                        <p><strong>Genres:</strong> {{ game.genres or 'N/A' }}</p>
+                                        <p><strong>Franchise:</strong> {{ game.franchise or 'N/A' }}</p>
+                                        <p><strong>Original Platform:</strong> {{ game.original_platform or 'N/A' }}</p>
+                                        <p><strong>Summary:</strong> {{ game.summary }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p>No games tracked yet. <a href="{{ url_for('main.search_game') }}">Add one!</a></p>
+    {% endfor %}
+
+    <script>
+        function toggleYear(id) {
+            const content = document.getElementById(id);
+            content.classList.toggle('collapsed');
+        }
+
+        function researchGame(id, title, date, plat, variant, isRewatch) {
+            let newTitle = prompt("Re-search game:", title);
+            if (newTitle) {
+                window.location.href = `/games/search?query=${encodeURIComponent(newTitle)}&replace_id=${id}&pre_date=${date}&pre_plat=${encodeURIComponent(plat)}&pre_variant=${encodeURIComponent(variant)}&pre_rewatch=${isRewatch}`;
+            }
+        }
+
+        const filterInput = document.getElementById('gameFilter');
+        filterInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const yearGroups = document.querySelectorAll('.year-group');
+            const allYearContents = document.querySelectorAll('.year-content');
+            
+            if (query.length > 0) {
+                allYearContents.forEach(content => content.classList.remove('collapsed'));
+                document.querySelectorAll('.movie-row').forEach(row => {
+                    const searchData = row.getAttribute('data-search');
+                    if (searchData && searchData.includes(query)) {
+                        row.style.display = '';
+                    } else if (row.classList.contains('movie-row')) {
+                        row.style.display = 'none';
+                        const detailId = row.querySelector('.toggle-details').getAttribute('data-id');
+                        const detailRow = document.getElementById(`details-${detailId}`);
+                        if (detailRow) detailRow.classList.remove('active');
+                    }
+                });
+                yearGroups.forEach(group => {
+                    const visibleGames = group.querySelectorAll('.movie-row:not([style*="display: none"])');
+                    group.style.display = visibleGames.length > 0 ? '' : 'none';
+                });
+            } else {
+                const currentYear = new Date().getFullYear();
+                allYearContents.forEach(content => {
+                    const yearId = content.id.replace('year-', '');
+                    if (yearId == currentYear) {
+                        content.classList.remove('collapsed');
+                    } else {
+                        content.classList.add('collapsed');
+                    }
+                });
+                document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
+                yearGroups.forEach(group => group.style.display = '');
+            }
+        });
+
+        document.querySelectorAll('.toggle-details').forEach(item => {
+            item.addEventListener('click', event => {
+                const id = item.getAttribute('data-id');
+                const detailsRow = document.getElementById(`details-${id}`);
+                detailsRow.classList.toggle('active');
+            });
+        });
+    </script>
+{% endblock %}

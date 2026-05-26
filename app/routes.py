@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 from app.services import TMDBService
-from app.models import Movie, TVSeason, User
+from app.models import Movie, TVSeason, User, Game
 from app import db
 from datetime import datetime
 from collections import OrderedDict
@@ -378,3 +378,173 @@ def delete_tv_season(season_id):
     db.session.commit()
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.tv_list'))
+
+# GAME ROUTES
+from app.services import IGDBService
+
+@main.route('/games')
+def games_list():
+    all_games = Game.query.order_by(Game.date_finished.asc()).all()
+    
+    # Group by year
+    grouped = OrderedDict()
+    for game in all_games:
+        year = game.date_finished.year if game.date_finished else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(game)
+    
+    return render_template('games.html', grouped_games=grouped, total_count=len(all_games), now=datetime.now())
+
+@main.route('/games/search', methods=['GET', 'POST'])
+@login_required
+def search_game():
+    results = []
+    query = request.args.get('query', '')
+    replace_id = request.args.get('replace_id')
+    pre_date = request.args.get('pre_date', '')
+    pre_plat = request.args.get('pre_plat', '')
+    pre_rewatch = request.args.get('pre_rewatch', 'false')
+    pre_variant = request.args.get('pre_variant', '')
+    
+    if request.method == 'POST':
+        query = request.form.get('query')
+        replace_id = request.form.get('replace_id')
+    
+    if query:
+        results = IGDBService.search_games(query)
+        
+    return render_template('game_search.html', 
+                         results=results, 
+                         query=query, 
+                         replace_id=replace_id,
+                         pre_date=pre_date,
+                         pre_plat=pre_plat,
+                         pre_rewatch=pre_rewatch,
+                         pre_variant=pre_variant)
+
+@main.route('/games/add/<int:igdb_id>', methods=['POST'])
+@login_required
+def add_game(igdb_id):
+    replace_id = request.form.get('replace_id')
+    details = IGDBService.get_game_details(igdb_id)
+    
+    if details:
+        # Get inputs from modal form
+        date_finished_str = request.form.get('date_finished')
+        platform_played = request.form.get('platform_played')
+        is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+        variant = request.form.get('variant')
+        
+        try:
+            date_finished = datetime.strptime(date_finished_str, '%Y-%m-%d').date() if date_finished_str else datetime.now().date()
+        except ValueError:
+            date_finished = datetime.now().date()
+
+        # Extract basic info
+        release_date_ts = details.get('first_release_date')
+        release_year = datetime.fromtimestamp(release_date_ts).year if release_date_ts else None
+        
+        # Companies
+        involved = details.get('involved_companies', [])
+        developers = ", ".join([ic['company']['name'] for ic in involved if ic.get('developer')])
+        publishers = ", ".join([ic['company']['name'] for ic in involved if ic.get('publisher')])
+        
+        # Cover
+        cover_filename = None
+        if details.get('cover'):
+            cover_filename = IGDBService.download_cover(details['cover']['url'])
+
+        if replace_id:
+            game = Game.query.get_or_404(replace_id)
+            game.title = details.get('name')
+            game.release_year = release_year
+            game.external_id = str(igdb_id)
+            game.developer = developers
+            game.publisher = publishers
+            game.franchise = ", ".join([f['name'] for f in details.get('franchises', [])])
+            game.summary = details.get('summary')
+            game.genres = ", ".join([g['name'] for g in details.get('genres', [])])
+            game.user_score = details.get('rating')
+            game.critic_score = details.get('aggregated_rating')
+            game.poster_path = cover_filename
+            
+            if date_finished_str:
+                game.date_finished = date_finished
+            if platform_played:
+                game.platform_played = platform_played
+            if request.form.get('is_rewatch'):
+                game.is_revisit = is_rewatch
+            if variant:
+                game.variant = variant
+                
+            flash(f"Refreshed details for {game.title}!")
+        else:
+            new_game = Game(
+                title=details.get('name'),
+                release_year=release_year,
+                external_id=str(igdb_id),
+                developer=developers,
+                publisher=publishers,
+                franchise=", ".join([f['name'] for f in details.get('franchises', [])]),
+                summary=details.get('summary'),
+                genres=", ".join([g['name'] for g in details.get('genres', [])]),
+                user_score=details.get('rating'),
+                critic_score=details.get('aggregated_rating'),
+                poster_path=cover_filename,
+                platform_played=platform_played,
+                original_platform=", ".join([p['name'] for p in details.get('platforms', [])[:3]]),
+                is_revisit=is_rewatch,
+                variant=variant,
+                date_finished=date_finished,
+                status='Finished'
+            )
+            db.session.add(new_game)
+            flash(f"Added {new_game.title} to your tracker!")
+        
+        db.session.commit()
+        return redirect(url_for('main.games_list'))
+    
+    flash("Error fetching game details from IGDB.")
+    return redirect(url_for('main.search_game'))
+
+@main.route('/games/edit/<int:game_id>', methods=['POST'])
+@login_required
+def edit_game(game_id):
+    game = Game.query.get_or_404(game_id)
+    
+    date_str = request.form.get('date_finished')
+    if date_str:
+        try:
+            game.date_finished = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Invalid date format.")
+            return redirect(url_for('main.games_list'))
+
+    game.platform_played = request.form.get('platform_played')
+    game.variant = request.form.get('variant')
+    game.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
+    
+    db.session.commit()
+    flash(f"Updated tracking for {game.title}.")
+    return redirect(url_for('main.games_list'))
+
+@main.route('/games/delete/<int:game_id>', methods=['POST'])
+@login_required
+def delete_game(game_id):
+    game = Game.query.get_or_404(game_id)
+    title = game.title
+    db.session.delete(game)
+    db.session.commit()
+    flash(f"Removed {title} from your tracker.")
+    return redirect(url_for('main.games_list'))
+
+@main.route('/backfill-games')
+def trigger_backfill_games():
+    from app.backfill_games import run_backfill_games
+    try:
+        count = run_backfill_games()
+        flash(f"Successfully backfilled {count} games!")
+    except Exception as e:
+        flash(f"Error during game backfill: {str(e)}")
+    return redirect(url_for('main.games_list'))

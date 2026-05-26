@@ -140,3 +140,100 @@ class TMDBService:
         except Exception as e:
             print(f"Error downloading poster: {e}")
             return None
+
+class IGDBService:
+    @staticmethod
+    def get_token():
+        client_id = current_app.config.get('IGDB_CLIENT_ID')
+        client_secret = current_app.config.get('IGDB_CLIENT_SECRET')
+        if not client_id or not client_secret:
+            return None
+            
+        url = f"https://id.twitch.tv/oauth2/token?client_id={client_id}&client_secret={client_secret}&grant_type=client_credentials"
+        try:
+            response = requests.post(url, timeout=30)
+            response.raise_for_status()
+            return response.json().get('access_token')
+        except Exception as e:
+            print(f"Failed to get IGDB token: {e}")
+            return None
+
+    @classmethod
+    def search_games(cls, query):
+        token = cls.get_token()
+        client_id = current_app.config.get('IGDB_CLIENT_ID')
+        if not token:
+            return []
+
+        url = "https://api.igdb.com/v4/games"
+        headers = {
+            'Client-ID': client_id,
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'text/plain'
+        }
+        # Fetching basic search results
+        body = f'search "{query}"; fields name, first_release_date, cover.url; limit 10;'
+        try:
+            response = requests.post(url, headers=headers, data=body, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"IGDB search error for '{query}': {e}")
+            return []
+
+    @classmethod
+    def get_game_details(cls, igdb_id):
+        token = cls.get_token()
+        client_id = current_app.config.get('IGDB_CLIENT_ID')
+        if not token:
+            return None
+
+        url = "https://api.igdb.com/v4/games"
+        headers = {
+            'Client-ID': client_id,
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'text/plain'
+        }
+        body = f"""
+        fields name, summary, first_release_date, 
+               genres.name, involved_companies.company.name, involved_companies.developer, involved_companies.publisher,
+               franchises.name, platforms.name, rating, aggregated_rating, cover.url;
+        where id = {igdb_id};
+        """
+        try:
+            response = requests.post(url, headers=headers, data=body, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+            return data[0] if data else None
+        except Exception as e:
+            print(f"IGDB details error for ID {igdb_id}: {e}")
+            return None
+
+    @classmethod
+    def download_cover(cls, cover_url):
+        if not cover_url:
+            return None
+        
+        # IGDB urls are usually //images.igdb.com/igdb/image/upload/t_thumb/co1r7h.jpg
+        if cover_url.startswith('//'):
+            cover_url = 'https:' + cover_url
+            
+        # Swap 't_thumb' for 't_cover_big' or 't_720p' for better quality
+        cover_url = cover_url.replace('t_thumb', 't_cover_big')
+        
+        filename = cover_url.split('/')[-1]
+        local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        
+        if os.path.exists(local_path):
+            return filename
+            
+        try:
+            response = requests.get(cover_url, stream=True)
+            response.raise_for_status()
+            with open(local_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return filename
+        except Exception as e:
+            print(f"Error downloading cover: {e}")
+            return None

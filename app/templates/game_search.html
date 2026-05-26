@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Search Games (via IGDB)</h1>
+    
+    <form method="POST" class="search-form">
+        <input type="text" name="query" placeholder="Enter game title..." value="{{ query }}" required>
+        <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+        <button type="submit" class="btn">Search</button>
+    </form>
+
+    <div class="search-results">
+        {% if results %}
+            {% for game in results %}
+            <div class="result-card">
+                <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
+                    {% if game.cover and game.cover.url %}
+                        <img src="{{ game.cover.url.replace('t_thumb', 't_cover_small') if game.cover.url.startswith('//') else game.cover.url }}" alt="{{ game.name }} cover" style="border-radius: 4px; width: 90px; flex-shrink: 0;">
+                    {% else %}
+                        <div style="width: 90px; height: 120px; background: #ddd; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem; flex-shrink: 0;">No Cover</div>
+                    {% endif %}
+                    <div>
+                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ game.name }}</strong>
+                        <span style="color: #666; font-size: 0.9rem;">
+                            {% if game.first_release_date %}
+                                ({{ now.fromtimestamp(game.first_release_date).year }})
+                            {% else %}
+                                (N/A)
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div style="margin-left: auto;">
+                    <button class="btn btn-secondary" onclick="openTrackModal('{{ game.id }}', '{{ game.name | replace("'", "\\'") }}')">
+                        {% if replace_id %}Update Game{% else %}Track Game...{% endif %}
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% elif query %}
+            <p style="margin-top: 2rem;">No games found for "{{ query }}".</p>
+        {% endif %}
+    </div>
+
+    <!-- Tracking Modal -->
+    <div id="trackModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle" style="margin: 0; font-size: 1.2rem;">Track Game</h2>
+                <span class="close" onclick="closeTrackModal()">&times;</span>
+            </div>
+            <form id="trackForm" method="POST">
+                <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+                
+                <div class="form-group">
+                    <label for="date_finished">Finished On:</label>
+                    <input type="date" id="date_finished" name="date_finished" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="platform_played">Platform Played:</label>
+                    <select id="platform_played" name="platform_played" required>
+                        <option value="">Select Platform...</option>
+                        {% for plat in ['PC / Steam Deck', 'Playstation 5', 'Playstation 4', 'Playstation 3', 'Nintendo Switch', 'Switch 2', 'Analogue Pocket', 'Retro Handheld', 'SNES', 'NES', 'Arcade', 'Genesis', 'Other'] %}
+                            <option value="{{ plat }}">{{ plat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="variant">Variant / Modifier:</label>
+                    <select id="variant" name="variant">
+                        <option value="">Standard Playthrough</option>
+                        {% for v in ['Modded', 'Completionist Run', 'Hard Mode', 'Best Ending', 'Abbreviated'] %}
+                            <option value="{{ v }}">{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px; font-weight: normal;">
+                        <input type="checkbox" name="is_rewatch" style="width: auto;"> This is a replay
+                    </label>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-success" style="flex: 1;">
+                        {% if replace_id %}Confirm & Update{% else %}Confirm & Track{% endif %}
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="closeTrackModal()" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById("trackModal");
+        const trackForm = document.getElementById("trackForm");
+        const modalTitle = document.getElementById("modalTitle");
+        const dateInput = document.getElementById("date_finished");
+        const platformSelect = document.getElementById("platform_played");
+        const variantSelect = document.getElementById("variant");
+        const rewatchCheckbox = document.querySelector('input[name="is_rewatch"]');
+
+        function openTrackModal(igdbId, title) {
+            modalTitle.innerText = `Track "${title}"`;
+            trackForm.action = `/games/add/${igdbId}`;
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const preDate = urlParams.get('pre_date');
+            const prePlat = urlParams.get('pre_plat');
+            const preRewatch = urlParams.get('pre_rewatch');
+            const preVariant = urlParams.get('pre_variant');
+
+            if (preDate) {
+                dateInput.value = preDate;
+            } else {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+
+            if (prePlat) platformSelect.value = prePlat;
+            if (preVariant) variantSelect.value = preVariant;
+            rewatchCheckbox.checked = (preRewatch === 'true');
+
+            modal.style.display = "block";
+        }
+
+        function closeTrackModal() { modal.style.display = "none"; }
+        window.onclick = function(event) { if (event.target == modal) closeTrackModal(); }
+    </script>
+{% endblock %}
