@@ -357,11 +357,14 @@ class WikipediaService:
 
     @classmethod
     def search_posters(cls, show_name):
+        # Clean title for better search (remove colons, etc)
+        clean_name = show_name.replace(':', '').replace(' - ', ' ').strip()
+        
         # 1. Search for the show
         search_params = {
             "action": "query",
             "list": "search",
-            "srsearch": f"{show_name} musical play poster",
+            "srsearch": f"{clean_name} musical play poster",
             "format": "json"
         }
         
@@ -371,21 +374,27 @@ class WikipediaService:
             search_results = resp.json().get('query', {}).get('search', [])
             
             if not search_results:
-                # Try without 'musical play poster' tags if too restrictive
+                # Try with just the name
+                search_params["srsearch"] = clean_name
+                resp = requests.get(cls.BASE_URL, params=search_params, headers=cls.HEADERS, timeout=20)
+                search_results = resp.json().get('query', {}).get('search', [])
+
+            if not search_results and clean_name != show_name:
+                # Try original name if cleaned failed
                 search_params["srsearch"] = show_name
                 resp = requests.get(cls.BASE_URL, params=search_params, headers=cls.HEADERS, timeout=20)
                 search_results = resp.json().get('query', {}).get('search', [])
 
             image_urls = []
-            # 2. Get the primary thumbnail for the top 5 matches
-            for result in search_results[:5]:
+            # 2. Get the primary thumbnail for the top 8 matches
+            for result in search_results[:8]:
                 page_title = result['title']
                 img_params = {
                     "action": "query",
                     "titles": page_title,
                     "prop": "pageimages",
                     "piprop": "thumbnail",
-                    "pithumbsize": 600,
+                    "pithumbsize": 800, # High res
                     "format": "json"
                 }
                 img_resp = requests.get(cls.BASE_URL, params=img_params, headers=cls.HEADERS, timeout=20)
@@ -397,7 +406,7 @@ class WikipediaService:
             
             return image_urls
         except Exception as e:
-            print(f"Wikipedia search error: {e}")
+            print(f"Wikipedia search error for {show_name}: {e}")
             return []
 
 class IBDBService:
@@ -470,10 +479,21 @@ class IBDBService:
                 try:
                     theater = html.split("span class='block'>")[1].split("</span>")[0].strip()
                 except: pass
+
+            # Scrape Description
+            summary = None
+            if 'description-info' in html:
+                try:
+                    summary = html.split('description-info')[1].split('">')[1].split('</p>')[0].strip()
+                    # Clean up any HTML tags inside summary if they exist
+                    import re
+                    summary = re.sub('<[^<]+?>', '', summary)
+                except: pass
             
             return {
                 "opening_date": opening_date,
-                "theater": theater
+                "theater": theater,
+                "summary": summary
             }
         except Exception as e:
             print(f"IBDB detail error for {slug_id}: {e}")

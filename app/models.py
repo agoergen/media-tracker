@@ -82,15 +82,7 @@ class Theater(db.Model):
     run_time = db.Column(db.Integer) # In minutes
     show_type = db.Column(db.String(100)) # Play, Musical
     poster_path = db.Column(db.String(255))
-
-class TheaterReference(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    show_name = db.Column(db.Text, nullable=False)
-    show_type = db.Column(db.String(100))
-    theatre = db.Column(db.Text)
-    date_open = db.Column(db.String(50))
-    date_close = db.Column(db.String(50))
-    run_time_minutes = db.Column(db.Integer)
+    summary = db.Column(db.Text)
 
 class TVSeason(db.Model):
     id = db.Column(db.Integer, primary_key=True)

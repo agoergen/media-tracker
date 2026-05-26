@@ -4,64 +4,37 @@
 
 {% block content %}
     <div style="margin-top: 2rem;">
-        <h1>Search Theater</h1>
+        <h1>Search Broadway Database (IBDB)</h1>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">Find any Broadway show or touring production.</p>
         
         <form method="POST" class="search-form" id="mainSearchForm">
-            <input type="text" name="query" placeholder="Enter show name (Hamilton, Wicked, etc.)..." value="{{ query }}" required>
+            <input type="text" name="query" placeholder="Enter show name (e.g. Six, Hamilton, Wicked)..." value="{{ query }}" required>
             <button type="submit" class="btn">Search</button>
         </form>
     </div>
 
-    <!-- Local Results Container -->
+    <!-- Results Container -->
     <div class="search-results" id="resultsContainer">
-        {% if results %}
-            <h2 style="font-size: 1.2rem; margin-top: 2rem; color: var(--text-muted);">From Local Broadway Database</h2>
-            {% for ref in results %}
+        {% if online_results %}
+            {% for show in online_results %}
             <div class="result-card">
                 <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
                     <div style="width: 60px; height: 60px; background: #eee; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 1.5rem; flex-shrink: 0;">🎭</div>
                     <div>
-                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ ref.show_name }}</strong>
-                        <span style="color: #666; font-size: 0.9rem;">
-                            {{ ref.show_type or 'Unknown Type' }} 
-                            {% if ref.date_open %}({{ ref.date_open[:4] }}){% endif %}
-                        </span>
-                        <div style="font-size: 0.85rem; color: #888; margin-top: 5px;">
-                            Original House: {{ ref.theatre or 'N/A' }}
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-left: auto;">
-                    <button class="btn btn-secondary" onclick="selectShow('local', '{{ ref.id }}', '{{ ref.show_name | replace("'", "\\'") }}', '{{ ref.show_type }}')">
-                        Track Show
-                    </button>
-                </div>
-            </div>
-            {% endfor %}
-        {% endif %}
-
-        {% if online_results %}
-            <h2 style="font-size: 1.2rem; margin-top: 2rem; color: var(--text-muted);">From Internet Broadway Database (IBDB)</h2>
-            {% for show in online_results %}
-            <div class="result-card" style="border-left: 4px solid var(--secondary);">
-                <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
-                    <div style="width: 60px; height: 60px; background: #fdf2f2; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 1.5rem; flex-shrink: 0;">🌐</div>
-                    <div>
                         <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ show.title }}</strong>
                         <span style="color: #666; font-size: 0.9rem;">{{ show.type }}</span>
-                        <div style="font-size: 0.75rem; color: #aaa; margin-top: 5px;">Live Online Result</div>
+                        <div style="font-size: 0.75rem; color: #aaa; margin-top: 5px;">Broadway Database Match</div>
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    <button class="btn btn-secondary" style="border-color: var(--secondary); color: var(--secondary);" 
-                            onclick="selectShow('ibdb', '{{ show.ibdb_id }}', '{{ show.title | replace("'", "\\'") }}', '{{ show.type }}')">
+                    <button class="btn btn-secondary" onclick="selectShow('{{ show.ibdb_id }}', '{{ show.title | replace("'", "\\'") }}', '{{ show.type }}')">
                         Track Show
                     </button>
                 </div>
             </div>
             {% endfor %}
-        {% elif query and not results %}
-            <p style="margin-top: 2rem;">No matches found for "{{ query }}".</p>
+        {% elif query %}
+            <p style="margin-top: 2rem;">No matches found for "{{ query }}" on IBDB.</p>
         {% endif %}
     </div>
 
@@ -143,7 +116,7 @@
 
         let currentShowTitle = "";
 
-        function selectShow(source, id, title, type) {
+        function selectShow(id, title, type) {
             currentShowTitle = title;
             resultsContainer.style.display = "none";
             mainSearchForm.style.display = "none";
@@ -151,12 +124,7 @@
             confirmTitle.innerText = `Tracking: ${title}`;
             formTitleInput.value = title;
             formTypeInput.value = type;
-
-            if (source === 'local') {
-                trackForm.action = `/theater/add/${id}`;
-            } else {
-                trackForm.action = `/theater/add-ibdb/${id}`;
-            }
+            trackForm.action = `/theater/add-ibdb/${id}`;
             
             dateInput.value = new Date().toISOString().split('T')[0];
 
@@ -165,7 +133,7 @@
         }
 
         searchPosterBtn.onclick = async function() {
-            posterSelection.innerHTML = "<p>Searching...</p>";
+            posterSelection.innerHTML = "<p>Searching Wikipedia...</p>";
             try {
                 const response = await fetch(`/theater/get-posters?query=${encodeURIComponent(currentShowTitle)}`);
                 const data = await response.json();
@@ -184,7 +152,7 @@
                         posterSelection.appendChild(img);
                     });
                 } else {
-                    posterSelection.innerHTML = `<p>No posters found. Please check your Railway logs for API errors.</p>`;
+                    posterSelection.innerHTML = `<p>No posters found on Wikipedia for "${currentShowTitle}".</p>`;
                 }
             } catch (err) {
                 posterSelection.innerHTML = "<p>Error searching posters.</p>";

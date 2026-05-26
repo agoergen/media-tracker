@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService, WikipediaService, IBDBService
-from app.models import Movie, TVSeason, User, Game, Book, Theater, TheaterReference
+from app.models import Movie, TVSeason, User, Game, Book, Theater
 from app import db
 from datetime import datetime
 from collections import OrderedDict
@@ -769,19 +769,16 @@ def theater_list():
 @main.route('/theater/search', methods=['GET', 'POST'])
 @login_required
 def search_theater():
-    results = []
     online_results = []
     query = request.args.get('query', '')
     if request.method == 'POST':
         query = request.form.get('query', '').strip()
     
     if query:
-        # Search local reference first
-        results = TheaterReference.query.filter(TheaterReference.show_name.ilike(f'%{query}%')).limit(10).all()
-        # Search IBDB for missing/newer shows
+        # Search IBDB exclusively
         online_results = IBDBService.search_shows(query)
         
-    return render_template('theater_search.html', results=results, online_results=online_results, query=query)
+    return render_template('theater_search.html', online_results=online_results, query=query)
 
 @main.route('/theater/add-ibdb/<string:slug_id>', methods=['POST'])
 @login_required
@@ -797,6 +794,7 @@ def add_theater_ibdb(slug_id):
     details = IBDBService.get_show_details(slug_id)
     opening_date_str = details.get('opening_date')
     original_theater = details.get('theater')
+    summary = details.get('summary')
     
     try:
         date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
@@ -824,48 +822,12 @@ def add_theater_ibdb(slug_id):
         release_year=release_year,
         original_theater=original_theater,
         show_type=show_type,
-        poster_path=poster_filename
+        poster_path=poster_filename,
+        summary=summary
     )
     db.session.add(new_show)
     db.session.commit()
     flash(f"Added {new_show.title} (via IBDB) to your tracker!")
-    return redirect(url_for('main.theater_list'))
-
-@main.route('/theater/add/<int:ref_id>', methods=['POST'])
-@login_required
-def add_theater(ref_id):
-    ref = TheaterReference.query.get_or_404(ref_id)
-    date_watched_str = request.form.get('date_watched')
-    location = request.form.get('location')
-    is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
-    selected_image = request.form.get('poster_url')
-    
-    try:
-        date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
-    except ValueError:
-        date_watched = datetime.now().date()
-
-    release_year = int(ref.date_open[:4]) if ref.date_open and len(ref.date_open) >= 4 else None
-
-    # Download selected poster if provided
-    poster_filename = None
-    if selected_image:
-        poster_filename = ImageSearchService.download_image(selected_image, 'theater', ref_id)
-
-    new_show = Theater(
-        title=ref.show_name,
-        date_watched=date_watched,
-        location=location,
-        is_revisit=is_rewatch,
-        release_year=release_year,
-        original_theater=ref.theatre,
-        run_time=ref.run_time_minutes,
-        show_type=ref.show_type,
-        poster_path=poster_filename
-    )
-    db.session.add(new_show)
-    db.session.commit()
-    flash(f"Added {new_show.title} to your tracker!")
     return redirect(url_for('main.theater_list'))
 
 @main.route('/theater/get-posters')
@@ -917,14 +879,3 @@ def trigger_backfill_books():
     except Exception as e:
         flash(f"Error during book backfill: {str(e)}")
     return redirect(url_for('main.books_list'))
-
-@main.route('/import-broadway')
-@login_required
-def import_broadway():
-    from app.import_broadway import run_import_broadway
-    try:
-        count = run_import_broadway()
-        flash(f"Successfully imported {count} Broadway shows!")
-    except Exception as e:
-        flash(f"Error during Broadway import: {str(e)}")
-    return redirect(url_for('main.index'))

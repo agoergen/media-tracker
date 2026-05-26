@@ -88,6 +88,14 @@
                                         <p><strong>Run Time:</strong> {{ show.run_time or 'N/A' }} minutes</p>
                                         <p><strong>Original Opening Year:</strong> {{ show.release_year or 'N/A' }}</p>
                                         <p><strong>Venue Attended:</strong> {{ show.location or 'N/A' }}</p>
+                                        
+                                        {% if show.summary %}
+                                            <div style="margin-top: 15px; font-size: 0.95rem; line-height: 1.6; color: #444; border-top: 1px solid #eee; pt: 15px;">
+                                                <p><strong>Description:</strong></p>
+                                                {{ show.summary }}
+                                            </div>
+                                        {% endif %}
+
                                         <div style="margin-top: 15px;">
                                             <a href="https://www.google.com/search?q=What+are+some+theater+shows+I+might+enjoy+if+I+enjoyed+{{ show.title | urlencode }}" target="_blank" class="btn btn-secondary" style="background: #8e44ad; color: #fff; padding: 6px 12px; font-size: 0.85rem;">Ask Google for Similar</a>
                                         </div>
