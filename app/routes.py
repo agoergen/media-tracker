@@ -32,8 +32,21 @@ def logout():
 
 @main.route('/')
 def index():
-    movies = Movie.query.order_by(Movie.date_watched.asc()).limit(5).all()
-    return render_template('index.html', movies=movies)
+    movie_count = Movie.query.count()
+    tv_count = TVSeason.query.count()
+    game_count = Game.query.count()
+    
+    # Get recent activity
+    recent_movies = Movie.query.order_by(Movie.date_watched.desc()).limit(3).all()
+    recent_games = Game.query.order_by(Game.date_finished.desc()).limit(3).all()
+    
+    return render_template('index.html', 
+                         movie_count=movie_count, 
+                         tv_count=tv_count, 
+                         game_count=game_count,
+                         recent_movies=recent_movies,
+                         recent_games=recent_games,
+                         now=datetime.now())
 
 @main.route('/movies')
 def movies_list():
