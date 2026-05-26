@@ -789,6 +789,11 @@ def search_theater():
 @main.route('/theater/add-ibdb/<string:slug_id>', methods=['POST'])
 @login_required
 def add_theater_ibdb(slug_id):
+    # LOGGING FOR DEBUGGING
+    print(f"DEBUG: add_theater_ibdb request received for ID {slug_id}")
+    print(f"DEBUG: request.form keys: {list(request.form.keys())}")
+    print(f"DEBUG: request.files keys: {list(request.files.keys())}")
+
     update_id = request.form.get('update_id')
     title = request.form.get('title')
     show_type = request.form.get('show_type')
@@ -802,12 +807,10 @@ def add_theater_ibdb(slug_id):
     poster_filename = None
 
     if poster_file and poster_file.filename != '':
-        # Handle manual upload (Highest priority)
-        print(f"DEBUG: Manual upload detected for {title}. Filename: {poster_file.filename}")
+        print(f"DEBUG: Manual upload detected. Filename: {poster_file.filename}")
 
-        # Ensure directory exists in case of runtime issues
+        # Ensure directory exists
         if not os.path.exists(current_app.config['UPLOAD_FOLDER']):
-            print(f"DEBUG: Re-creating UPLOAD_FOLDER at {current_app.config['UPLOAD_FOLDER']}")
             os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
 
         filename = secure_filename(f"theater_manual_{slug_id}_{poster_file.filename}")
@@ -820,11 +823,12 @@ def add_theater_ibdb(slug_id):
         except Exception as e:
             print(f"DEBUG: Error saving manual poster: {e}")
             flash(f"Error saving your uploaded image: {str(e)}")
-
     elif selected_image:
-        # Handle Wikipedia selection (Second priority)
-
+        print(f"DEBUG: Using Wikipedia image: {selected_image}")
         poster_filename = ImageSearchService.download_image(selected_image, 'theater', slug_id.split('-')[-1])
+    else:
+        print("DEBUG: No poster file or selected image found.")
+
 
     # 1. Fetch extra details from IBDB (Opening date, Original Theater)
 
