@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Media Tracker{% endblock %}</title>
+    <title>{% block title %}LeisureLedger{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://rsms.me/">
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
@@ -11,7 +11,7 @@
 <body>
     <nav>
         <div class="container">
-            <a href="{{ url_for('main.index') }}" class="brand">Media Tracker</a>
+            <a href="{{ url_for('main.index') }}" class="brand">LeisureLedger</a>
             <ul class="nav-links">
                 <li><a href="{{ url_for('main.movies_list') }}">Movies</a></li>
                 <li><a href="{{ url_for('main.tv_list') }}">TV</a></li>
