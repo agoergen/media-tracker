@@ -4,17 +4,18 @@
 
 {% block content %}
     <div style="margin-top: 2rem;">
-        <h1>Search Broadway Reference</h1>
+        <h1>Search Theater</h1>
         
         <form method="POST" class="search-form" id="mainSearchForm">
-            <input type="text" name="query" placeholder="Enter show name..." value="{{ query }}" required>
+            <input type="text" name="query" placeholder="Enter show name (Hamilton, Wicked, etc.)..." value="{{ query }}" required>
             <button type="submit" class="btn">Search</button>
         </form>
     </div>
 
-    <!-- Results Container -->
+    <!-- Local Results Container -->
     <div class="search-results" id="resultsContainer">
         {% if results %}
+            <h2 style="font-size: 1.2rem; margin-top: 2rem; color: var(--text-muted);">From Local Broadway Database</h2>
             {% for ref in results %}
             <div class="result-card">
                 <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
@@ -31,14 +32,36 @@
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    <button class="btn btn-secondary" onclick="selectShow('{{ ref.id }}', '{{ ref.show_name | replace("'", "\\'") }}')">
+                    <button class="btn btn-secondary" onclick="selectShow('local', '{{ ref.id }}', '{{ ref.show_name | replace("'", "\\'") }}', '{{ ref.show_type }}')">
                         Track Show
                     </button>
                 </div>
             </div>
             {% endfor %}
-        {% elif query %}
-            <p style="margin-top: 2rem;">No Broadway matches found for "{{ query }}".</p>
+        {% endif %}
+
+        {% if online_results %}
+            <h2 style="font-size: 1.2rem; margin-top: 2rem; color: var(--text-muted);">From Internet Broadway Database (IBDB)</h2>
+            {% for show in online_results %}
+            <div class="result-card" style="border-left: 4px solid var(--secondary);">
+                <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
+                    <div style="width: 60px; height: 60px; background: #fdf2f2; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 1.5rem; flex-shrink: 0;">🌐</div>
+                    <div>
+                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ show.title }}</strong>
+                        <span style="color: #666; font-size: 0.9rem;">{{ show.type }}</span>
+                        <div style="font-size: 0.75rem; color: #aaa; margin-top: 5px;">Live Online Result</div>
+                    </div>
+                </div>
+                <div style="margin-left: auto;">
+                    <button class="btn btn-secondary" style="border-color: var(--secondary); color: var(--secondary);" 
+                            onclick="selectShow('ibdb', '{{ show.ibdb_id }}', '{{ show.title | replace("'", "\\'") }}', '{{ show.type }}')">
+                        Track Show
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% elif query and not results %}
+            <p style="margin-top: 2rem;">No matches found for "{{ query }}".</p>
         {% endif %}
     </div>
 
@@ -51,6 +74,8 @@
 
         <form id="trackForm" method="POST">
             <input type="hidden" name="poster_url" id="selectedPosterUrl">
+            <input type="hidden" name="title" id="formTitle">
+            <input type="hidden" name="show_type" id="formType">
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
                 <div class="form-group">
@@ -113,16 +138,25 @@
         const posterSelection = document.getElementById("posterSelection");
         const searchPosterBtn = document.getElementById("searchPosterBtn");
         const selectedPosterUrlInput = document.getElementById("selectedPosterUrl");
+        const formTitleInput = document.getElementById("formTitle");
+        const formTypeInput = document.getElementById("formType");
 
         let currentShowTitle = "";
 
-        function selectShow(refId, title) {
+        function selectShow(source, id, title, type) {
             currentShowTitle = title;
             resultsContainer.style.display = "none";
             mainSearchForm.style.display = "none";
             
             confirmTitle.innerText = `Tracking: ${title}`;
-            trackForm.action = `/theater/add/${refId}`;
+            formTitleInput.value = title;
+            formTypeInput.value = type;
+
+            if (source === 'local') {
+                trackForm.action = `/theater/add/${id}`;
+            } else {
+                trackForm.action = `/theater/add-ibdb/${id}`;
+            }
             
             dateInput.value = new Date().toISOString().split('T')[0];
 

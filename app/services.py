@@ -400,6 +400,85 @@ class WikipediaService:
             print(f"Wikipedia search error: {e}")
             return []
 
+class IBDBService:
+    BASE_URL = "https://www.ibdb.com"
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    @classmethod
+    def search_shows(cls, query):
+        url = f"{cls.BASE_URL}/Search/QuickSearchInfo"
+        params = {"Keyword": query, "Category": "show"}
+        
+        try:
+            resp = requests.get(url, params=params, headers=cls.HEADERS, timeout=30)
+            resp.raise_for_status()
+            html = resp.text
+            
+            results = []
+            if '<div class="row" id="shows"' not in html:
+                return []
+                
+            shows_section = html.split('<div class="row" id="shows"')[1].split('<div class="pagination-wrap">')[0]
+            show_blocks = shows_section.split('<div class="row">')[1:]
+            
+            for block in show_blocks:
+                if 'broadway-show' not in block:
+                    continue
+                
+                try:
+                    title_part = block.split('href="/broadway-show/')[1]
+                    slug_id = title_part.split('">')[0]
+                    title = title_part.split('">')[1].split('</a>')[0]
+                    
+                    show_type = "Show"
+                    if '<b>Musical</b>' in block: show_type = "Musical"
+                    elif '<b>Play</b>' in block: show_type = "Play"
+                    
+                    results.append({
+                        "title": title,
+                        "type": show_type,
+                        "ibdb_id": slug_id,
+                        "source": "IBDB"
+                    })
+                except:
+                    continue
+                    
+            return results[:15]
+        except Exception as e:
+            print(f"IBDB search error: {e}")
+            return []
+
+    @classmethod
+    def get_show_details(cls, slug_id):
+        url = f"{cls.BASE_URL}/broadway-show/{slug_id}"
+        try:
+            resp = requests.get(url, headers=cls.HEADERS, timeout=30)
+            resp.raise_for_status()
+            html = resp.text
+            
+            opening_date = None
+            if 'broadway-production' in html:
+                try:
+                    prod_part = html.split('broadway-production')[1].split('">')[1]
+                    opening_date = prod_part.split('–')[0].split('</a>')[0].strip()
+                except: pass
+            
+            theater = None
+            if "span class='block'>" in html:
+                try:
+                    theater = html.split("span class='block'>")[1].split("</span>")[0].strip()
+                except: pass
+            
+            return {
+                "opening_date": opening_date,
+                "theater": theater
+            }
+        except Exception as e:
+            print(f"IBDB detail error for {slug_id}: {e}")
+            return {}
+
 class ImageSearchService:
     @classmethod
     def download_image(cls, image_url, prefix, item_id):
