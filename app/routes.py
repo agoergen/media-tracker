@@ -32,18 +32,22 @@ def logout():
 
 @main.route('/')
 def index():
-    # Latest 5 movies
+    # Latest 5 of each category
     recent_movies = Movie.query.order_by(Movie.date_watched.desc()).limit(5).all()
     movie_count = Movie.query.count()
     
-    # Latest 5 games
     recent_games = Game.query.order_by(Game.date_finished.desc()).limit(5).all()
     game_count = Game.query.count()
+
+    recent_tv = TVSeason.query.order_by(TVSeason.date_watched.desc()).limit(5).all()
+    tv_count = TVSeason.query.count()
 
     # Counts by current year
     current_year = datetime.now().year
     movies_this_year = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year).count()
     games_this_year = Game.query.filter(db.extract('year', Game.date_finished) == current_year).count()
+    tv_this_year = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == current_year).count()
+    books_this_year = Book.query.filter(db.extract('year', Book.date_finished) == current_year).count()
     
     return render_template('index.html', 
                          recent_movies=recent_movies, 
@@ -51,7 +55,11 @@ def index():
                          movies_this_year=movies_this_year,
                          recent_games=recent_games,
                          game_count=game_count,
-                         games_this_year=games_this_year)
+                         games_this_year=games_this_year,
+                         recent_tv=recent_tv,
+                         tv_count=tv_count,
+                         tv_this_year=tv_this_year,
+                         books_this_year=books_this_year)
 
 # MOVIE ROUTES
 @main.route('/movies')
