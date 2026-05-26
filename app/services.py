@@ -311,6 +311,9 @@ class GoogleBooksService:
             
         try:
             response = requests.get(cls.BASE_URL, params=params, headers=cls.HEADERS, timeout=30)
+            if response.status_code == 429:
+                print("Google Books Quota Exhausted (429).")
+                return "RATE_LIMIT"
             if response.status_code != 200:
                 print(f"Google Books API Error: {response.status_code} - {response.text}")
             response.raise_for_status()

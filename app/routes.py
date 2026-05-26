@@ -66,9 +66,6 @@ def movies_list():
             grouped[year] = []
         grouped[year].append(movie)
     
-    # Sort grouped by year descending
-    # grouped = OrderedDict(sorted(grouped.items(), key=lambda t: str(t[0]), reverse=True))
-    
     return render_template('movies.html', grouped_movies=grouped, total_count=len(all_movies), now=datetime.now())
 
 @main.route('/movies/search', methods=['GET', 'POST'])
@@ -158,12 +155,11 @@ def add_movie(tmdb_id):
             if wikidata_id:
                 movie.wikipedia_url = f"https://www.wikidata.org/wiki/{wikidata_id}"
             
-            # Keep original date/location unless explicitly provided in modal
             if date_watched_str:
                 movie.date_watched = date_watched
             if watched_at:
                 movie.provider = watched_at
-            if request.form.get('is_rewatch'): # If form exists, update rewatch
+            if request.form.get('is_rewatch'):
                 movie.is_revisit = is_rewatch_input
                 
             flash(f"Refreshed details for {movie.title}!")
@@ -188,13 +184,11 @@ def add_movie(tmdb_id):
                 revenue=details.get('revenue')
             )
             
-            # Extract trailer
             videos = details.get('videos', {}).get('results', [])
             trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
             if trailer:
                 new_movie.trailer_url = f"https://www.youtube.com/embed/{trailer}"
 
-            # Wikipedia/Wikidata
             wikidata_id = details.get('external_ids', {}).get('wikidata_id')
             if wikidata_id:
                 new_movie.wikipedia_url = f"https://www.wikidata.org/wiki/{wikidata_id}"
@@ -244,7 +238,6 @@ def delete_movie(movie_id):
 def tv_list():
     all_seasons = TVSeason.query.order_by(TVSeason.date_watched.asc()).all()
     
-    # Group by year
     grouped = OrderedDict()
     for season in all_seasons:
         year = season.date_watched.year if season.date_watched else "Unknown"
@@ -290,7 +283,6 @@ def add_tv_season(series_id):
     details = TMDBService.get_tv_details(series_id, season_number)
     
     if details:
-        # Get inputs from modal form
         date_watched_str = request.form.get('date_watched')
         watched_at = request.form.get('watched_at')
         is_rewatch_input = True if request.form.get('is_rewatch') == 'on' else False
@@ -300,7 +292,6 @@ def add_tv_season(series_id):
         except ValueError:
             date_watched = datetime.now().date()
 
-        # Poster
         poster_filename = None
         if details.get('poster_path'):
             poster_filename = TMDBService.download_poster(details['poster_path'])
@@ -316,7 +307,6 @@ def add_tv_season(series_id):
             season.user_score = details.get('vote_average')
             season.plot = details.get('overview')
             
-            # Extract trailer from series level
             videos = details.get('videos', {}).get('results', [])
             trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
             if trailer:
@@ -344,7 +334,6 @@ def add_tv_season(series_id):
                 is_revisit=is_rewatch_input
             )
             
-            # Extract trailer
             videos = details.get('videos', {}).get('results', [])
             trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
             if trailer:
@@ -395,11 +384,9 @@ def delete_tv_season(season_id):
 def games_list():
     all_games = Game.query.order_by(Game.date_finished.asc()).all()
     
-    # Get distinct franchises for the dropdown
     distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
     franchise_list = [f[0] for f in distinct_franchises]
     
-    # Group by year
     grouped = OrderedDict()
     for game in all_games:
         year = game.date_finished.year if game.date_finished else "Unknown"
@@ -420,7 +407,6 @@ def search_game():
     pre_rewatch = request.args.get('pre_rewatch', 'false')
     pre_variant = request.args.get('pre_variant', '')
     
-    # Get distinct franchises for the dropdown
     distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
     franchise_list = [f[0] for f in distinct_franchises]
     
@@ -449,7 +435,6 @@ def add_game(igdb_id):
     details = IGDBService.get_game_details(igdb_id)
     
     if details:
-        # Get inputs from modal form
         date_finished_str = request.form.get('date_finished')
         platform_played = request.form.get('platform_played')
         is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
@@ -461,16 +446,13 @@ def add_game(igdb_id):
         except ValueError:
             date_finished = datetime.now().date()
 
-        # Extract basic info
         release_date_ts = details.get('first_release_date')
         release_year = datetime.fromtimestamp(release_date_ts).year if release_date_ts else None
         
-        # Companies
         involved = details.get('involved_companies', [])
         developers = ", ".join([ic['company']['name'] for ic in involved if ic.get('developer')])
         publishers = ", ".join([ic['company']['name'] for ic in involved if ic.get('publisher')])
         
-        # Cover
         cover_filename = None
         if details.get('cover'):
             cover_filename = IGDBService.download_cover(details['cover']['url'])
@@ -568,7 +550,6 @@ def delete_game(game_id):
 def books_list():
     all_books = Book.query.order_by(Book.date_finished.asc()).all()
     
-    # Group by year
     grouped = OrderedDict()
     for book in all_books:
         year = book.date_finished.year if book.date_finished else "Unknown"
@@ -592,95 +573,138 @@ def search_book():
         query = request.form.get('query', '').strip()
         replace_id = request.form.get('replace_id')
     
+    normalized_results = []
     if query:
-        results = GoogleBooksService.search_books(query)
+        raw_results = GoogleBooksService.search_books(query)
+        is_google = True
+        
+        if raw_results == "RATE_LIMIT":
+            raw_results = OpenLibraryService.search_books(query)
+            is_google = False
+        
+        for book in raw_results:
+            if is_google:
+                info = book.get('volumeInfo', {})
+                normalized_results.append({
+                    'id': book.get('id'),
+                    'title': info.get('title'),
+                    'author': ", ".join(info.get('authors', [])) if info.get('authors') else 'Unknown',
+                    'year': info.get('publishedDate', '')[:4],
+                    'description': info.get('description', ''),
+                    'thumbnail': info.get('imageLinks', {}).get('thumbnail', '').replace('http://', 'https://'),
+                    'source': 'google'
+                })
+            else:
+                normalized_results.append({
+                    'id': book.get('key', '').split('/')[-1],
+                    'title': book.get('title'),
+                    'author': book.get('author_name', ['Unknown'])[0],
+                    'year': book.get('first_publish_year', ''),
+                    'description': f"Edition count: {book.get('edition_count', 0)}",
+                    'thumbnail': f"https://covers.openlibrary.org/b/id/{book.get('cover_i')}-M.jpg" if book.get('cover_i') else None,
+                    'source': 'openlibrary'
+                })
         
     return render_template('book_search.html', 
-                         results=results, 
+                         results=normalized_results, 
                          query=query, 
                          replace_id=replace_id,
                          pre_date=pre_date,
                          pre_format=pre_format,
                          pre_rewatch=pre_rewatch)
 
-@main.route('/books/add/<volume_id>', methods=['POST'])
+@main.route('/books/add/<book_id>', methods=['POST'])
 @login_required
-def add_book(volume_id):
+def add_book(book_id):
     replace_id = request.form.get('replace_id')
-    details = GoogleBooksService.get_book_details(volume_id)
+    source = request.form.get('source', 'google')
     
-    if details:
-        volume_info = details.get('volumeInfo', {})
-        # Get inputs from modal form
-        date_finished_str = request.form.get('date_finished')
-        book_format = request.form.get('format')
-        is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
-        rating = request.form.get('rating', type=float)
-        
-        try:
-            date_finished = datetime.strptime(date_finished_str, '%Y-%m-%d').date() if date_finished_str else datetime.now().date()
-        except ValueError:
-            date_finished = datetime.now().date()
+    title, author, summary, page_count, genres, release_year, cover_filename = None, None, None, None, None, None, None
 
-        # Extract basic info
-        title = volume_info.get('title')
-        author = ", ".join(volume_info.get('authors', []))
-        summary = volume_info.get('description', '')
-        page_count = volume_info.get('pageCount')
-        genres = ", ".join(volume_info.get('categories', []))
-        release_year = int(volume_info.get('publishedDate', '0')[:4]) if volume_info.get('publishedDate') else None
-        
-        # Cover
-        cover_filename = None
-        image_links = volume_info.get('imageLinks', {})
-        image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
-        if image_url:
-            cover_filename = GoogleBooksService.download_cover(image_url, volume_id)
-
-        if replace_id:
-            book = Book.query.get_or_404(replace_id)
-            book.title = title
-            book.author = author
-            book.external_id = volume_id
-            book.summary = summary
-            book.poster_path = cover_filename
-            book.page_count = page_count
-            book.genres = genres
-            book.release_year = release_year
+    if source == 'google':
+        details = GoogleBooksService.get_book_details(book_id)
+        if details:
+            volume_info = details.get('volumeInfo', {})
+            title = volume_info.get('title')
+            author = ", ".join(volume_info.get('authors', [])) if volume_info.get('authors') else 'Unknown'
+            summary = volume_info.get('description', '')
+            page_count = volume_info.get('pageCount')
+            genres = ", ".join(volume_info.get('categories', [])) if volume_info.get('categories') else ''
+            release_year = int(volume_info.get('publishedDate', '0')[:4]) if volume_info.get('publishedDate') else None
             
-            if date_finished_str:
-                book.date_finished = date_finished
-            if book_format:
-                book.format = book_format
-            if request.form.get('is_rewatch'):
-                book.is_revisit = is_rewatch
-            if rating:
-                book.storygraph_rating = rating
-                
-            flash(f"Refreshed details for {book.title}!")
-        else:
-            new_book = Book(
-                title=title,
-                author=author,
-                external_id=volume_id,
-                summary=summary,
-                poster_path=cover_filename,
-                page_count=page_count,
-                genres=genres,
-                release_year=release_year,
-                format=book_format,
-                is_revisit=is_rewatch,
-                date_finished=date_finished,
-                storygraph_rating=rating
-            )
-            db.session.add(new_book)
-            flash(f"Added {new_book.title} to your tracker!")
-        
-        db.session.commit()
-        return redirect(url_for('main.books_list'))
+            image_links = volume_info.get('imageLinks', {})
+            image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
+            if image_url:
+                cover_filename = GoogleBooksService.download_cover(image_url, book_id)
+    else: # openlibrary
+        details = OpenLibraryService.get_book_details(book_id)
+        if details:
+            title = details.get('title')
+            author = 'Unknown' 
+            desc = details.get('description', '')
+            summary = desc.get('value', '') if isinstance(desc, dict) else desc
+            genres = ", ".join(details.get('subjects', [])[:5]) if details.get('subjects') else ''
+            covers = details.get('covers', [])
+            if covers:
+                cover_filename = OpenLibraryService.download_book_cover(cover_id=covers[0])
+            else:
+                cover_filename = OpenLibraryService.download_book_cover(ol_id=book_id)
+
+    if not title:
+        flash(f"Error fetching book details from {source.capitalize()}.")
+        return redirect(url_for('main.search_book'))
+
+    date_finished_str = request.form.get('date_finished')
+    book_format = request.form.get('format')
+    is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+    rating = request.form.get('rating', type=float)
     
-    flash("Error fetching book details from Google Books.")
-    return redirect(url_for('main.search_book'))
+    try:
+        date_finished = datetime.strptime(date_finished_str, '%Y-%m-%d').date() if date_finished_str else datetime.now().date()
+    except ValueError:
+        date_finished = datetime.now().date()
+
+    if replace_id:
+        book = Book.query.get_or_404(replace_id)
+        book.title = title
+        book.author = author
+        book.external_id = book_id
+        book.summary = summary
+        book.poster_path = cover_filename
+        book.page_count = page_count
+        book.genres = genres
+        book.release_year = release_year
+        
+        if date_finished_str:
+            book.date_finished = date_finished
+        if book_format:
+            book.format = book_format
+        if request.form.get('is_rewatch'):
+            book.is_revisit = is_rewatch
+        if rating:
+            book.storygraph_rating = rating
+            
+        flash(f"Refreshed details for {book.title}!")
+    else:
+        new_book = Book(
+            title=title,
+            author=author,
+            external_id=book_id,
+            summary=summary,
+            poster_path=cover_filename,
+            page_count=page_count,
+            genres=genres,
+            release_year=release_year,
+            format=book_format,
+            is_revisit=is_rewatch,
+            date_finished=date_finished,
+            storygraph_rating=rating
+        )
+        db.session.add(new_book)
+        flash(f"Added {new_book.title} to your tracker!")
+    
+    db.session.commit()
+    return redirect(url_for('main.books_list'))
 
 @main.route('/books/edit/<int:book_id>', methods=['POST'])
 @login_required

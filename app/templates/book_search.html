@@ -17,29 +17,29 @@
     <div class="search-results" id="resultsContainer">
         {% if results %}
             {% for book in results %}
-            {% set info = book.volumeInfo %}
             <div class="result-card">
                 <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
-                    {% if info.imageLinks and info.imageLinks.thumbnail %}
-                        <img src="{{ info.imageLinks.thumbnail.replace('http://', 'https://') }}" alt="{{ info.title }} cover" style="border-radius: 4px; width: 90px; flex-shrink: 0;">
+                    {% if book.thumbnail %}
+                        <img src="{{ book.thumbnail }}" alt="{{ book.title }} cover" style="border-radius: 4px; width: 90px; flex-shrink: 0;">
                     {% else %}
                         <div style="width: 90px; height: 135px; background: #ddd; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem; flex-shrink: 0;">No Cover</div>
                     {% endif %}
                     <div>
-                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ info.title }}</strong>
+                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ book.title }}</strong>
                         <span style="color: #666; font-size: 0.9rem;">
-                            By {{ info.authors[0] if info.authors else 'Unknown' }}
-                            {% if info.publishedDate %}({{ info.publishedDate[:4] }}){% endif %}
+                            By {{ book.author }}
+                            {% if book.year %}({{ book.year }}){% endif %}
                         </span>
-                        {% if info.description %}
+                        {% if book.description %}
                             <p class="hide-mobile" style="font-size: 0.85rem; color: #444; margin-top: 10px; line-height: 1.4;">
-                                {{ info.description[:200] }}...
+                                {{ book.description[:200] }}...
                             </p>
                         {% endif %}
+                        <small style="color: #999; display: block; margin-top: 5px;">Source: {{ book.source | capitalize }}</small>
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    <button class="btn btn-secondary" onclick="selectBook('{{ book.id }}', '{{ info.title | replace("'", "\\'") }}')">
+                    <button class="btn btn-secondary" onclick="selectBook('{{ book.id }}', '{{ book.title | replace("'", "\\'") }}', '{{ book.source }}')">
                         {% if replace_id %}Update Book{% else %}Track Book{% endif %}
                     </button>
                 </div>
@@ -59,6 +59,7 @@
 
         <form id="trackForm" method="POST">
             <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+            <input type="hidden" name="source" id="bookSource" value="google">
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
                 <div class="form-group">
@@ -104,18 +105,20 @@
         const confirmationContainer = document.getElementById("confirmationContainer");
         const mainSearchForm = document.getElementById("mainSearchForm");
         const trackForm = document.getElementById("trackForm");
+        const bookSource = document.getElementById("bookSource");
         const confirmTitle = document.getElementById("confirmTitle");
         const dateInput = document.getElementById("date_finished");
         const formatSelect = document.getElementById("format");
         const ratingInput = document.getElementById("rating");
         const rewatchCheckbox = document.querySelector('input[name="is_rewatch"]');
 
-        function selectBook(volumeId, title) {
+        function selectBook(id, title, source) {
             resultsContainer.style.display = "none";
             mainSearchForm.style.display = "none";
             
             confirmTitle.innerText = `Tracking: ${title}`;
-            trackForm.action = `/books/add/${volumeId}`;
+            trackForm.action = `/books/add/${id}`;
+            bookSource.value = source;
             
             const urlParams = new URLSearchParams(window.location.search);
             const preDate = urlParams.get('pre_date');

@@ -26,6 +26,7 @@ class Config:
     # IGDB (Twitch) API credentials
     IGDB_CLIENT_ID = os.environ.get('IGDB_CLIENT_ID')
     IGDB_CLIENT_SECRET = os.environ.get('IGDB_CLIENT_SECRET')
+    GOOGLE_BOOKS_API_KEY = os.environ.get('GOOGLE_BOOKS_API_KEY')
     
     # Persistent storage for posters
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(os.path.abspath(os.path.dirname(__file__)), 'app', 'static', 'posters')
