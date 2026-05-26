@@ -421,7 +421,8 @@ def search_game():
                          pre_date=pre_date,
                          pre_plat=pre_plat,
                          pre_rewatch=pre_rewatch,
-                         pre_variant=pre_variant)
+                         pre_variant=pre_variant,
+                         datetime=datetime)
 
 @main.route('/games/add/<int:igdb_id>', methods=['POST'])
 @login_required

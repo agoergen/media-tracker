@@ -23,7 +23,7 @@
                         <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ game.name }}</strong>
                         <span style="color: #666; font-size: 0.9rem;">
                             {% if game.first_release_date %}
-                                ({{ now.fromtimestamp(game.first_release_date).year }})
+                                ({{ datetime.fromtimestamp(game.first_release_date).year }})
                             {% else %}
                                 (N/A)
                             {% endif %}
