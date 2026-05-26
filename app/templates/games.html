@@ -15,7 +15,6 @@
     </div>
 
     {% set global_count = namespace(value=0) %}
-    {% set current_year = now.year %}
     
     {% for year, games in grouped_games.items() %}
     <div class="year-group" data-year="{{ year }}">
@@ -52,7 +51,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="toggle-details" data-id="{{ game.id }}" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ game.title }}</span>
+                                <span class="toggle-details" onclick="toggleDetails('{{ game.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ game.title }}</span>
                                 <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
                                     {{ game.platform_played }}
                                     {% if game.variant %}<span style="color: #e67e22;"> ({{ game.variant }})</span>{% endif %}
@@ -140,6 +139,13 @@
             content.classList.toggle('collapsed');
         }
 
+        function toggleDetails(id) {
+            const detailRow = document.getElementById('details-' + id);
+            if (detailRow) {
+                detailRow.classList.toggle('active');
+            }
+        }
+
         function researchGame(id, title, date, plat, variant, isRewatch) {
             let newTitle = prompt("Re-search game:", title);
             if (newTitle) {
@@ -159,11 +165,14 @@
                     const searchData = row.getAttribute('data-search');
                     if (searchData && searchData.includes(query)) {
                         row.style.display = '';
-                    } else if (row.classList.contains('movie-row')) {
+                    } else {
                         row.style.display = 'none';
-                        const detailId = row.querySelector('.toggle-details').getAttribute('data-id');
-                        const detailRow = document.getElementById(`details-${detailId}`);
-                        if (detailRow) detailRow.classList.remove('active');
+                        const toggleBtn = row.querySelector('.toggle-details');
+                        if (toggleBtn) {
+                            const detailId = toggleBtn.getAttribute('onclick').match(/'([^']+)'/)[1];
+                            const detailRow = document.getElementById(`details-${detailId}`);
+                            if (detailRow) detailRow.classList.remove('active');
+                        }
                     }
                 });
                 yearGroups.forEach(group => {
@@ -183,14 +192,6 @@
                 document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
                 yearGroups.forEach(group => group.style.display = '');
             }
-        });
-
-        document.querySelectorAll('.toggle-details').forEach(item => {
-            item.addEventListener('click', event => {
-                const id = item.getAttribute('data-id');
-                const detailsRow = document.getElementById(`details-${id}`);
-                detailsRow.classList.toggle('active');
-            });
         });
     </script>
 {% endblock %}

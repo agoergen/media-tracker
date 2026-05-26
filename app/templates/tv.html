@@ -15,7 +15,6 @@
     </div>
 
     {% set global_count = namespace(value=0) %}
-    {% set current_year = now.year %}
     
     {% for year, seasons in grouped_seasons.items() %}
     <div class="year-group" data-year="{{ year }}">
@@ -51,7 +50,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="toggle-details" data-id="{{ season.id }}" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">
+                                <span class="toggle-details" onclick="toggleDetails('{{ season.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">
                                     {{ season.series_title }} (Season {{ season.season_number }})
                                 </span>
                                 <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
@@ -140,6 +139,13 @@
             content.classList.toggle('collapsed');
         }
 
+        function toggleDetails(id) {
+            const detailRow = document.getElementById('details-' + id);
+            if (detailRow) {
+                detailRow.classList.toggle('active');
+            }
+        }
+
         function researchTV(id, title, seasonNum, date, provider, isRewatch) {
             let newTitle = prompt("Re-search TV show:", title);
             if (newTitle) {
@@ -158,11 +164,11 @@
                 allYearContents.forEach(content => content.classList.remove('collapsed'));
                 document.querySelectorAll('.movie-row').forEach(row => {
                     const searchData = row.getAttribute('data-search');
-                    if (searchData.includes(query)) {
+                    if (searchData && searchData.includes(query)) {
                         row.style.display = '';
-                    } else {
+                    } else if (row.classList.contains('movie-row')) {
                         row.style.display = 'none';
-                        const detailId = row.querySelector('.toggle-details').getAttribute('data-id');
+                        const detailId = row.querySelector('.toggle-details').getAttribute('onclick').match(/'([^']+)'/)[1];
                         const detailRow = document.getElementById(`details-${detailId}`);
                         if (detailRow) detailRow.classList.remove('active');
                     }
@@ -184,14 +190,6 @@
                 document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
                 yearGroups.forEach(group => group.style.display = '');
             }
-        });
-
-        document.querySelectorAll('.toggle-details').forEach(item => {
-            item.addEventListener('click', event => {
-                const id = item.getAttribute('data-id');
-                const detailsRow = document.getElementById(`details-${id}`);
-                detailsRow.classList.toggle('active');
-            });
         });
     </script>
 {% endblock %}

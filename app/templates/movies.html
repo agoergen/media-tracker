@@ -15,7 +15,6 @@
     </div>
 
     {% set global_count = namespace(value=0) %}
-    {% set current_year = now.year %}
     
     {% for year, movies in grouped_movies.items() %}
     <div class="year-group" data-year="{{ year }}">
@@ -52,7 +51,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="toggle-details" data-id="{{ movie.id }}" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ movie.title }}</span>
+                                <span class="toggle-details" onclick="toggleDetails('{{ movie.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ movie.title }}</span>
                                 <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
                                     Dir: {{ movie.director.split(',')[0] if movie.director else 'N/A' }}
                                 </div>
@@ -145,6 +144,13 @@
             content.classList.toggle('collapsed');
         }
 
+        function toggleDetails(id) {
+            const detailRow = document.getElementById('details-' + id);
+            if (detailRow) {
+                detailRow.classList.toggle('active');
+            }
+        }
+
         function researchMovie(id, title, date, provider, isRewatch) {
             let newTitle = prompt("Re-search movie:", title);
             if (newTitle) {
@@ -170,7 +176,7 @@
                     } else {
                         row.style.display = 'none';
                         // Also hide the detail row if open
-                        const detailId = row.querySelector('.toggle-details').getAttribute('data-id');
+                        const detailId = row.querySelector('.toggle-details').getAttribute('onclick').match(/'([^']+)'/)[1];
                         const detailRow = document.getElementById(`details-${detailId}`);
                         if (detailRow) detailRow.classList.remove('active');
                     }
@@ -198,14 +204,6 @@
                 document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
                 yearGroups.forEach(group => group.style.display = '');
             }
-        });
-
-        document.querySelectorAll('.toggle-details').forEach(item => {
-            item.addEventListener('click', event => {
-                const id = item.getAttribute('data-id');
-                const detailsRow = document.getElementById(`details-${id}`);
-                detailsRow.classList.toggle('active');
-            });
         });
     </script>
 {% endblock %}
