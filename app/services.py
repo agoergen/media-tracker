@@ -357,7 +357,7 @@ class WikipediaService:
 
     @classmethod
     def search_posters(cls, show_name):
-        # Clean title for better search (remove colons, etc)
+        # Clean title for better search
         clean_name = show_name.replace(':', '').replace(' - ', ' ').strip()
         
         # 1. Search for the show
@@ -374,40 +374,103 @@ class WikipediaService:
             search_results = resp.json().get('query', {}).get('search', [])
             
             if not search_results:
-                # Try with just the name
                 search_params["srsearch"] = clean_name
                 resp = requests.get(cls.BASE_URL, params=search_params, headers=cls.HEADERS, timeout=20)
                 search_results = resp.json().get('query', {}).get('search', [])
 
-            if not search_results and clean_name != show_name:
-                # Try original name if cleaned failed
-                search_params["srsearch"] = show_name
-                resp = requests.get(cls.BASE_URL, params=search_params, headers=cls.HEADERS, timeout=20)
-                search_results = resp.json().get('query', {}).get('search', [])
-
             image_urls = []
-            # 2. Get the primary thumbnail for the top 8 matches
-            for result in search_results[:8]:
+            # 2. Get the primary thumbnail AND other images for top 5 matches
+            for result in search_results[:5]:
                 page_title = result['title']
+                
+                # A. Try page image first (primary thumbnail)
                 img_params = {
                     "action": "query",
                     "titles": page_title,
-                    "prop": "pageimages",
+                    "prop": "pageimages|images",
                     "piprop": "thumbnail",
-                    "pithumbsize": 800, # High res
+                    "pithumbsize": 800,
                     "format": "json"
                 }
                 img_resp = requests.get(cls.BASE_URL, params=img_params, headers=cls.HEADERS, timeout=20)
                 pages = img_resp.json().get('query', {}).get('pages', {})
+                
                 for page_id in pages:
+                    # Add primary thumbnail
                     thumb = pages[page_id].get('thumbnail', {}).get('source')
                     if thumb:
                         image_urls.append(thumb)
+                    
+                    # Add other images on page that look like posters
+                    page_images = pages[page_id].get('images', [])
+                    for img in page_images:
+                        title = img.get('title', '').lower()
+                        # Filter for things that are likely posters/artwork
+                        if any(x in title for x in ['poster', 'logo', 'musical', 'play', 'show', 'theater', 'production']):
+                            # Need to get the actual URL for this File:
+                            url = cls.get_image_url(img.get('title'))
+                            if url:
+                                image_urls.append(url)
             
-            return image_urls
+            # Remove duplicates while preserving order
+            seen = set()
+            return [x for x in image_urls if not (x in seen or seen.add(x))]
         except Exception as e:
             print(f"Wikipedia search error for {show_name}: {e}")
             return []
+
+    @classmethod
+    def get_image_url(cls, file_title):
+        params = {
+            "action": "query",
+            "titles": file_title,
+            "prop": "imageinfo",
+            "iiprop": "url",
+            "iiurlwidth": 800,
+            "format": "json"
+        }
+        try:
+            resp = requests.get(cls.BASE_URL, params=params, headers=cls.HEADERS, timeout=20)
+            pages = resp.json().get('query', {}).get('pages', {})
+            for page_id in pages:
+                info = pages[page_id].get('imageinfo', [{}])[0]
+                # Return the scaled URL if available, else original
+                return info.get('thumburl') or info.get('url')
+        except:
+            return None
+
+    @classmethod
+    def get_summary(cls, show_name):
+        # 1. Search to find the best page
+        search_params = {
+            "action": "query",
+            "list": "search",
+            "srsearch": f"{show_name} musical play",
+            "format": "json"
+        }
+        try:
+            resp = requests.get(cls.BASE_URL, params=search_params, headers=cls.HEADERS, timeout=20)
+            search_results = resp.json().get('query', {}).get('search', [])
+            if not search_results: return None
+            
+            page_title = search_results[0]['title']
+            
+            # 2. Get extract
+            extract_params = {
+                "action": "query",
+                "titles": page_title,
+                "prop": "extracts",
+                "exintro": True,
+                "explaintext": True,
+                "format": "json"
+            }
+            resp = requests.get(cls.BASE_URL, params=extract_params, headers=cls.HEADERS, timeout=20)
+            pages = resp.json().get('query', {}).get('pages', {})
+            for page_id in pages:
+                return pages[page_id].get('extract')
+        except:
+            return None
+        return None
 
 class IBDBService:
     BASE_URL = "https://www.ibdb.com"

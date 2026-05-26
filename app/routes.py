@@ -775,7 +775,7 @@ def search_theater():
         query = request.form.get('query', '').strip()
     
     if query:
-        # Search IBDB exclusively
+        # Search IBDB exclusively for comprehensive records
         online_results = IBDBService.search_shows(query)
         
     return render_template('theater_search.html', online_results=online_results, query=query)
@@ -790,11 +790,13 @@ def add_theater_ibdb(slug_id):
     is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
     selected_image = request.form.get('poster_url')
     
-    # Fetch extra details from IBDB
+    # 1. Fetch extra details from IBDB (Opening date, Original Theater)
     details = IBDBService.get_show_details(slug_id)
     opening_date_str = details.get('opening_date')
     original_theater = details.get('theater')
-    summary = details.get('summary')
+    
+    # 2. Fetch rich summary from Wikipedia (since IBDB is mostly stats)
+    summary = WikipediaService.get_summary(title)
     
     try:
         date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
@@ -803,9 +805,7 @@ def add_theater_ibdb(slug_id):
 
     release_year = None
     if opening_date_str:
-        # IBDB date format varies, but usually Month Day, Year
         try:
-            # Handle "Aug 6, 2015"
             release_year = int(opening_date_str.split(',')[-1].strip())
         except: pass
 
@@ -827,7 +827,7 @@ def add_theater_ibdb(slug_id):
     )
     db.session.add(new_show)
     db.session.commit()
-    flash(f"Added {new_show.title} (via IBDB) to your tracker!")
+    flash(f"Added {new_show.title} to your tracker!")
     return redirect(url_for('main.theater_list'))
 
 @main.route('/theater/get-posters')
