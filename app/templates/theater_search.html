@@ -150,7 +150,7 @@
                         posterSelection.appendChild(img);
                     });
                 } else {
-                    posterSelection.innerHTML = "<p>No posters found. Try an API key in config.</p>";
+                    posterSelection.innerHTML = `<p>No posters found. Please check your Railway logs for API errors.</p>`;
                 }
             } catch (err) {
                 posterSelection.innerHTML = "<p>Error searching posters.</p>";

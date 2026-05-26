@@ -373,7 +373,7 @@ class ImageSearchService:
         cx = current_app.config.get('GOOGLE_SEARCH_ID')
         
         if not key or not cx:
-            print("Google Search API Key or CX not configured.")
+            print(f"DEBUG: Missing config. Key present: {bool(key)}, CX present: {bool(cx)}")
             return []
             
         url = "https://www.googleapis.com/customsearch/v1"
@@ -387,6 +387,8 @@ class ImageSearchService:
         
         try:
             response = requests.get(url, params=params, timeout=30)
+            if response.status_code != 200:
+                print(f"Google Image Search API Error: {response.status_code} - {response.text}")
             response.raise_for_status()
             items = response.json().get('items', [])
             return [item['link'] for item in items]
