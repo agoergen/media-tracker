@@ -74,7 +74,7 @@
                                         <div style="display: flex; align-items: center; justify-content: space-between;">
                                             <select name="variant" style="padding: 2px; font-size: 0.75rem; border: 1px solid #ccc; border-radius: 3px;">
                                                 <option value="">Standard</option>
-                                                {% for v in ['Modded', 'Completionist Run', 'Hard Mode', 'Best Ending', 'Abbreviated'] %}
+                                                {% for v in ['Modded', 'Completionist Run', 'Hard Mode', 'Best Ending', 'Abbreviated', 'Part of a Collection'] %}
                                                     <option value="{{ v }}" {% if game.variant == v %}selected{% endif %}>{{ v }}</option>
                                                 {% endfor %}
                                             </select>
