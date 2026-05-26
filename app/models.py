@@ -69,6 +69,7 @@ class Book(db.Model):
     poster_path = db.Column(db.String(255))
     page_count = db.Column(db.Integer)
     genres = db.Column(db.Text)
+    google_books_url = db.Column(db.String(255))
 
 class Theater(db.Model):
     id = db.Column(db.Integer, primary_key=True)

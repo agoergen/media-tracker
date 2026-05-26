@@ -13,7 +13,7 @@ def run_backfill_books():
         reader = csv.DictReader(f)
         for row in reader:
             title = row.get('Title')
-            author = row.get('Author')
+            author_csv = row.get('Author')
             if not title:
                 continue
                 
@@ -39,12 +39,12 @@ def run_backfill_books():
             is_reread = row.get('Reread') == 'X'
             
             # Check if exists (check for existing by title/author)
-            book = Book.query.filter_by(title=title, author=author).first()
+            book = Book.query.filter_by(title=title, author=author_csv).first()
             
             if not book:
                 book = Book(
                     title=title,
-                    author=author,
+                    author=author_csv,
                     format=row.get('Format'),
                     date_finished=date_finished,
                     release_year=int(row.get('Year Published')) if row.get('Year Published') and row.get('Year Published').isdigit() else None,
@@ -54,37 +54,34 @@ def run_backfill_books():
                 db.session.add(book)
                 count += 1
             
-            # Enforce metadata/cover fetch if not present or if we want to refresh from Google
-            # Since the user specifically asked to switch to Google and re-scrape, we'll refresh if external_id isn't from Google (we can't easily tell, but we can check if it's missing or if we want a fresh start)
-            # For now, let's refresh if poster_path or summary is missing, or if external_id doesn't look like a Google volume ID (usually ~12 chars)
-            # Actually, let's just refresh if it's not already linked to Google (we'll assume all old ones weren't)
-            if not book.external_id or len(book.external_id) > 15: # OL IDs are often longer/different
-                print(f"Enriching with Google Books: {title} by {author}...")
-                search_query = f"intitle:{title}"
-                if author:
-                    search_query += f"+inauthor:{author}"
+            # Enrich with Google Books
+            print(f"Enriching with Google Books: {title} by {author_csv}...")
+            search_query = f"intitle:{title}"
+            if author_csv:
+                search_query += f"+inauthor:{author_csv}"
+            
+            results = GoogleBooksService.search_books(search_query)
+            
+            if results:
+                match = results[0]
+                volume_id = match.get('id')
+                volume_info = match.get('volumeInfo', {})
                 
-                results = GoogleBooksService.search_books(search_query)
-                
-                if results:
-                    match = results[0]
-                    volume_id = match.get('id')
-                    volume_info = match.get('volumeInfo', {})
+                if volume_id:
+                    book.external_id = volume_id
+                    book.summary = volume_info.get('description', book.summary)
+                    book.page_count = volume_info.get('pageCount', book.page_count)
+                    book.genres = ", ".join(volume_info.get('categories', [])) if volume_info.get('categories') else book.genres
+                    book.google_books_url = volume_info.get('canonicalVolumeLink') or volume_info.get('infoLink')
                     
-                    if volume_id:
-                        book.external_id = volume_id
-                        book.summary = volume_info.get('description', book.summary)
-                        book.page_count = volume_info.get('pageCount', book.page_count)
-                        book.genres = ", ".join(volume_info.get('categories', [])) if volume_info.get('categories') else book.genres
-                        
-                        # Cover
-                        image_links = volume_info.get('imageLinks', {})
-                        image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
-                        if image_url:
-                            book.poster_path = GoogleBooksService.download_cover(image_url, volume_id)
-                
-                # Small sleep to be polite
-                time.sleep(0.2)
+                    # Cover
+                    image_links = volume_info.get('imageLinks', {})
+                    image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
+                    if image_url:
+                        book.poster_path = GoogleBooksService.download_cover(image_url, volume_id)
+            
+            # Small sleep to be polite
+            time.sleep(0.2)
 
     db.session.commit()
     return count

@@ -112,6 +112,9 @@
                                             <img src="{{ url_for('main.serve_poster', filename=book.poster_path.lstrip('/')) }}" alt="{{ book.title }} cover" style="border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%;" loading="lazy">
                                         {% endif %}
                                         <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                                            {% if book.google_books_url %}
+                                                <a href="{{ book.google_books_url }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #e0e0e0; color: #000; padding: 6px;">Google Books</a>
+                                            {% endif %}
                                             <a href="https://www.google.com/search?q=What+are+some+books+I+might+enjoy+if+I+enjoyed+{{ book.title | urlencode }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #8e44ad; color: #fff; padding: 6px; font-size: 0.75rem; line-height: 1.2;">Ask Google for Similar</a>
                                         </div>
                                     </div>

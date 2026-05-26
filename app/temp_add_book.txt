@@ -1,0 +1,97 @@
+@main.route('/books/add/<book_id>', methods=['POST'])
+@login_required
+def add_book(book_id):
+    replace_id = request.form.get('replace_id')
+    source = request.form.get('source', 'google')
+    
+    title, author, summary, page_count, genres, release_year, cover_filename, google_books_url = None, None, None, None, None, None, None, None
+
+    if source == 'google':
+        details = GoogleBooksService.get_book_details(book_id)
+        if details:
+            volume_info = details.get('volumeInfo', {})
+            title = volume_info.get('title')
+            author = ", ".join(volume_info.get('authors', [])) if volume_info.get('authors') else 'Unknown'
+            summary = volume_info.get('description', '')
+            page_count = volume_info.get('pageCount')
+            genres = ", ".join(volume_info.get('categories', [])) if volume_info.get('categories') else ''
+            release_year = int(volume_info.get('publishedDate', '0')[:4]) if volume_info.get('publishedDate') else None
+            google_books_url = volume_info.get('canonicalVolumeLink') or volume_info.get('infoLink')
+            
+            image_links = volume_info.get('imageLinks', {})
+            image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
+            if image_url:
+                cover_filename = GoogleBooksService.download_cover(image_url, book_id)
+    else: # openlibrary
+        details = OpenLibraryService.get_book_details(book_id)
+        if details:
+            title = details.get('title')
+            author = 'Unknown' 
+            desc = details.get('description', '')
+            summary = desc.get('value', '') if isinstance(desc, dict) else desc
+            genres = ", ".join(details.get('subjects', [])[:5]) if details.get('subjects') else ''
+            google_books_url = f"https://openlibrary.org/works/{book_id}"
+            covers = details.get('covers', [])
+            if covers:
+                cover_filename = OpenLibraryService.download_book_cover(cover_id=covers[0])
+            else:
+                cover_filename = OpenLibraryService.download_book_cover(ol_id=book_id)
+
+    if not title:
+        flash(f"Error fetching book details from {source.capitalize()}.")
+        return redirect(url_for('main.search_book'))
+
+    # Common form inputs
+    date_finished_str = request.form.get('date_finished')
+    book_format = request.form.get('format')
+    is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+    rating = request.form.get('rating', type=float)
+    
+    try:
+        date_finished = datetime.strptime(date_finished_str, '%Y-%m-%d').date() if date_finished_str else datetime.now().date()
+    except ValueError:
+        date_finished = datetime.now().date()
+
+    if replace_id:
+        book = Book.query.get_or_404(replace_id)
+        book.title = title
+        book.author = author
+        book.external_id = book_id
+        book.summary = summary
+        book.poster_path = cover_filename
+        book.page_count = page_count
+        book.genres = genres
+        book.release_year = release_year
+        book.google_books_url = google_books_url
+        
+        if date_finished_str:
+            book.date_finished = date_finished
+        if book_format:
+            book.format = book_format
+        if request.form.get('is_rewatch'):
+            book.is_revisit = is_rewatch
+        if rating:
+            book.storygraph_rating = rating
+            
+        flash(f"Refreshed details for {book.title}!")
+    else:
+        new_book = Book(
+            title=title,
+            author=author,
+            external_id=book_id,
+            summary=summary,
+            poster_path=cover_filename,
+            page_count=page_count,
+            genres=genres,
+            release_year=release_year,
+            google_books_url=google_books_url,
+            format=book_format,
+            is_revisit=is_rewatch,
+            date_finished=date_finished,
+            storygraph_rating=rating
+        )
+        db.session.add(new_book)
+        flash(f"Added {new_book.title} to your tracker!")
+    
+    db.session.commit()
+    return redirect(url_for('main.books_list'))
