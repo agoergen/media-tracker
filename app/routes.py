@@ -148,7 +148,12 @@ def add_movie(tmdb_id):
             movie.imdb_id = details.get('imdb_id')
             movie.user_score = details.get('vote_average')
             movie.runtime = details.get('runtime')
-            movie.certification = next((r['certification'] for r in details.get('release_dates', {}).get('results', []) if r['iso_3166_1'] == 'US' and r['release_dates']), None)
+            # Certification (Safe extraction)
+            release_results = details.get('release_dates', {}).get('results', [])
+            us_release = next((r for r in release_results if r['iso_3166_1'] == 'US'), {})
+            certification = next((rd.get('certification') for rd in us_release.get('release_dates', []) if rd.get('certification')), None)
+
+            movie.certification = certification
             movie.budget = details.get('budget')
             movie.revenue = details.get('revenue')
             
@@ -187,7 +192,7 @@ def add_movie(tmdb_id):
                 imdb_id=details.get('imdb_id'),
                 user_score=details.get('vote_average'),
                 runtime=details.get('runtime'),
-                certification=next((r['certification'] for r in details.get('release_dates', {}).get('results', []) if r['iso_3166_1'] == 'US' and r['release_dates']), None),
+                certification=next((rd.get('certification') for rd in next((r for r in details.get('release_dates', {}).get('results', []) if r['iso_3166_1'] == 'US'), {}).get('release_dates', []) if rd.get('certification')), None),
                 budget=details.get('budget'),
                 revenue=details.get('revenue')
             )
