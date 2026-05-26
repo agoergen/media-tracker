@@ -520,6 +520,24 @@ class IBDBService:
             resp.raise_for_status()
             html = resp.text
             
+            # Handle Direct Redirect (e.g. 'shucked' redirects to show page)
+            if "/broadway-show/" in resp.url:
+                slug_id = resp.url.split("/broadway-show/")[1].rstrip('/')
+                title = query.capitalize() # Default to query if we can't find title
+                if '<title>' in html:
+                    title = html.split('<title>')[1].split(' – ')[0].strip()
+                
+                show_type = "Show"
+                if "Musical" in html: show_type = "Musical"
+                elif "Play" in html: show_type = "Play"
+                
+                return [{
+                    "title": title,
+                    "type": show_type,
+                    "ibdb_id": slug_id,
+                    "source": "IBDB"
+                }]
+
             results = []
             if '<div class="row" id="shows"' not in html:
                 return []
