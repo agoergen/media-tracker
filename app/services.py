@@ -366,6 +366,54 @@ class GoogleBooksService:
             print(f"Error downloading Google Books cover: {e}")
             return None
 
+class WikipediaService:
+    BASE_URL = "https://en.wikipedia.org/w/api.php"
+
+    @classmethod
+    def search_posters(cls, show_name):
+        # 1. Search for the show
+        search_params = {
+            "action": "query",
+            "list": "search",
+            "srsearch": f"{show_name} musical play poster",
+            "format": "json"
+        }
+        
+        try:
+            resp = requests.get(cls.BASE_URL, params=search_params, timeout=20)
+            resp.raise_for_status()
+            search_results = resp.json().get('query', {}).get('search', [])
+            
+            if not search_results:
+                # Try without 'musical play poster' tags if too restrictive
+                search_params["srsearch"] = show_name
+                resp = requests.get(cls.BASE_URL, params=search_params, timeout=20)
+                search_results = resp.json().get('query', {}).get('search', [])
+
+            image_urls = []
+            # 2. Get the primary thumbnail for the top 5 matches
+            for result in search_results[:5]:
+                page_title = result['title']
+                img_params = {
+                    "action": "query",
+                    "titles": page_title,
+                    "prop": "pageimages",
+                    "piprop": "thumbnail",
+                    "pithumbsize": 600,
+                    "format": "json"
+                }
+                img_resp = requests.get(cls.BASE_URL, params=img_params, timeout=20)
+                pages = img_resp.json().get('query', {}).get('pages', {})
+                for page_id in pages:
+                    thumb = pages[page_id].get('thumbnail', {}).get('source')
+                    if thumb:
+                        image_urls.append(thumb)
+            
+            return image_urls
+        except Exception as e:
+            print(f"Wikipedia search error: {e}")
+            return []
+
 class ImageSearchService:
     @classmethod
     def search_images(cls, query):

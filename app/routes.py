@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_user, logout_user, current_user, login_required
-from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService
+from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService, WikipediaService
 from app.models import Movie, TVSeason, User, Game, Book, Theater, TheaterReference
 from app import db
 from datetime import datetime
@@ -822,7 +822,7 @@ def get_theater_posters():
     query = request.args.get('query')
     if not query:
         return {"images": []}
-    images = ImageSearchService.search_images(query)
+    images = WikipediaService.search_posters(query)
     return {"images": images}
 
 @main.route('/theater/delete/<int:show_id>', methods=['POST'])
