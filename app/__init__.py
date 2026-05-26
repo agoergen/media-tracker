@@ -31,4 +31,17 @@ def create_app(config_class=Config):
     from app.routes import main
     app.register_blueprint(main)
 
+    @app.context_processor
+    def inject_globals():
+        from datetime import datetime
+        from app.models import Movie, TVSeason, Game, Book
+        return {
+            'datetime': datetime,
+            'now': datetime.now(),
+            'Movie': Movie,
+            'TVSeason': TVSeason,
+            'Game': Game,
+            'Book': Book
+        }
+
     return app
