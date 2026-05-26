@@ -295,3 +295,63 @@ class OpenLibraryService:
         except Exception as e:
             print(f"Error downloading book cover: {e}")
             return None
+
+class GoogleBooksService:
+    BASE_URL = "https://www.googleapis.com/books/v1/volumes"
+
+    @classmethod
+    def search_books(cls, query):
+        params = {"q": query, "maxResults": 10}
+        api_key = current_app.config.get('GOOGLE_BOOKS_API_KEY')
+        if api_key:
+            params['key'] = api_key
+            
+        try:
+            response = requests.get(cls.BASE_URL, params=params, timeout=30)
+            response.raise_for_status()
+            return response.json().get('items', [])
+        except Exception as e:
+            print(f"Google Books search error for '{query}': {e}")
+            return []
+
+    @classmethod
+    def get_book_details(cls, volume_id):
+        url = f"{cls.BASE_URL}/{volume_id}"
+        params = {}
+        api_key = current_app.config.get('GOOGLE_BOOKS_API_KEY')
+        if api_key:
+            params['key'] = api_key
+
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Google Books details error for {volume_id}: {e}")
+            return None
+
+    @classmethod
+    def download_cover(cls, image_url, volume_id):
+        if not image_url:
+            return None
+            
+        filename = f"book_{volume_id}.jpg"
+        local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        
+        if os.path.exists(local_path):
+            return filename
+            
+        try:
+            # Google Books image URLs often use http, better to force https
+            if image_url.startswith('http://'):
+                image_url = image_url.replace('http://', 'https://')
+            
+            response = requests.get(image_url, stream=True)
+            response.raise_for_status()
+            with open(local_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return filename
+        except Exception as e:
+            print(f"Error downloading Google Books cover: {e}")
+            return None

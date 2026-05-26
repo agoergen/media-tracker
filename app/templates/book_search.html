@@ -4,7 +4,7 @@
 
 {% block content %}
     <div style="margin-top: 2rem;">
-        <h1>Search Books (via OpenLibrary)</h1>
+        <h1>Search Books (via Google Books)</h1>
         
         <form method="POST" class="search-form" id="mainSearchForm">
             <input type="text" name="query" placeholder="Enter book title or author..." value="{{ query }}" required>
@@ -17,26 +17,29 @@
     <div class="search-results" id="resultsContainer">
         {% if results %}
             {% for book in results %}
+            {% set info = book.volumeInfo %}
             <div class="result-card">
                 <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
-                    {% if book.cover_i %}
-                        <img src="https://covers.openlibrary.org/b/id/{{ book.cover_i }}-M.jpg" alt="{{ book.title }} cover" style="border-radius: 4px; width: 90px; flex-shrink: 0;">
+                    {% if info.imageLinks and info.imageLinks.thumbnail %}
+                        <img src="{{ info.imageLinks.thumbnail.replace('http://', 'https://') }}" alt="{{ info.title }} cover" style="border-radius: 4px; width: 90px; flex-shrink: 0;">
                     {% else %}
                         <div style="width: 90px; height: 135px; background: #ddd; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem; flex-shrink: 0;">No Cover</div>
                     {% endif %}
                     <div>
-                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ book.title }}</strong>
+                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ info.title }}</strong>
                         <span style="color: #666; font-size: 0.9rem;">
-                            By {{ book.author_name[0] if book.author_name else 'Unknown' }}
-                            {% if book.first_publish_year %}({{ book.first_publish_year }}){% endif %}
+                            By {{ info.authors[0] if info.authors else 'Unknown' }}
+                            {% if info.publishedDate %}({{ info.publishedDate[:4] }}){% endif %}
                         </span>
-                        <p class="hide-mobile" style="font-size: 0.85rem; color: #444; margin-top: 10px; line-height: 1.4;">
-                            Edition count: {{ book.edition_count }}
-                        </p>
+                        {% if info.description %}
+                            <p class="hide-mobile" style="font-size: 0.85rem; color: #444; margin-top: 10px; line-height: 1.4;">
+                                {{ info.description[:200] }}...
+                            </p>
+                        {% endif %}
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    <button class="btn btn-secondary" onclick="selectBook('{{ book.key.split('/')[-1] }}', '{{ book.title | replace("'", "\\'") }}')">
+                    <button class="btn btn-secondary" onclick="selectBook('{{ book.id }}', '{{ info.title | replace("'", "\\'") }}')">
                         {% if replace_id %}Update Book{% else %}Track Book{% endif %}
                     </button>
                 </div>
@@ -107,12 +110,12 @@
         const ratingInput = document.getElementById("rating");
         const rewatchCheckbox = document.querySelector('input[name="is_rewatch"]');
 
-        function selectBook(olId, title) {
+        function selectBook(volumeId, title) {
             resultsContainer.style.display = "none";
             mainSearchForm.style.display = "none";
             
             confirmTitle.innerText = `Tracking: ${title}`;
-            trackForm.action = `/books/add/${olId}`;
+            trackForm.action = `/books/add/${volumeId}`;
             
             const urlParams = new URLSearchParams(window.location.search);
             const preDate = urlParams.get('pre_date');

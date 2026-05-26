@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_user, logout_user, current_user, login_required
-from app.services import TMDBService, IGDBService, OpenLibraryService
+from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService
 from app.models import Movie, TVSeason, User, Game, Book
 from app import db
 from datetime import datetime
@@ -593,7 +593,7 @@ def search_book():
         replace_id = request.form.get('replace_id')
     
     if query:
-        results = OpenLibraryService.search_books(query)
+        results = GoogleBooksService.search_books(query)
         
     return render_template('book_search.html', 
                          results=results, 
@@ -603,13 +603,14 @@ def search_book():
                          pre_format=pre_format,
                          pre_rewatch=pre_rewatch)
 
-@main.route('/books/add/<ol_id>', methods=['POST'])
+@main.route('/books/add/<volume_id>', methods=['POST'])
 @login_required
-def add_book(ol_id):
+def add_book(volume_id):
     replace_id = request.form.get('replace_id')
-    details = OpenLibraryService.get_book_details(ol_id)
+    details = GoogleBooksService.get_book_details(volume_id)
     
     if details:
+        volume_info = details.get('volumeInfo', {})
         # Get inputs from modal form
         date_finished_str = request.form.get('date_finished')
         book_format = request.form.get('format')
@@ -622,28 +623,30 @@ def add_book(ol_id):
             date_finished = datetime.now().date()
 
         # Extract basic info
-        title = details.get('title')
+        title = volume_info.get('title')
+        author = ", ".join(volume_info.get('authors', []))
+        summary = volume_info.get('description', '')
+        page_count = volume_info.get('pageCount')
+        genres = ", ".join(volume_info.get('categories', []))
+        release_year = int(volume_info.get('publishedDate', '0')[:4]) if volume_info.get('publishedDate') else None
         
         # Cover
         cover_filename = None
-        covers = details.get('covers', [])
-        if covers:
-            cover_filename = OpenLibraryService.download_book_cover(cover_id=covers[0])
-        else:
-            # Try by OLID if no specific cover ID is provided in details
-            cover_filename = OpenLibraryService.download_book_cover(ol_id=ol_id)
-
-        # Summary/Description (can be a string or a dict)
-        description = details.get('description', '')
-        if isinstance(description, dict):
-            description = description.get('value', '')
+        image_links = volume_info.get('imageLinks', {})
+        image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
+        if image_url:
+            cover_filename = GoogleBooksService.download_cover(image_url, volume_id)
 
         if replace_id:
             book = Book.query.get_or_404(replace_id)
             book.title = title
-            book.external_id = ol_id
-            book.summary = description
+            book.author = author
+            book.external_id = volume_id
+            book.summary = summary
             book.poster_path = cover_filename
+            book.page_count = page_count
+            book.genres = genres
+            book.release_year = release_year
             
             if date_finished_str:
                 book.date_finished = date_finished
@@ -658,9 +661,13 @@ def add_book(ol_id):
         else:
             new_book = Book(
                 title=title,
-                external_id=ol_id,
-                summary=description,
+                author=author,
+                external_id=volume_id,
+                summary=summary,
                 poster_path=cover_filename,
+                page_count=page_count,
+                genres=genres,
+                release_year=release_year,
                 format=book_format,
                 is_revisit=is_rewatch,
                 date_finished=date_finished,
@@ -672,7 +679,7 @@ def add_book(ol_id):
         db.session.commit()
         return redirect(url_for('main.books_list'))
     
-    flash("Error fetching book details from OpenLibrary.")
+    flash("Error fetching book details from Google Books.")
     return redirect(url_for('main.search_book'))
 
 @main.route('/books/edit/<int:book_id>', methods=['POST'])
