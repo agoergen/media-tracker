@@ -16,11 +16,11 @@
 
     {% set global_count = namespace(value=0) %}
     
-    {% for year, seasons in grouped_seasons.items() %}
+    {% for year, year_seasons in grouped_seasons.items() %}
     <div class="year-group" id="group-year-{{ year }}">
         <div class="year-header" onclick="toggleYear('year-{{ year }}')">
             <span>{{ year }}</span>
-            <span class="year-count">{{ seasons|length }} seasons</span>
+            <span class="year-count">{{ year_seasons|length }} seasons</span>
         </div>
         <div id="year-{{ year }}" class="year-content {% if year != now.year %}collapsed{% endif %}">
             <div class="table-responsive">
@@ -38,7 +38,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for season in seasons %}
+                        {% for season in year_seasons %}
                         {% set global_count.value = global_count.value + 1 %}
                         <tr class="movie-row" id="row-{{ season.id }}" data-search="{{ season.series_title|lower }} {{ season.network|lower if season.network else '' }}">
                             <td style="color: #999; font-size: 0.8rem; vertical-align: middle;">{{ global_count.value }}</td>
@@ -136,7 +136,7 @@
     <script>
         function toggleYear(id) {
             const content = document.getElementById(id);
-            content.classList.toggle('collapsed');
+            if (content) content.classList.toggle('collapsed');
         }
 
         function toggleDetails(id) {
@@ -156,40 +156,50 @@
         // Search/Filter Logic
         const filterInput = document.getElementById('tvFilter');
         filterInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase();
+            const query = this.value.toLowerCase().trim();
             const yearGroups = document.querySelectorAll('.year-group');
-            const allYearContents = document.querySelectorAll('.year-content');
             
             if (query.length > 0) {
-                allYearContents.forEach(content => content.classList.remove('collapsed'));
                 document.querySelectorAll('.movie-row').forEach(row => {
-                    const searchData = row.getAttribute('data-search');
+                    const searchData = row.getAttribute('data-search') || '';
                     const season_id = row.id.replace('row-', '');
                     const detailRow = document.getElementById('details-' + season_id);
 
-                    if (searchData && searchData.includes(query)) {
+                    if (searchData.includes(query)) {
                         row.style.display = '';
-                    } else if (row.classList.contains('movie-row')) {
+                    } else {
                         row.style.display = 'none';
                         if (detailRow) detailRow.classList.remove('active');
                     }
                 });
+
                 yearGroups.forEach(group => {
+                    const yearId = group.id.replace('group-', '');
+                    const content = document.getElementById(yearId);
                     const visibleRows = group.querySelectorAll('.movie-row:not([style*="display: none"])');
-                    group.style.display = visibleRows.length > 0 ? '' : 'none';
+                    
+                    if (visibleRows.length > 0) {
+                        group.style.display = '';
+                        if (content) content.classList.remove('collapsed');
+                    } else {
+                        group.style.display = 'none';
+                    }
                 });
             } else {
-                const currentYear = new Date().getFullYear();
-                allYearContents.forEach(content => {
-                    const yearId = content.id.replace('year-', '');
-                    if (yearId == currentYear) {
-                        content.classList.remove('collapsed');
-                    } else {
-                        content.classList.add('collapsed');
+                const currentYear = new Date().getFullYear().toString();
+                yearGroups.forEach(group => {
+                    group.style.display = '';
+                    const yearId = group.id.replace('group-', '');
+                    const content = document.getElementById(yearId);
+                    if (content) {
+                        if (yearId.includes(currentYear)) {
+                            content.classList.remove('collapsed');
+                        } else {
+                            content.classList.add('collapsed');
+                        }
                     }
                 });
                 document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
-                yearGroups.forEach(group => group.style.display = '');
             }
         });
     </script>

@@ -16,13 +16,12 @@
 
     {% set global_count = namespace(value=0) %}
     
-    {% for year, movies in grouped_movies.items() %}
+    {% for year, year_movies in grouped_movies.items() %}
     <div class="year-group" id="group-year-{{ year }}">
         <div class="year-header" onclick="toggleYear('year-{{ year }}')">
             <span>{{ year }}</span>
-            <span class="year-count">{{ movies|length }} movies</span>
+            <span class="year-count">{{ year_movies|length }} movies</span>
         </div>
-        <!-- Expand only the current year by default -->
         <div id="year-{{ year }}" class="year-content {% if year != now.year %}collapsed{% endif %}">
             <div class="table-responsive">
                 <table>
@@ -39,7 +38,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for movie in movies %}
+                        {% for movie in year_movies %}
                         {% set global_count.value = global_count.value + 1 %}
                         <tr class="movie-row" id="row-{{ movie.id }}" data-search="{{ movie.title|lower }} {{ movie.director|lower if movie.director else '' }} {{ movie.leading_actors|lower if movie.leading_actors else '' }}">
                             <td style="color: #999; font-size: 0.8rem; vertical-align: middle;">{{ global_count.value }}</td>
@@ -141,7 +140,7 @@
     <script>
         function toggleYear(id) {
             const content = document.getElementById(id);
-            content.classList.toggle('collapsed');
+            if (content) content.classList.toggle('collapsed');
         }
 
         function toggleDetails(id) {
@@ -161,16 +160,13 @@
         // Search/Filter Logic
         const filterInput = document.getElementById('movieFilter');
         filterInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase();
+            const query = this.value.toLowerCase().trim();
             const yearGroups = document.querySelectorAll('.year-group');
-            const allYearContents = document.querySelectorAll('.year-content');
             
             if (query.length > 0) {
-                // Expand all years when searching
-                allYearContents.forEach(content => content.classList.remove('collapsed'));
-                
+                // Show matching movies and their parent years
                 document.querySelectorAll('.movie-row').forEach(row => {
-                    const searchData = row.getAttribute('data-search');
+                    const searchData = row.getAttribute('data-search') || '';
                     const movie_id = row.id.replace('row-', '');
                     const detailRow = document.getElementById('details-' + movie_id);
 
@@ -182,27 +178,38 @@
                     }
                 });
 
-                // Hide year groups that have no matching movies
+                // Expand all years to show results, and hide empty years
                 yearGroups.forEach(group => {
+                    const yearId = group.id.replace('group-', '');
+                    const content = document.getElementById(yearId);
                     const visibleRows = group.querySelectorAll('.movie-row:not([style*="display: none"])');
-                    group.style.display = visibleRows.length > 0 ? '' : 'none';
-                });
-
-            } else {
-                // Restore default collapse behavior
-                const currentYear = new Date().getFullYear();
-                allYearContents.forEach(content => {
-                    const yearId = content.id.replace('year-', '');
-                    if (yearId == currentYear) {
-                        content.classList.remove('collapsed');
+                    
+                    if (visibleRows.length > 0) {
+                        group.style.display = '';
+                        if (content) content.classList.remove('collapsed');
                     } else {
-                        content.classList.add('collapsed');
+                        group.style.display = 'none';
                     }
                 });
 
-                // Show all movies and year groups
+            } else {
+                // Restore default collapse behavior (only current year open)
+                const currentYear = new Date().getFullYear().toString();
+                yearGroups.forEach(group => {
+                    group.style.display = '';
+                    const yearId = group.id.replace('group-', '');
+                    const content = document.getElementById(yearId);
+                    if (content) {
+                        if (yearId.includes(currentYear)) {
+                            content.classList.remove('collapsed');
+                        } else {
+                            content.classList.add('collapsed');
+                        }
+                    }
+                });
+
+                // Show all movies
                 document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
-                yearGroups.forEach(group => group.style.display = '');
             }
         });
     </script>
