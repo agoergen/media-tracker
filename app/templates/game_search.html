@@ -1,15 +1,18 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Search Games (via IGDB)</h1>
-    
-    <form method="POST" class="search-form">
-        <input type="text" name="query" placeholder="Enter game title..." value="{{ query }}" required>
-        <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
-        <button type="submit" class="btn">Search</button>
-    </form>
+    <div style="margin-top: 2rem;">
+        <h1>Search Games (via IGDB)</h1>
+        
+        <form method="POST" class="search-form" id="mainSearchForm">
+            <input type="text" name="query" placeholder="Enter game title..." value="{{ query }}" required>
+            <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+            <button type="submit" class="btn">Search</button>
+        </form>
+    </div>
 
-    <div class="search-results">
+    <!-- Results Container -->
+    <div class="search-results" id="resultsContainer">
         {% if results %}
             {% for game in results %}
             <div class="result-card">
@@ -31,7 +34,7 @@
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    <button class="btn btn-secondary" onclick="openTrackModal('{{ game.id }}', '{{ game.name | replace("'", "\\'") }}')">
+                    <button class="btn btn-secondary" onclick="selectGame('{{ game.id }}', '{{ game.name | replace("'", "\\'") }}')">
                         {% if replace_id %}Update Game{% else %}Track Game...{% endif %}
                     </button>
                 </div>
@@ -42,24 +45,25 @@
         {% endif %}
     </div>
 
-    <!-- Tracking Modal -->
-    <div id="trackModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle" style="margin: 0; font-size: 1.2rem;">Track Game</h2>
-                <span class="close" onclick="closeTrackModal()">&times;</span>
-            </div>
-            <form id="trackForm" method="POST">
-                <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
-                
+    <!-- Selection Confirmation Container (Hidden by default) -->
+    <div id="confirmationContainer" style="display: none; margin-top: 2rem; background: var(--white); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 id="confirmTitle" style="margin: 0; font-size: 1.5rem;">Confirm Tracking</h2>
+            <button class="btn btn-secondary" onclick="cancelSelection()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;">&larr; Back to results</button>
+        </div>
+
+        <form id="trackForm" method="POST">
+            <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
                 <div class="form-group">
                     <label for="date_finished">Finished On:</label>
-                    <input type="date" id="date_finished" name="date_finished" required>
+                    <input type="date" id="date_finished" name="date_finished" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                 </div>
                 
                 <div class="form-group">
                     <label for="platform_played">Platform Played:</label>
-                    <select id="platform_played" name="platform_played" required>
+                    <select id="platform_played" name="platform_played" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                         <option value="">Select Platform...</option>
                         {% for plat in ['PC / Steam Deck', 'Playstation 5', 'Playstation 4', 'Playstation 3', 'Nintendo Switch', 'Switch 2', 'Analogue Pocket', 'Retro Handheld', 'SNES', 'NES', 'Arcade', 'Genesis', 'Other'] %}
                             <option value="{{ plat }}">{{ plat }}</option>
@@ -69,7 +73,7 @@
 
                 <div class="form-group">
                     <label for="franchise_input">Franchise:</label>
-                    <input type="text" id="franchise_input" name="franchise" list="franchise-options" placeholder="Select or type new..." style="padding: 10px; border-radius: 4px; border: 1px solid #ccc; width: 100%;">
+                    <input type="text" id="franchise_input" name="franchise" list="franchise-options" placeholder="Select or type new..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                     <datalist id="franchise-options">
                         {% for franchise in distinct_franchises %}
                             <option value="{{ franchise }}">
@@ -79,42 +83,46 @@
 
                 <div class="form-group">
                     <label for="variant">Variant / Modifier:</label>
-                    <select id="variant" name="variant">
+                    <select id="variant" name="variant" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                         <option value="">Standard Playthrough</option>
                         {% for v in ['Modded', 'Completionist Run', 'Hard Mode', 'Best Ending', 'Abbreviated', 'Part of a Collection', 'Alternative Playstyle'] %}
                             <option value="{{ v }}">{{ v }}</option>
                         {% endfor %}
                     </select>
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 10px; font-weight: normal;">
-                        <input type="checkbox" name="is_rewatch" style="width: auto;"> This is a replay
-                    </label>
-                </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer;">
+                    <input type="checkbox" name="is_rewatch" style="width: 20px; height: 20px;"> This is a replay
+                </label>
+            </div>
 
-                <div style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button type="submit" class="btn btn-success" style="flex: 1;">
-                        {% if replace_id %}Confirm & Update{% else %}Confirm & Track{% endif %}
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeTrackModal()" style="flex: 1;">Cancel</button>
-                </div>
-            </form>
-        </div>
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">
+                    {% if replace_id %}Confirm & Update{% else %}Confirm & Track{% endif %}
+                </button>
+            </div>
+        </form>
     </div>
 
     <script>
-        const modal = document.getElementById("trackModal");
+        const resultsContainer = document.getElementById("resultsContainer");
+        const confirmationContainer = document.getElementById("confirmationContainer");
+        const mainSearchForm = document.getElementById("mainSearchForm");
         const trackForm = document.getElementById("trackForm");
-        const modalTitle = document.getElementById("modalTitle");
+        const confirmTitle = document.getElementById("confirmTitle");
         const dateInput = document.getElementById("date_finished");
         const platformSelect = document.getElementById("platform_played");
         const variantSelect = document.getElementById("variant");
         const franchiseInput = document.getElementById("franchise_input");
         const rewatchCheckbox = document.querySelector('input[name="is_rewatch"]');
 
-        function openTrackModal(igdbId, title) {
-            modalTitle.innerText = `Track "${title}"`;
+        function selectGame(igdbId, title) {
+            resultsContainer.style.display = "none";
+            mainSearchForm.style.display = "none";
+            
+            confirmTitle.innerText = `Tracking: ${title}`;
             trackForm.action = `/games/add/${igdbId}`;
             
             const urlParams = new URLSearchParams(window.location.search);
@@ -130,15 +138,19 @@
                 dateInput.value = new Date().toISOString().split('T')[0];
             }
 
-            if (prePlat) platformSelect.value = prePlat;
-            if (preVariant) variantSelect.value = preVariant;
-            if (preFranchise) franchiseInput.value = preFranchise;
+            if (prePlat) platformSelect.value = decodeURIComponent(prePlat);
+            if (preVariant) variantSelect.value = decodeURIComponent(preVariant);
+            if (preFranchise) franchiseInput.value = decodeURIComponent(preFranchise);
             rewatchCheckbox.checked = (preRewatch === 'true');
 
-            modal.style.display = "block";
+            confirmationContainer.style.display = "block";
+            window.scrollTo(0, 0);
         }
 
-        function closeTrackModal() { modal.style.display = "none"; }
-        window.onclick = function(event) { if (event.target == modal) closeTrackModal(); }
+        function cancelSelection() {
+            confirmationContainer.style.display = "none";
+            resultsContainer.style.display = "block";
+            mainSearchForm.style.display = "block";
+        }
     </script>
 {% endblock %}
