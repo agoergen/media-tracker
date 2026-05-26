@@ -62,13 +62,13 @@ class Book(db.Model):
     release_year = db.Column(db.Integer)
     is_revisit = db.Column(db.Boolean, default=False)
     external_id = db.Column(db.String(100))
-    author = db.Column(db.String(255))
+    author = db.Column(db.Text)
     format = db.Column(db.String(100))
     storygraph_rating = db.Column(db.Float)
     summary = db.Column(db.Text)
     poster_path = db.Column(db.String(255))
     page_count = db.Column(db.Integer)
-    genres = db.Column(db.String(255))
+    genres = db.Column(db.Text)
 
 class Theater(db.Model):
     id = db.Column(db.Integer, primary_key=True)
