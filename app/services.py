@@ -240,13 +240,16 @@ class IGDBService:
 
 class OpenLibraryService:
     BASE_URL = "https://openlibrary.org"
+    HEADERS = {
+        "User-Agent": "LeisureLedger/1.0 (agoergen@gmail.com)"
+    }
 
     @classmethod
     def search_books(cls, query):
         url = f"{cls.BASE_URL}/search.json"
         params = {"q": query}
         try:
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, headers=cls.HEADERS, timeout=30)
             response.raise_for_status()
             return response.json().get('docs', [])
         except Exception as e:
@@ -258,7 +261,7 @@ class OpenLibraryService:
         # ol_id is usually a 'work' ID like 'OL12345W'
         url = f"{cls.BASE_URL}/works/{ol_id}.json"
         try:
-            response = requests.get(url, timeout=30)
+            response = requests.get(url, headers=cls.HEADERS, timeout=30)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -283,7 +286,7 @@ class OpenLibraryService:
             return filename
             
         try:
-            response = requests.get(url, stream=True)
+            response = requests.get(url, headers=cls.HEADERS, stream=True)
             response.raise_for_status()
             with open(local_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
