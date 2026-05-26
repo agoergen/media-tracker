@@ -389,6 +389,18 @@ def trigger_backfill_tv():
         flash(f"Error during TV backfill: {str(e)}")
     return redirect(url_for('main.tv_list'))
 
+@main.route('/init-admin')
+def init_admin():
+    # Only allow if no users exist or specifically for this setup
+    user = User.query.filter_by(username='8bitacrylic').first()
+    if not user:
+        user = User(username='8bitacrylic')
+        user.set_password('mycooltracker')
+        db.session.add(user)
+        db.session.commit()
+        return "Admin user created! You can now log in."
+    return "Admin user already exists."
+
 @main.route('/scrape-movie-posters')
 def trigger_scrape_movie_posters():
     from scrape_movie_posters import scrape_posters
