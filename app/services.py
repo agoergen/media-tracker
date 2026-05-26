@@ -368,6 +368,9 @@ class GoogleBooksService:
 
 class WikipediaService:
     BASE_URL = "https://en.wikipedia.org/w/api.php"
+    HEADERS = {
+        "User-Agent": "LeisureLedger/1.0 (agoergen@gmail.com)"
+    }
 
     @classmethod
     def search_posters(cls, show_name):
@@ -380,14 +383,14 @@ class WikipediaService:
         }
         
         try:
-            resp = requests.get(cls.BASE_URL, params=search_params, timeout=20)
+            resp = requests.get(cls.BASE_URL, params=search_params, headers=cls.HEADERS, timeout=20)
             resp.raise_for_status()
             search_results = resp.json().get('query', {}).get('search', [])
             
             if not search_results:
                 # Try without 'musical play poster' tags if too restrictive
                 search_params["srsearch"] = show_name
-                resp = requests.get(cls.BASE_URL, params=search_params, timeout=20)
+                resp = requests.get(cls.BASE_URL, params=search_params, headers=cls.HEADERS, timeout=20)
                 search_results = resp.json().get('query', {}).get('search', [])
 
             image_urls = []
@@ -402,7 +405,7 @@ class WikipediaService:
                     "pithumbsize": 600,
                     "format": "json"
                 }
-                img_resp = requests.get(cls.BASE_URL, params=img_params, timeout=20)
+                img_resp = requests.get(cls.BASE_URL, params=img_params, headers=cls.HEADERS, timeout=20)
                 pages = img_resp.json().get('query', {}).get('pages', {})
                 for page_id in pages:
                     thumb = pages[page_id].get('thumbnail', {}).get('source')
