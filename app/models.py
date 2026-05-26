@@ -64,7 +64,11 @@ class Book(db.Model):
     external_id = db.Column(db.String(100))
     author = db.Column(db.String(255))
     format = db.Column(db.String(100))
-    goodreads_rating = db.Column(db.Integer)
+    storygraph_rating = db.Column(db.Float)
+    summary = db.Column(db.Text)
+    poster_path = db.Column(db.String(255))
+    page_count = db.Column(db.Integer)
+    genres = db.Column(db.String(255))
 
 class Theater(db.Model):
     id = db.Column(db.Integer, primary_key=True)

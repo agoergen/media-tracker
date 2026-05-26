@@ -237,3 +237,53 @@ class IGDBService:
         except Exception as e:
             print(f"Error downloading cover: {e}")
             return None
+
+class OpenLibraryService:
+    BASE_URL = "https://openlibrary.org"
+
+    @classmethod
+    def search_books(cls, query):
+        url = f"{cls.BASE_URL}/search.json"
+        params = {"q": query}
+        try:
+            response = requests.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            return response.json().get('docs', [])
+        except Exception as e:
+            print(f"OpenLibrary search error for '{query}': {e}")
+            return []
+
+    @classmethod
+    def get_book_details(cls, ol_id):
+        # ol_id is usually a 'work' ID like 'OL12345W'
+        url = f"{cls.BASE_URL}/works/{ol_id}.json"
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"OpenLibrary details error for {ol_id}: {e}")
+            return None
+
+    @classmethod
+    def download_book_cover(cls, cover_id):
+        if not cover_id:
+            return None
+            
+        url = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
+        filename = f"book_{cover_id}.jpg"
+        local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        
+        if os.path.exists(local_path):
+            return filename
+            
+        try:
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            with open(local_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            return filename
+        except Exception as e:
+            print(f"Error downloading book cover: {e}")
+            return None

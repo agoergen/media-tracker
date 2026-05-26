@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}LeisureLedger: Search Books{% endblock %}
+
+{% block content %}
+    <div style="margin-top: 2rem;">
+        <h1>Search Books (via OpenLibrary)</h1>
+        
+        <form method="POST" class="search-form" id="mainSearchForm">
+            <input type="text" name="query" placeholder="Enter book title or author..." value="{{ query }}" required>
+            <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+            <button type="submit" class="btn">Search</button>
+        </form>
+    </div>
+
+    <!-- Results Container -->
+    <div class="search-results" id="resultsContainer">
+        {% if results %}
+            {% for book in results %}
+            <div class="result-card">
+                <div style="display: flex; gap: 15px; align-items: flex-start; flex: 1;">
+                    {% if book.cover_i %}
+                        <img src="https://covers.openlibrary.org/b/id/{{ book.cover_i }}-M.jpg" alt="{{ book.title }} cover" style="border-radius: 4px; width: 90px; flex-shrink: 0;">
+                    {% else %}
+                        <div style="width: 90px; height: 135px; background: #ddd; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 0.8rem; flex-shrink: 0;">No Cover</div>
+                    {% endif %}
+                    <div>
+                        <strong style="font-size: 1.1rem; display: block; margin-bottom: 5px;">{{ book.title }}</strong>
+                        <span style="color: #666; font-size: 0.9rem;">
+                            By {{ book.author_name[0] if book.author_name else 'Unknown' }}
+                            {% if book.first_publish_year %}({{ book.first_publish_year }}){% endif %}
+                        </span>
+                        <p class="hide-mobile" style="font-size: 0.85rem; color: #444; margin-top: 10px; line-height: 1.4;">
+                            Edition count: {{ book.edition_count }}
+                        </p>
+                    </div>
+                </div>
+                <div style="margin-left: auto;">
+                    <button class="btn btn-secondary" onclick="selectBook('{{ book.key.split('/')[-1] }}', '{{ book.title | replace("'", "\\'") }}')">
+                        {% if replace_id %}Update Book{% else %}Track Book{% endif %}
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        {% elif query %}
+            <p style="margin-top: 2rem;">No books found for "{{ query }}".</p>
+        {% endif %}
+    </div>
+
+    <!-- Selection Confirmation Container (Hidden by default) -->
+    <div id="confirmationContainer" style="display: none; margin-top: 2rem; background: var(--white); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 id="confirmTitle" style="margin: 0; font-size: 1.5rem;">Confirm Tracking</h2>
+            <button class="btn btn-secondary" onclick="cancelSelection()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;">&larr; Back to results</button>
+        </div>
+
+        <form id="trackForm" method="POST">
+            <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+                <div class="form-group">
+                    <label for="date_finished">Finished On:</label>
+                    <input type="date" id="date_finished" name="date_finished" required 
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                </div>
+                
+                <div class="form-group">
+                    <label for="format">Format:</label>
+                    <select id="format" name="format" 
+                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                        <option value="">Select Format...</option>
+                        {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
+                            <option value="{{ f }}">{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="rating">StoryGraph Rating:</label>
+                    <input type="number" step="0.05" id="rating" name="rating" placeholder="e.g. 4.25"
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer;">
+                    <input type="checkbox" name="is_rewatch" style="width: 20px; height: 20px;"> This is a reread
+                </label>
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">
+                    {% if replace_id %}Confirm & Update{% else %}Confirm & Track{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const resultsContainer = document.getElementById("resultsContainer");
+        const confirmationContainer = document.getElementById("confirmationContainer");
+        const mainSearchForm = document.getElementById("mainSearchForm");
+        const trackForm = document.getElementById("trackForm");
+        const confirmTitle = document.getElementById("confirmTitle");
+        const dateInput = document.getElementById("date_finished");
+        const formatSelect = document.getElementById("format");
+        const ratingInput = document.getElementById("rating");
+        const rewatchCheckbox = document.querySelector('input[name="is_rewatch"]');
+
+        function selectBook(olId, title) {
+            resultsContainer.style.display = "none";
+            mainSearchForm.style.display = "none";
+            
+            confirmTitle.innerText = `Tracking: ${title}`;
+            trackForm.action = `/books/add/${olId}`;
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const preDate = urlParams.get('pre_date');
+            const preFormat = urlParams.get('pre_format');
+            const preRewatch = urlParams.get('pre_rewatch');
+            const preRating = urlParams.get('pre_rating');
+
+            if (preDate) {
+                dateInput.value = preDate;
+            } else {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+
+            if (preFormat) formatSelect.value = decodeURIComponent(preFormat);
+            if (preRating) ratingInput.value = preRating;
+            rewatchCheckbox.checked = (preRewatch === 'true');
+
+            confirmationContainer.style.display = "block";
+            window.scrollTo(0, 0);
+        }
+
+        function cancelSelection() {
+            confirmationContainer.style.display = "none";
+            resultsContainer.style.display = "block";
+            mainSearchForm.style.display = "block";
+        }
+    </script>
+{% endblock %}

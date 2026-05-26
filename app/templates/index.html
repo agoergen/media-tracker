@@ -5,59 +5,85 @@
 {% block content %}
     <div class="dashboard-hero">
         <h1>Welcome back.</h1>
-        <p style="color: var(--text-muted); font-size: 1.25rem;">Track your journey through cinema, television, and gaming.</p>
+        <p style="color: var(--text-muted); font-size: 1.25rem;">Track your journey through cinema, television, gaming, and literature.</p>
         
         <div class="stats-grid">
             <a href="{{ url_for('main.movies_list') }}" class="stat-card">
                 <h3>Movies</h3>
                 <span class="count">{{ movie_count }}</span>
-                <span class="label">Titles tracked &rarr;</span>
+                <span class="label">{{ movies_this_year }} watched in {{ datetime.now().year }}</span>
             </a>
+            
             <a href="{{ url_for('main.tv_list') }}" class="stat-card">
-                <h3>TV Shows</h3>
-                <span class="count">{{ tv_count }}</span>
-                <span class="label">Seasons finished &rarr;</span>
+                <h3>Television</h3>
+                <span class="count">{{ TVSeason.query.count() }}</span>
+                <span class="label">Total seasons tracked</span>
             </a>
+            
             <a href="{{ url_for('main.games_list') }}" class="stat-card">
                 <h3>Games</h3>
                 <span class="count">{{ game_count }}</span>
-                <span class="label">Campaigns completed &rarr;</span>
+                <span class="label">{{ games_this_year }} finished in {{ datetime.now().year }}</span>
+            </a>
+
+            <a href="{{ url_for('main.books_list') }}" class="stat-card">
+                <h3>Books</h3>
+                <span class="count">{{ Book.query.count() }}</span>
+                <span class="label">Total books read</span>
             </a>
         </div>
+    </div>
 
-        <div style="margin-top: 4rem; display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;">
-            <div>
-                <h2 style="font-size: 1.25rem; margin-bottom: 1.5rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Recent Movies</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 3rem; margin-top: 2rem;">
+        <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Movies</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
                 {% for movie in recent_movies %}
-                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
+                <div style="display: flex; gap: 15px; align-items: center;">
                     {% if movie.poster_path %}
-                        <img src="{{ url_for('main.serve_poster', filename=movie.poster_path.lstrip('/')) }}" style="width: 40px; height: 60px; border-radius: 4px; object-fit: cover;">
-                    {% else %}
-                        <div style="width: 40px; height: 60px; background: var(--card-bg); border-radius: 4px; border: 1px solid var(--border-color);"></div>
+                        <img src="{{ url_for('main.serve_poster', filename=movie.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
                     {% endif %}
                     <div>
-                        <div style="font-weight: 600;">{{ movie.title }}</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">Watched on {{ movie.date_watched.strftime('%B %d') }}</div>
+                        <div style="font-weight: 500;">{{ movie.title }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ movie.date_watched.strftime('%b %d, %Y') }}</div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
-            <div>
-                <h2 style="font-size: 1.25rem; margin-bottom: 1.5rem; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.05em;">Recent Games</h2>
+        </section>
+
+        <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Games</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
                 {% for game in recent_games %}
-                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem;">
+                <div style="display: flex; gap: 15px; align-items: center;">
                     {% if game.poster_path %}
-                        <img src="{{ url_for('main.serve_poster', filename=game.poster_path.lstrip('/')) }}" style="width: 40px; height: 60px; border-radius: 4px; object-fit: cover;">
-                    {% else %}
-                        <div style="width: 40px; height: 60px; background: var(--card-bg); border-radius: 4px; border: 1px solid var(--border-color);"></div>
+                        <img src="{{ url_for('main.serve_poster', filename=game.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
                     {% endif %}
                     <div>
-                        <div style="font-weight: 600;">{{ game.title }}</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">Finished on {{ game.date_finished.strftime('%B %d') }}</div>
+                        <div style="font-weight: 500;">{{ game.title }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ game.date_finished.strftime('%b %d, %Y') }}</div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
-        </div>
+        </section>
+
+        <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Books</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for book in Book.query.order_by(Book.date_finished.desc()).limit(5).all() %}
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if book.poster_path %}
+                        <img src="{{ url_for('main.serve_poster', filename=book.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 500;">{{ book.title }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ book.date_finished.strftime('%b %d, %Y') if book.date_finished else 'N/A' }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
     </div>
 {% endblock %}

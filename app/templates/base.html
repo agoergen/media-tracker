@@ -16,6 +16,7 @@
                 <li><a href="{{ url_for('main.movies_list') }}">Movies</a></li>
                 <li><a href="{{ url_for('main.tv_list') }}">TV</a></li>
                 <li><a href="{{ url_for('main.games_list') }}">Games</a></li>
+                <li><a href="{{ url_for('main.books_list') }}">Books</a></li>
                 {% if current_user.is_authenticated %}
                     <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
                 {% else %}

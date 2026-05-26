@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_user, logout_user, current_user, login_required
-from app.services import TMDBService
-from app.models import Movie, TVSeason, User, Game
+from app.services import TMDBService, IGDBService, OpenLibraryService
+from app.models import Movie, TVSeason, User, Game, Book
 from app import db
 from datetime import datetime
 from collections import OrderedDict
@@ -14,51 +14,60 @@ def serve_poster(filename):
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('main.index'))
     if request.method == 'POST':
-        user = User.query.filter_by(username=request.form.get('username')).first()
-        if user is None or not user.check_password(request.form.get('password')):
-            flash('Invalid username or password')
-            return redirect(url_for('main.login'))
-        login_user(user)
-        return redirect(url_for('main.index'))
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for('main.index'))
+        flash('Invalid username or password')
     return render_template('login.html')
 
 @main.route('/logout')
+@login_required
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
 
 @main.route('/')
 def index():
+    # Latest 5 movies
+    recent_movies = Movie.query.order_by(Movie.date_watched.desc()).limit(5).all()
     movie_count = Movie.query.count()
-    tv_count = TVSeason.query.count()
-    game_count = Game.query.count()
     
-    # Get recent activity
-    recent_movies = Movie.query.order_by(Movie.date_watched.desc()).limit(3).all()
-    recent_games = Game.query.order_by(Game.date_finished.desc()).limit(3).all()
+    # Latest 5 games
+    recent_games = Game.query.order_by(Game.date_finished.desc()).limit(5).all()
+    game_count = Game.query.count()
+
+    # Counts by current year
+    current_year = datetime.now().year
+    movies_this_year = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year).count()
+    games_this_year = Game.query.filter(db.extract('year', Game.date_finished) == current_year).count()
     
     return render_template('index.html', 
-                         movie_count=movie_count, 
-                         tv_count=tv_count, 
-                         game_count=game_count,
-                         recent_movies=recent_movies,
+                         recent_movies=recent_movies, 
+                         movie_count=movie_count,
+                         movies_this_year=movies_this_year,
                          recent_games=recent_games,
-                         now=datetime.now())
+                         game_count=game_count,
+                         games_this_year=games_this_year)
 
+# MOVIE ROUTES
 @main.route('/movies')
 def movies_list():
     all_movies = Movie.query.order_by(Movie.date_watched.asc()).all()
     
-    # Group movies by year
+    # Group by year
     grouped = OrderedDict()
     for movie in all_movies:
         year = movie.date_watched.year if movie.date_watched else "Unknown"
         if year not in grouped:
             grouped[year] = []
         grouped[year].append(movie)
+    
+    # Sort grouped by year descending
+    # grouped = OrderedDict(sorted(grouped.items(), key=lambda t: str(t[0]), reverse=True))
     
     return render_template('movies.html', grouped_movies=grouped, total_count=len(all_movies), now=datetime.now())
 
@@ -71,7 +80,7 @@ def search_movie():
     pre_date = request.args.get('pre_date', '')
     pre_loc = request.args.get('pre_loc', '')
     pre_rewatch = request.args.get('pre_rewatch', 'false')
-    
+
     if request.method == 'POST':
         query = request.form.get('query')
         replace_id = request.form.get('replace_id')
@@ -82,9 +91,9 @@ def search_movie():
     return render_template('movie_search.html', 
                          results=results, 
                          query=query, 
-                         replace_id=replace_id,
-                         pre_date=pre_date,
-                         pre_loc=pre_loc,
+                         replace_id=replace_id, 
+                         pre_date=pre_date, 
+                         pre_loc=pre_loc, 
                          pre_rewatch=pre_rewatch)
 
 @main.route('/movies/add/<int:tmdb_id>', methods=['POST'])
@@ -94,73 +103,64 @@ def add_movie(tmdb_id):
     details = TMDBService.get_movie_details(tmdb_id)
     
     if details:
-        # Get inputs from modal form (or use existing if replacing)
+        # Get inputs from modal form
         date_watched_str = request.form.get('date_watched')
         watched_at = request.form.get('watched_at')
-        is_rewatch_input = request.form.get('is_rewatch') == 'on'
+        is_rewatch_input = True if request.form.get('is_rewatch') == 'on' else False
         
-        # Extract release year
-        release_date = details.get('release_date', '')
-        year = int(release_date[:4]) if release_date else None
-        
-        # Get director and cast from credits
-        credits = details.get('credits', {})
-        cast = ", ".join([member.get('name') for member in credits.get('cast', [])[:5]])
-        directors = ", ".join([member.get('name') for member in credits.get('crew', []) if member.get('job') == 'Director'])
-        writers = ", ".join([member.get('name') for member in credits.get('crew', []) if member.get('department') == 'Writing'])
-        
-        # Get certification (MPAA rating)
-        certification = "N/A"
-        release_dates = details.get('release_dates', {}).get('results', [])
-        for rd in release_dates:
-            if rd.get('iso_3166_1') == 'US':
-                for release in rd.get('release_dates', []):
-                    cert = release.get('certification')
-                    if cert:
-                        certification = cert
-                        break
-                break
-        
-        # Get YouTube trailer URL
-        trailer_url = None
-        videos = details.get('videos', {}).get('results', [])
-        for video in videos:
-            if video.get('site') == 'YouTube' and video.get('type') == 'Trailer':
-                trailer_url = f"https://www.youtube.com/embed/{video.get('key')}"
-                break
-        
-        # Get external IDs (Wikipedia)
-        external_ids = details.get('external_ids', {})
-        wiki_id = external_ids.get('wikidata_id')
-        wiki_url = f"https://www.wikidata.org/wiki/{wiki_id}" if wiki_id else None
+        try:
+            date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
+        except ValueError:
+            date_watched = datetime.now().date()
 
-        # Download poster for local storage
+        # Extract basic info
+        release_year = int(details.get('release_date', '0')[:4]) if details.get('release_date') else None
+        
+        # Crew & Cast
+        credits = details.get('credits', {})
+        crew = credits.get('crew', [])
+        cast = credits.get('cast', [])
+        
+        director = ", ".join([c['name'] for c in crew if c['job'] == 'Director'])
+        writer = ", ".join([c['name'] for c in crew if c['job'] in ['Screenplay', 'Writer']])
+        leading_actors = ", ".join([c['name'] for c in cast[:5]])
+
+        # Poster
+        poster_filename = None
         if details.get('poster_path'):
-            TMDBService.download_poster(details.get('poster_path'))
+            poster_filename = TMDBService.download_poster(details['poster_path'])
 
         if replace_id:
-            # Update existing movie
             movie = Movie.query.get_or_404(replace_id)
             movie.title = details.get('title')
-            movie.release_year = year
+            movie.release_year = release_year
             movie.external_id = str(tmdb_id)
-            movie.imdb_id = details.get('imdb_id')
-            movie.director = directors
-            movie.writer = writers
-            movie.leading_actors = cast
+            movie.director = director
+            movie.writer = writer
+            movie.leading_actors = leading_actors
             movie.plot = details.get('overview')
-            movie.poster_path = details.get('poster_path')
+            movie.poster_path = poster_filename
+            movie.imdb_id = details.get('imdb_id')
             movie.user_score = details.get('vote_average')
             movie.runtime = details.get('runtime')
-            movie.certification = certification
+            movie.certification = next((r['certification'] for r in details.get('release_dates', {}).get('results', []) if r['iso_3166_1'] == 'US' and r['release_dates']), None)
             movie.budget = details.get('budget')
             movie.revenue = details.get('revenue')
-            movie.trailer_url = trailer_url
-            movie.wikipedia_url = wiki_url
+            
+            # Extract trailer
+            videos = details.get('videos', {}).get('results', [])
+            trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
+            if trailer:
+                movie.trailer_url = f"https://www.youtube.com/embed/{trailer}"
+
+            # Wikipedia/Wikidata
+            wikidata_id = details.get('external_ids', {}).get('wikidata_id')
+            if wikidata_id:
+                movie.wikipedia_url = f"https://www.wikidata.org/wiki/{wikidata_id}"
             
             # Keep original date/location unless explicitly provided in modal
             if date_watched_str:
-                movie.date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date()
+                movie.date_watched = date_watched
             if watched_at:
                 movie.provider = watched_at
             if request.form.get('is_rewatch'): # If form exists, update rewatch
@@ -168,33 +168,37 @@ def add_movie(tmdb_id):
                 
             flash(f"Refreshed details for {movie.title}!")
         else:
-            # Add new movie
-            try:
-                date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
-            except ValueError:
-                date_watched = datetime.now().date()
-
             new_movie = Movie(
                 title=details.get('title'),
-                release_year=year,
+                date_watched=date_watched,
+                release_year=release_year,
                 external_id=str(tmdb_id),
-                imdb_id=details.get('imdb_id'),
-                director=directors,
-                writer=writers,
-                leading_actors=cast,
-                plot=details.get('overview'),
-                poster_path=details.get('poster_path'),
-                user_score=details.get('vote_average'),
-                runtime=details.get('runtime'),
-                certification=certification,
-                budget=details.get('budget'),
-                revenue=details.get('revenue'),
-                trailer_url=trailer_url,
-                wikipedia_url=wiki_url,
                 provider=watched_at,
                 is_revisit=is_rewatch_input,
-                date_watched=date_watched
+                director=director,
+                writer=writer,
+                leading_actors=leading_actors,
+                plot=details.get('overview'),
+                poster_path=poster_filename,
+                imdb_id=details.get('imdb_id'),
+                user_score=details.get('vote_average'),
+                runtime=details.get('runtime'),
+                certification=next((r['certification'] for r in details.get('release_dates', {}).get('results', []) if r['iso_3166_1'] == 'US' and r['release_dates']), None),
+                budget=details.get('budget'),
+                revenue=details.get('revenue')
             )
+            
+            # Extract trailer
+            videos = details.get('videos', {}).get('results', [])
+            trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
+            if trailer:
+                new_movie.trailer_url = f"https://www.youtube.com/embed/{trailer}"
+
+            # Wikipedia/Wikidata
+            wikidata_id = details.get('external_ids', {}).get('wikidata_id')
+            if wikidata_id:
+                new_movie.wikipedia_url = f"https://www.wikidata.org/wiki/{wikidata_id}"
+
             db.session.add(new_movie)
             flash(f"Added {new_movie.title} to your tracker!")
         
@@ -209,19 +213,15 @@ def add_movie(tmdb_id):
 def edit_movie(movie_id):
     movie = Movie.query.get_or_404(movie_id)
     
-    # Update Date
-    new_date_str = request.form.get('date_watched')
-    if new_date_str:
+    date_str = request.form.get('date_watched')
+    if date_str:
         try:
-            movie.date_watched = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+            movie.date_watched = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             flash("Invalid date format.")
             return redirect(url_for('main.movies_list'))
 
-    # Update Provider (Watched At)
     movie.provider = request.form.get('watched_at')
-    
-    # Update Rewatch (is_revisit)
     movie.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
     
     db.session.commit()
@@ -237,6 +237,7 @@ def delete_movie(movie_id):
     db.session.commit()
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.movies_list'))
+
 
 # TV ROUTES
 @main.route('/tv')
@@ -262,7 +263,8 @@ def search_tv():
     pre_date = request.args.get('pre_date', '')
     pre_loc = request.args.get('pre_loc', '')
     pre_rewatch = request.args.get('pre_rewatch', 'false')
-    
+    pre_season = request.args.get('pre_season', '1')
+
     if request.method == 'POST':
         query = request.form.get('query')
         replace_id = request.form.get('replace_id')
@@ -276,85 +278,80 @@ def search_tv():
                          replace_id=replace_id,
                          pre_date=pre_date,
                          pre_loc=pre_loc,
-                         pre_rewatch=pre_rewatch)
+                         pre_rewatch=pre_rewatch,
+                         pre_season=pre_season)
 
 @main.route('/tv/add/<int:series_id>', methods=['POST'])
 @login_required
 def add_tv_season(series_id):
-    season_number = request.form.get('season_number', type=int)
     replace_id = request.form.get('replace_id')
+    season_number = int(request.form.get('season_number', 1))
     
-    show_details = TMDBService.get_tv_show_details(series_id)
-    season_details = TMDBService.get_tv_season_details(series_id, season_number)
+    details = TMDBService.get_tv_details(series_id, season_number)
     
-    if show_details and season_details:
+    if details:
         # Get inputs from modal form
         date_watched_str = request.form.get('date_watched')
         watched_at = request.form.get('watched_at')
-        is_rewatch_input = request.form.get('is_rewatch') == 'on'
+        is_rewatch_input = True if request.form.get('is_rewatch') == 'on' else False
         
         try:
             date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
         except ValueError:
             date_watched = datetime.now().date()
 
-        # Trailer (from series level usually)
-        trailer_url = None
-        videos = show_details.get('videos', {}).get('results', [])
-        for video in videos:
-            if video.get('site') == 'YouTube' and video.get('type') == 'Trailer':
-                trailer_url = f"https://www.youtube.com/embed/{video.get('key')}"
-                break
-
-        # IMDB ID (from series level)
-        imdb_id = show_details.get('external_ids', {}).get('imdb_id')
-
-        # Download poster for local storage
-        if season_details.get('poster_path'):
-            TMDBService.download_poster(season_details.get('poster_path'))
-        elif show_details.get('poster_path'):
-            TMDBService.download_poster(show_details.get('poster_path'))
+        # Poster
+        poster_filename = None
+        if details.get('poster_path'):
+            poster_filename = TMDBService.download_poster(details['poster_path'])
 
         if replace_id:
             season = TVSeason.query.get_or_404(replace_id)
-            season.series_title = show_details.get('name')
+            season.series_title = details.get('series_name')
             season.season_number = season_number
-            season.release_year = int(season_details.get('air_date', '')[:4]) if season_details.get('air_date') else None
             season.external_id = str(series_id)
-            season.network = show_details.get('networks', [{}])[0].get('name')
-            season.episode_count = len(season_details.get('episodes', []))
-            season.poster_path = season_details.get('poster_path') or show_details.get('poster_path')
-            season.user_score = show_details.get('vote_average')
-            season.plot = season_details.get('overview') or show_details.get('overview')
-            season.trailer_url = trailer_url
-            season.imdb_id = imdb_id
+            season.network = details.get('network')
+            season.episode_count = details.get('episode_count')
+            season.poster_path = poster_filename
+            season.user_score = details.get('vote_average')
+            season.plot = details.get('overview')
+            
+            # Extract trailer from series level
+            videos = details.get('videos', {}).get('results', [])
+            trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
+            if trailer:
+                season.trailer_url = f"https://www.youtube.com/embed/{trailer}"
             
             if date_watched_str:
                 season.date_watched = date_watched
             if watched_at:
-                season.network = watched_at # Using network as provider for TV consistency in UI
+                season.network = watched_at
             if request.form.get('is_rewatch'):
                 season.is_revisit = is_rewatch_input
                 
-            flash(f"Refreshed details for {season.series_title} Season {season_number}!")
+            flash(f"Refreshed details for {season.series_title} S{season.season_number}!")
         else:
             new_season = TVSeason(
-                series_title=show_details.get('name'),
+                series_title=details.get('series_name'),
                 season_number=season_number,
                 date_watched=date_watched,
-                release_year=int(season_details.get('air_date', '')[:4]) if season_details.get('air_date') else None,
-                is_revisit=is_rewatch_input,
                 external_id=str(series_id),
-                network=watched_at or (show_details.get('networks', [{}])[0].get('name') if show_details.get('networks') else None),
-                episode_count=len(season_details.get('episodes', [])),
-                poster_path=season_details.get('poster_path') or show_details.get('poster_path'),
-                user_score=show_details.get('vote_average'),
-                plot=season_details.get('overview') or show_details.get('overview'),
-                trailer_url=trailer_url,
-                imdb_id=imdb_id
+                network=watched_at or details.get('network'),
+                episode_count=details.get('episode_count'),
+                poster_path=poster_filename,
+                user_score=details.get('vote_average'),
+                plot=details.get('overview'),
+                is_revisit=is_rewatch_input
             )
+            
+            # Extract trailer
+            videos = details.get('videos', {}).get('results', [])
+            trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
+            if trailer:
+                new_season.trailer_url = f"https://www.youtube.com/embed/{trailer}"
+
             db.session.add(new_season)
-            flash(f"Added {new_season.series_title} Season {season_number} to your tracker!")
+            flash(f"Added {new_season.series_title} Season {new_season.season_number} to your tracker!")
         
         db.session.commit()
         return redirect(url_for('main.tv_list'))
@@ -367,10 +364,10 @@ def add_tv_season(series_id):
 def edit_tv_season(season_id):
     season = TVSeason.query.get_or_404(season_id)
     
-    new_date_str = request.form.get('date_watched')
-    if new_date_str:
+    date_str = request.form.get('date_watched')
+    if date_str:
         try:
-            season.date_watched = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+            season.date_watched = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             flash("Invalid date format.")
             return redirect(url_for('main.tv_list'))
@@ -392,9 +389,8 @@ def delete_tv_season(season_id):
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.tv_list'))
 
-# GAME ROUTES
-from app.services import IGDBService
 
+# GAME ROUTES
 @main.route('/games')
 def games_list():
     all_games = Game.query.order_by(Game.date_finished.asc()).all()
@@ -501,6 +497,8 @@ def add_game(igdb_id):
                 game.is_revisit = is_rewatch
             if variant:
                 game.variant = variant
+            if franchise_input:
+                game.franchise = franchise_input
                 
             flash(f"Refreshed details for {game.title}!")
         else:
@@ -564,6 +562,147 @@ def delete_game(game_id):
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.games_list'))
 
+
+# BOOK ROUTES
+@main.route('/books')
+def books_list():
+    all_books = Book.query.order_by(Book.date_finished.asc()).all()
+    
+    # Group by year
+    grouped = OrderedDict()
+    for book in all_books:
+        year = book.date_finished.year if book.date_finished else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(book)
+    
+    return render_template('books.html', grouped_books=grouped, total_count=len(all_books), now=datetime.now())
+
+@main.route('/books/search', methods=['GET', 'POST'])
+@login_required
+def search_book():
+    results = []
+    query = request.args.get('query', '')
+    replace_id = request.args.get('replace_id')
+    pre_date = request.args.get('pre_date', '')
+    pre_format = request.args.get('pre_format', '')
+    pre_rewatch = request.args.get('pre_rewatch', 'false')
+    
+    if request.method == 'POST':
+        query = request.form.get('query')
+        replace_id = request.form.get('replace_id')
+    
+    if query:
+        results = OpenLibraryService.search_books(query)
+        
+    return render_template('book_search.html', 
+                         results=results, 
+                         query=query, 
+                         replace_id=replace_id,
+                         pre_date=pre_date,
+                         pre_format=pre_format,
+                         pre_rewatch=pre_rewatch)
+
+@main.route('/books/add/<ol_id>', methods=['POST'])
+@login_required
+def add_book(ol_id):
+    replace_id = request.form.get('replace_id')
+    details = OpenLibraryService.get_book_details(ol_id)
+    
+    if details:
+        # Get inputs from modal form
+        date_finished_str = request.form.get('date_finished')
+        book_format = request.form.get('format')
+        is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+        rating = request.form.get('rating', type=float)
+        
+        try:
+            date_finished = datetime.strptime(date_finished_str, '%Y-%m-%d').date() if date_finished_str else datetime.now().date()
+        except ValueError:
+            date_finished = datetime.now().date()
+
+        # Extract basic info
+        title = details.get('title')
+        
+        # Cover
+        cover_filename = None
+        covers = details.get('covers', [])
+        if covers:
+            cover_filename = OpenLibraryService.download_book_cover(covers[0])
+
+        # Summary/Description (can be a string or a dict)
+        description = details.get('description', '')
+        if isinstance(description, dict):
+            description = description.get('value', '')
+
+        if replace_id:
+            book = Book.query.get_or_404(replace_id)
+            book.title = title
+            book.external_id = ol_id
+            book.summary = description
+            book.poster_path = cover_filename
+            
+            if date_finished_str:
+                book.date_finished = date_finished
+            if book_format:
+                book.format = book_format
+            if request.form.get('is_rewatch'):
+                book.is_revisit = is_rewatch
+            if rating:
+                book.storygraph_rating = rating
+                
+            flash(f"Refreshed details for {book.title}!")
+        else:
+            new_book = Book(
+                title=title,
+                external_id=ol_id,
+                summary=description,
+                poster_path=cover_filename,
+                format=book_format,
+                is_revisit=is_rewatch,
+                date_finished=date_finished,
+                storygraph_rating=rating
+            )
+            db.session.add(new_book)
+            flash(f"Added {new_book.title} to your tracker!")
+        
+        db.session.commit()
+        return redirect(url_for('main.books_list'))
+    
+    flash("Error fetching book details from OpenLibrary.")
+    return redirect(url_for('main.search_book'))
+
+@main.route('/books/edit/<int:book_id>', methods=['POST'])
+@login_required
+def edit_book(book_id):
+    book = Book.query.get_or_404(book_id)
+    
+    date_str = request.form.get('date_finished')
+    if date_str:
+        try:
+            book.date_finished = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            flash("Invalid date format.")
+            return redirect(url_for('main.books_list'))
+
+    book.format = request.form.get('format')
+    book.storygraph_rating = request.form.get('rating', type=float)
+    book.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
+    
+    db.session.commit()
+    flash(f"Updated tracking for {book.title}.")
+    return redirect(url_for('main.books_list'))
+
+@main.route('/books/delete/<int:book_id>', methods=['POST'])
+@login_required
+def delete_book(book_id):
+    book = Book.query.get_or_404(book_id)
+    title = book.title
+    db.session.delete(book)
+    db.session.commit()
+    flash(f"Removed {title} from your tracker.")
+    return redirect(url_for('main.books_list'))
+
 @main.route('/backfill-games')
 def trigger_backfill_games():
     from app.backfill_games import run_backfill_games
@@ -573,3 +712,13 @@ def trigger_backfill_games():
     except Exception as e:
         flash(f"Error during game backfill: {str(e)}")
     return redirect(url_for('main.games_list'))
+
+@main.route('/backfill-books')
+def trigger_backfill_books():
+    from app.backfill_books import run_backfill_books
+    try:
+        count = run_backfill_books()
+        flash(f"Successfully backfilled {count} books!")
+    except Exception as e:
+        flash(f"Error during book backfill: {str(e)}")
+    return redirect(url_for('main.books_list'))
