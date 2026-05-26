@@ -440,7 +440,7 @@ class WikipediaService:
             return None
 
     @classmethod
-    def get_summary(cls, show_name):
+    def get_details(cls, show_name):
         # 1. Search to find the best page
         search_params = {
             "action": "query",
@@ -448,29 +448,61 @@ class WikipediaService:
             "srsearch": f"{show_name} musical play",
             "format": "json"
         }
+        
+        details = {"summary": None, "runtime": None}
+        
         try:
             resp = requests.get(cls.BASE_URL, params=search_params, headers=cls.HEADERS, timeout=20)
             search_results = resp.json().get('query', {}).get('search', [])
-            if not search_results: return None
+            if not search_results: return details
             
             page_title = search_results[0]['title']
             
-            # 2. Get extract
-            extract_params = {
+            # 2. Get extract AND wikibase_item (for Wikidata)
+            info_params = {
                 "action": "query",
                 "titles": page_title,
-                "prop": "extracts",
+                "prop": "extracts|pageprops",
                 "exintro": True,
                 "explaintext": True,
                 "format": "json"
             }
-            resp = requests.get(cls.BASE_URL, params=extract_params, headers=cls.HEADERS, timeout=20)
+            resp = requests.get(cls.BASE_URL, params=info_params, headers=cls.HEADERS, timeout=20)
             pages = resp.json().get('query', {}).get('pages', {})
+            
+            wikidata_id = None
             for page_id in pages:
-                return pages[page_id].get('extract')
-        except:
-            return None
-        return None
+                details["summary"] = pages[page_id].get('extract')
+                wikidata_id = pages[page_id].get('pageprops', {}).get('wikibase_item')
+
+            # 3. Fetch runtime from Wikidata if we have an ID
+            if wikidata_id:
+                wiki_url = f"https://www.wikidata.org/w/api.php"
+                wiki_params = {
+                    "action": "wbgetclaims",
+                    "entity": wikidata_id,
+                    "property": "P2047", # Duration
+                    "format": "json"
+                }
+                w_resp = requests.get(wiki_url, params=wiki_params, headers=cls.HEADERS, timeout=20)
+                claims = w_resp.json().get('claims', {}).get('P2047', [])
+                if claims:
+                    # Get the first claim value
+                    val = claims[0].get('mainsnak', {}).get('datavalue', {}).get('value', {})
+                    amount = val.get('amount')
+                    if amount:
+                        # amount is usually like "+160"
+                        details["runtime"] = int(float(amount))
+            
+            return details
+        except Exception as e:
+            print(f"Wikipedia details error for {show_name}: {e}")
+            return details
+
+    @classmethod
+    def get_summary(cls, show_name):
+        # Deprecated: use get_details
+        return cls.get_details(show_name).get('summary')
 
 class IBDBService:
     BASE_URL = "https://www.ibdb.com"

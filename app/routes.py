@@ -795,8 +795,10 @@ def add_theater_ibdb(slug_id):
     opening_date_str = details.get('opening_date')
     original_theater = details.get('theater')
     
-    # 2. Fetch rich summary from Wikipedia (since IBDB is mostly stats)
-    summary = WikipediaService.get_summary(title)
+    # 2. Fetch rich summary and runtime from Wikipedia/Wikidata
+    wiki_details = WikipediaService.get_details(title)
+    summary = wiki_details.get('summary')
+    runtime = wiki_details.get('runtime')
     
     try:
         date_watched = datetime.strptime(date_watched_str, '%Y-%m-%d').date() if date_watched_str else datetime.now().date()
@@ -821,6 +823,7 @@ def add_theater_ibdb(slug_id):
         is_revisit=is_rewatch,
         release_year=release_year,
         original_theater=original_theater,
+        run_time=runtime,
         show_type=show_type,
         poster_path=poster_filename,
         summary=summary
