@@ -771,18 +771,23 @@ def theater_list():
 def search_theater():
     online_results = []
     query = request.args.get('query', '')
+    update_id = request.args.get('update_id')
+    pre_date = request.args.get('date')
+    pre_loc = request.args.get('loc')
+    
     if request.method == 'POST':
         query = request.form.get('query', '').strip()
+        update_id = request.form.get('update_id')
     
     if query:
-        # Search IBDB exclusively for comprehensive records
         online_results = IBDBService.search_shows(query)
         
-    return render_template('theater_search.html', online_results=online_results, query=query)
+    return render_template('theater_search.html', online_results=online_results, query=query, update_id=update_id, pre_date=pre_date, pre_loc=pre_loc)
 
 @main.route('/theater/add-ibdb/<string:slug_id>', methods=['POST'])
 @login_required
 def add_theater_ibdb(slug_id):
+    update_id = request.form.get('update_id')
     title = request.form.get('title')
     show_type = request.form.get('show_type')
     date_watched_str = request.form.get('date_watched')
@@ -790,7 +795,7 @@ def add_theater_ibdb(slug_id):
     is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
     selected_image = request.form.get('poster_url')
     
-    # 1. Fetch extra details from IBDB (Opening date, Original Theater)
+    # 1. Fetch extra details from IBDB
     details = IBDBService.get_show_details(slug_id)
     opening_date_str = details.get('opening_date')
     original_theater = details.get('theater')
@@ -811,26 +816,45 @@ def add_theater_ibdb(slug_id):
             release_year = int(opening_date_str.split(',')[-1].strip())
         except: pass
 
-    # Download selected poster if provided
+    # Download selected poster
     poster_filename = None
     if selected_image:
         poster_filename = ImageSearchService.download_image(selected_image, 'theater', slug_id.split('-')[-1])
 
-    new_show = Theater(
-        title=title,
-        date_watched=date_watched,
-        location=location,
-        is_revisit=is_rewatch,
-        release_year=release_year,
-        original_theater=original_theater,
-        run_time=runtime,
-        show_type=show_type,
-        poster_path=poster_filename,
-        summary=summary
-    )
-    db.session.add(new_show)
-    db.session.commit()
-    flash(f"Added {new_show.title} to your tracker!")
+    if update_id:
+        # SYNC MODE: Update existing record
+        show = Theater.query.get_or_404(int(update_id))
+        show.title = title
+        show.date_watched = date_watched
+        show.location = location
+        show.is_revisit = is_rewatch
+        show.release_year = release_year or show.release_year
+        show.original_theater = original_theater
+        show.run_time = runtime
+        show.show_type = show_type
+        if poster_filename:
+            show.poster_path = poster_filename
+        show.summary = summary
+        db.session.commit()
+        flash(f"Synchronized {show.title} with live metadata!")
+    else:
+        # ADD MODE: Create new record
+        new_show = Theater(
+            title=title,
+            date_watched=date_watched,
+            location=location,
+            is_revisit=is_rewatch,
+            release_year=release_year,
+            original_theater=original_theater,
+            run_time=runtime,
+            show_type=show_type,
+            poster_path=poster_filename,
+            summary=summary
+        )
+        db.session.add(new_show)
+        db.session.commit()
+        flash(f"Added {new_show.title} to your tracker!")
+        
     return redirect(url_for('main.theater_list'))
 
 @main.route('/theater/get-posters')

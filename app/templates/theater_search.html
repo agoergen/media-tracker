@@ -4,10 +4,15 @@
 
 {% block content %}
     <div style="margin-top: 2rem;">
-        <h1>Search Broadway Database (IBDB)</h1>
-        <p style="color: var(--text-muted); margin-bottom: 2rem;">Find any Broadway show or touring production.</p>
+        <h1>{% if update_id %}Sync Show with IBDB{% else %}Search Theater{% endif %}</h1>
+        {% if update_id %}
+            <p style="background: #e1f5fe; padding: 10px; border-radius: 8px; color: #0277bd; font-size: 0.9rem;">
+                <strong>Sync Mode:</strong> You are matching an existing record to IBDB to pull live metadata and posters.
+            </p>
+        {% endif %}
         
         <form method="POST" class="search-form" id="mainSearchForm">
+            <input type="hidden" name="update_id" value="{{ update_id or '' }}">
             <input type="text" name="query" placeholder="Enter show name (e.g. Six, Hamilton, Wicked)..." value="{{ query }}" required>
             <button type="submit" class="btn">Search</button>
         </form>
@@ -49,17 +54,18 @@
             <input type="hidden" name="poster_url" id="selectedPosterUrl">
             <input type="hidden" name="title" id="formTitle">
             <input type="hidden" name="show_type" id="formType">
+            <input type="hidden" name="update_id" value="{{ update_id or '' }}">
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
                 <div class="form-group">
                     <label for="date_watched">Watched On:</label>
-                    <input type="date" id="date_watched" name="date_watched" required 
+                    <input type="date" id="date_watched" name="date_watched" value="{{ pre_date or '' }}" required 
                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                 </div>
                 
                 <div class="form-group">
                     <label for="location">Venue Watched:</label>
-                    <input type="text" id="location" name="location" value="Orpheum" placeholder="e.g. Orpheum Theatre"
+                    <input type="text" id="location" name="location" value="{{ pre_loc or 'Orpheum' }}" placeholder="e.g. Orpheum Theatre"
                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                 </div>
             </div>
@@ -126,7 +132,10 @@
             formTypeInput.value = type;
             trackForm.action = `/theater/add-ibdb/${id}`;
             
-            dateInput.value = new Date().toISOString().split('T')[0];
+            // Only default to today if there is no pre-existing date (e.g. from Sync)
+            if (!dateInput.value) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
 
             confirmationContainer.style.display = "block";
             window.scrollTo(0, 0);

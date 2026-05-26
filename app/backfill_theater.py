@@ -1,9 +1,7 @@
 import csv
-import time
 from datetime import datetime
 from app import db
 from app.models import Theater
-from app.services import WikipediaService, ImageSearchService
 
 def run_backfill_theater():
     csv_path = 'app/backfill_data/theater.csv'
@@ -16,7 +14,7 @@ def run_backfill_theater():
             if not title:
                 continue
                 
-            # Date parsing (M/D/YY)
+            # Date parsing (M/D/YY or M/D/YYYY)
             date_watched = None
             date_str = row.get('Date Watched')
             if date_str:
@@ -28,9 +26,9 @@ def run_backfill_theater():
                 except ValueError:
                     pass
             
-            # Check if exists
-            show = Theater.query.filter_by(title=title, date_watched=date_watched).first()
-            if not show:
+            # Check if exists to avoid duplicates on re-run
+            existing = Theater.query.filter_by(title=title, date_watched=date_watched).first()
+            if not existing:
                 show = Theater(
                     title=title,
                     location=row.get('Location'),
@@ -38,19 +36,8 @@ def run_backfill_theater():
                     release_year=int(row.get('Original Year of Release')) if row.get('Original Year of Release') and row.get('Original Year of Release').isdigit() else None,
                     is_revisit=False
                 )
-                
                 db.session.add(show)
-                db.session.flush() # Get ID for image download
                 count += 1
-
-            # Enrich with Wikipedia Poster if missing
-            if not show.poster_path:
-                print(f"Fetching poster for {title}...")
-                posters = WikipediaService.search_posters(title)
-                if posters:
-                    # Just take the first one for backfill
-                    show.poster_path = ImageSearchService.download_image(posters[0], 'theater', show.id)
-                time.sleep(0.5)
                 
     db.session.commit()
     return count

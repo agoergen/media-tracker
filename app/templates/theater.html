@@ -96,7 +96,8 @@
                                             </div>
                                         {% endif %}
 
-                                        <div style="margin-top: 15px;">
+                                        <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                            <a href="{{ url_for('main.search_theater', query=show.title, update_id=show.id, date=show.date_watched, loc=show.location) }}" class="btn btn-secondary" style="background: var(--secondary); color: #fff; padding: 6px 12px; font-size: 0.85rem;">Sync with IBDB/Posters</a>
                                             <a href="https://www.google.com/search?q=What+are+some+theater+shows+I+might+enjoy+if+I+enjoyed+{{ show.title | urlencode }}" target="_blank" class="btn btn-secondary" style="background: #8e44ad; color: #fff; padding: 6px 12px; font-size: 0.85rem;">Ask Google for Similar</a>
                                         </div>
                                     </div>
