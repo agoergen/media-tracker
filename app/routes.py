@@ -589,7 +589,7 @@ def search_book():
     pre_rewatch = request.args.get('pre_rewatch', 'false')
     
     if request.method == 'POST':
-        query = request.form.get('query')
+        query = request.form.get('query', '').strip()
         replace_id = request.form.get('replace_id')
     
     if query:

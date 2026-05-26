@@ -298,6 +298,9 @@ class OpenLibraryService:
 
 class GoogleBooksService:
     BASE_URL = "https://www.googleapis.com/books/v1/volumes"
+    HEADERS = {
+        "User-Agent": "LeisureLedger/1.0 (agoergen@gmail.com)"
+    }
 
     @classmethod
     def search_books(cls, query):
@@ -307,7 +310,9 @@ class GoogleBooksService:
             params['key'] = api_key
             
         try:
-            response = requests.get(cls.BASE_URL, params=params, timeout=30)
+            response = requests.get(cls.BASE_URL, params=params, headers=cls.HEADERS, timeout=30)
+            if response.status_code != 200:
+                print(f"Google Books API Error: {response.status_code} - {response.text}")
             response.raise_for_status()
             return response.json().get('items', [])
         except Exception as e:
@@ -323,7 +328,9 @@ class GoogleBooksService:
             params['key'] = api_key
 
         try:
-            response = requests.get(url, params=params, timeout=30)
+            response = requests.get(url, params=params, headers=cls.HEADERS, timeout=30)
+            if response.status_code != 200:
+                print(f"Google Books Detail Error: {response.status_code} - {response.text}")
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -346,7 +353,7 @@ class GoogleBooksService:
             if image_url.startswith('http://'):
                 image_url = image_url.replace('http://', 'https://')
             
-            response = requests.get(image_url, stream=True)
+            response = requests.get(image_url, headers=cls.HEADERS, stream=True)
             response.raise_for_status()
             with open(local_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
