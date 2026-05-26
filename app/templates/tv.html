@@ -17,7 +17,7 @@
     {% set global_count = namespace(value=0) %}
     
     {% for year, seasons in grouped_seasons.items() %}
-    <div class="year-group" data-year="{{ year }}">
+    <div class="year-group" id="group-year-{{ year }}">
         <div class="year-header" onclick="toggleYear('year-{{ year }}')">
             <span>{{ year }}</span>
             <span class="year-count">{{ seasons|length }} seasons</span>
@@ -40,7 +40,7 @@
                     <tbody>
                         {% for season in seasons %}
                         {% set global_count.value = global_count.value + 1 %}
-                        <tr class="movie-row" data-search="{{ season.series_title|lower }} {{ season.network|lower }}">
+                        <tr class="movie-row" id="row-{{ season.id }}" data-search="{{ season.series_title|lower }} {{ season.network|lower if season.network else '' }}">
                             <td style="color: #999; font-size: 0.8rem; vertical-align: middle;">{{ global_count.value }}</td>
                             <td>
                                 {% if season.poster_path %}
@@ -164,18 +164,19 @@
                 allYearContents.forEach(content => content.classList.remove('collapsed'));
                 document.querySelectorAll('.movie-row').forEach(row => {
                     const searchData = row.getAttribute('data-search');
+                    const season_id = row.id.replace('row-', '');
+                    const detailRow = document.getElementById('details-' + season_id);
+
                     if (searchData && searchData.includes(query)) {
                         row.style.display = '';
                     } else if (row.classList.contains('movie-row')) {
                         row.style.display = 'none';
-                        const detailId = row.querySelector('.toggle-details').getAttribute('onclick').match(/'([^']+)'/)[1];
-                        const detailRow = document.getElementById(`details-${detailId}`);
                         if (detailRow) detailRow.classList.remove('active');
                     }
                 });
                 yearGroups.forEach(group => {
-                    const visibleMovies = group.querySelectorAll('.movie-row:not([style*="display: none"])');
-                    group.style.display = visibleMovies.length > 0 ? '' : 'none';
+                    const visibleRows = group.querySelectorAll('.movie-row:not([style*="display: none"])');
+                    group.style.display = visibleRows.length > 0 ? '' : 'none';
                 });
             } else {
                 const currentYear = new Date().getFullYear();

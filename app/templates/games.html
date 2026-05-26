@@ -17,7 +17,7 @@
     {% set global_count = namespace(value=0) %}
     
     {% for year, games in grouped_games.items() %}
-    <div class="year-group" data-year="{{ year }}">
+    <div class="year-group" id="group-year-{{ year }}">
         <div class="year-header" onclick="toggleYear('year-{{ year }}')">
             <span>{{ year }}</span>
             <span class="year-count">{{ games|length }} games</span>
@@ -41,7 +41,7 @@
                     <tbody>
                         {% for game in games %}
                         {% set global_count.value = global_count.value + 1 %}
-                        <tr class="movie-row" data-search="{{ game.title|lower }} {{ game.platform_played|lower }} {{ game.franchise|lower if game.franchise else '' }}">
+                        <tr class="movie-row" id="row-{{ game.id }}" data-search="{{ game.title|lower }} {{ game.platform_played|lower }} {{ game.franchise|lower if game.franchise else '' }}">
                             <td style="color: #999; font-size: 0.8rem; vertical-align: middle;">{{ global_count.value }}</td>
                             <td>
                                 {% if game.poster_path %}
@@ -163,21 +163,19 @@
                 allYearContents.forEach(content => content.classList.remove('collapsed'));
                 document.querySelectorAll('.movie-row').forEach(row => {
                     const searchData = row.getAttribute('data-search');
+                    const game_id = row.id.replace('row-', '');
+                    const detailRow = document.getElementById('details-' + game_id);
+
                     if (searchData && searchData.includes(query)) {
                         row.style.display = '';
-                    } else {
+                    } else if (row.classList.contains('movie-row')) {
                         row.style.display = 'none';
-                        const toggleBtn = row.querySelector('.toggle-details');
-                        if (toggleBtn) {
-                            const detailId = toggleBtn.getAttribute('onclick').match(/'([^']+)'/)[1];
-                            const detailRow = document.getElementById(`details-${detailId}`);
-                            if (detailRow) detailRow.classList.remove('active');
-                        }
+                        if (detailRow) detailRow.classList.remove('active');
                     }
                 });
                 yearGroups.forEach(group => {
-                    const visibleGames = group.querySelectorAll('.movie-row:not([style*="display: none"])');
-                    group.style.display = visibleGames.length > 0 ? '' : 'none';
+                    const visibleRows = group.querySelectorAll('.movie-row:not([style*="display: none"])');
+                    group.style.display = visibleRows.length > 0 ? '' : 'none';
                 });
             } else {
                 const currentYear = new Date().getFullYear();
