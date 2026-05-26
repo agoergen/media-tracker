@@ -66,14 +66,14 @@ class TMDBService:
     @classmethod
     def get_movie_details(cls, tmdb_id):
         url = f"{cls.BASE_URL}/movie/{tmdb_id}"
-        # Append 'credits', 'videos', 'release_dates', and 'external_ids'
+        # Request US release dates for certification
         params = {"append_to_response": "credits,videos,release_dates,external_ids"}
         try:
             response = requests.get(url, headers=cls.get_headers(), params=params)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching TMDB details: {e}")
+            print(f"Error getting TMDB movie details: {e}")
             return None
 
     @classmethod
@@ -89,50 +89,50 @@ class TMDBService:
             return []
 
     @classmethod
-    def get_tv_show_details(cls, series_id):
-        url = f"{cls.BASE_URL}/tv/{series_id}"
-        # Append 'external_ids' to get IMDB ID if possible
-        params = {"append_to_response": "external_ids,videos"}
-        try:
-            response = requests.get(url, headers=cls.get_headers(), params=params)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching TMDB TV show details: {e}")
-            return None
-
-    @classmethod
-    def get_tv_season_details(cls, series_id, season_number):
-        url = f"{cls.BASE_URL}/tv/{series_id}/season/{season_number}"
-        try:
-            response = requests.get(url, headers=cls.get_headers())
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching TMDB TV season details: {e}")
-            return None
-
-    @classmethod
-    def download_poster(cls, poster_path):
-        if not poster_path:
-            return None
+    def get_tv_details(cls, series_id, season_number):
+        # We need series info for the name and season info for episode count/poster
+        series_url = f"{cls.BASE_URL}/tv/{series_id}"
+        season_url = f"{cls.BASE_URL}/tv/{series_id}/season/{season_number}"
         
-        # Clean the path to use as a filename
-        filename = poster_path.lstrip('/')
+        try:
+            # 1. Get series level data (for network, original name)
+            series_resp = requests.get(series_url, headers=cls.get_headers(), params={"append_to_response": "videos"})
+            series_resp.raise_for_status()
+            series_data = series_resp.json()
+
+            # 2. Get season level data
+            season_resp = requests.get(season_url, headers=cls.get_headers())
+            season_resp.raise_for_status()
+            season_data = season_resp.json()
+
+            return {
+                "series_name": series_data.get('name'),
+                "network": series_data.get('networks', [{}])[0].get('name') if series_data.get('networks') else None,
+                "episode_count": season_data.get('episodes', []),
+                "poster_path": season_data.get('poster_path'),
+                "vote_average": season_data.get('vote_average'),
+                "overview": season_data.get('overview') or series_data.get('overview'),
+                "videos": series_data.get('videos', {}),
+                "episode_count": len(season_data.get('episodes', []))
+            }
+        except requests.exceptions.RequestException as e:
+            print(f"Error getting TMDB TV details: {e}")
+            return None
+
+    @classmethod
+    def download_poster(cls, path):
+        if not path:
+            return None
+        url = f"https://image.tmdb.org/t/p/w500{path}"
+        filename = path.lstrip('/')
         local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         
-        # If it already exists, don't download again
         if os.path.exists(local_path):
             return filename
             
-        url = f"https://image.tmdb.org/t/p/original{poster_path}"
         try:
             response = requests.get(url, stream=True)
             response.raise_for_status()
-            
-            # Ensure subdirectories exist if poster_path has them (unlikely with TMDB but safe)
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            
             with open(local_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
@@ -142,100 +142,83 @@ class TMDBService:
             return None
 
 class IGDBService:
-    @staticmethod
-    def get_token():
-        client_id = current_app.config.get('IGDB_CLIENT_ID')
-        client_secret = current_app.config.get('IGDB_CLIENT_SECRET')
-        if not client_id or not client_secret:
-            return None
+    CLIENT_ID = None
+    CLIENT_SECRET = None
+    _access_token = None
+
+    @classmethod
+    def _get_token(cls):
+        if cls._access_token:
+            return cls._access_token
             
-        url = f"https://id.twitch.tv/oauth2/token?client_id={client_id}&client_secret={client_secret}&grant_type=client_credentials"
-        try:
-            response = requests.post(url, timeout=30)
-            response.raise_for_status()
-            return response.json().get('access_token')
-        except Exception as e:
-            print(f"Failed to get IGDB token: {e}")
-            return None
+        cls.CLIENT_ID = current_app.config.get('IGDB_CLIENT_ID')
+        cls.CLIENT_SECRET = current_app.config.get('IGDB_CLIENT_SECRET')
+        
+        url = f"https://id.twitch.tv/oauth2/token?client_id={cls.CLIENT_ID}&client_secret={cls.CLIENT_SECRET}&grant_type=client_credentials"
+        resp = requests.post(url)
+        resp.raise_for_status()
+        cls._access_token = resp.json()['access_token']
+        return cls._access_token
 
     @classmethod
     def search_games(cls, query):
-        token = cls.get_token()
-        client_id = current_app.config.get('IGDB_CLIENT_ID')
-        if not token:
-            return []
-
+        token = cls._get_token()
         url = "https://api.igdb.com/v4/games"
         headers = {
-            'Client-ID': client_id,
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'text/plain'
+            "Client-ID": cls.CLIENT_ID,
+            "Authorization": f"Bearer {token}"
         }
-        # Fetching basic search results
         body = f'search "{query}"; fields name, first_release_date, cover.url; limit 10;'
+        
         try:
-            response = requests.post(url, headers=headers, data=body, timeout=30)
-            response.raise_for_status()
-            return response.json()
+            resp = requests.post(url, headers=headers, data=body)
+            resp.raise_for_status()
+            return resp.json()
         except Exception as e:
-            print(f"IGDB search error for '{query}': {e}")
+            print(f"IGDB search error: {e}")
             return []
 
     @classmethod
     def get_game_details(cls, igdb_id):
-        token = cls.get_token()
-        client_id = current_app.config.get('IGDB_CLIENT_ID')
-        if not token:
-            return None
-
+        token = cls._get_token()
         url = "https://api.igdb.com/v4/games"
         headers = {
-            'Client-ID': client_id,
-            'Authorization': f'Bearer {token}',
-            'Content-Type': 'text/plain'
+            "Client-ID": cls.CLIENT_ID,
+            "Authorization": f"Bearer {token}"
         }
-        body = f"""
-        fields name, summary, first_release_date, 
-               genres.name, involved_companies.company.name, involved_companies.developer, involved_companies.publisher,
-               franchises.name, platforms.name, rating, aggregated_rating, cover.url;
-        where id = {igdb_id};
-        """
+        body = f'fields name, summary, first_release_date, cover.url, genres.name, involved_companies.developer, involved_companies.publisher, involved_companies.company.name, platforms.name, franchises.name, rating, aggregated_rating; where id = {igdb_id};'
+        
         try:
-            response = requests.post(url, headers=headers, data=body, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            return data[0] if data else None
+            resp = requests.post(url, headers=headers, data=body)
+            resp.raise_for_status()
+            results = resp.json()
+            return results[0] if results else None
         except Exception as e:
-            print(f"IGDB details error for ID {igdb_id}: {e}")
+            print(f"IGDB details error: {e}")
             return None
 
     @classmethod
-    def download_cover(cls, cover_url):
-        if not cover_url:
+    def download_cover(cls, image_url):
+        if not image_url:
             return None
-        
-        # IGDB urls are usually //images.igdb.com/igdb/image/upload/t_thumb/co1r7h.jpg
-        if cover_url.startswith('//'):
-            cover_url = 'https:' + cover_url
-            
-        # Swap 't_thumb' for 't_cover_big' or 't_720p' for better quality
-        cover_url = cover_url.replace('t_thumb', 't_cover_big')
-        
-        filename = cover_url.split('/')[-1]
+        # Convert thumbnail URL to high res
+        # //images.igdb.com/igdb/image/upload/t_thumb/co1r8v.jpg -> t_cover_big
+        high_res_url = "https:" + image_url.replace("t_thumb", "t_720p")
+        filename = image_url.split('/')[-1]
         local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         
         if os.path.exists(local_path):
             return filename
             
         try:
-            response = requests.get(cover_url, stream=True)
+            response = requests.get(high_res_url, stream=True)
             response.raise_for_status()
             with open(local_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
             return filename
         except Exception as e:
-            print(f"Error downloading cover: {e}")
+            print(f"Error downloading game cover: {e}")
             return None
 
 class OpenLibraryService:
@@ -419,41 +402,21 @@ class WikipediaService:
 
 class ImageSearchService:
     @classmethod
-    def search_images(cls, query):
-        key = current_app.config.get('GOOGLE_SEARCH_KEY')
-        cx = current_app.config.get('GOOGLE_SEARCH_ID')
-        
-        if not key or not cx:
-            print(f"DEBUG: Missing config. Key present: {bool(key)}, CX present: {bool(cx)}")
-            return []
-            
-        url = "https://www.googleapis.com/customsearch/v1"
-        params = {
-            "q": query + " theater poster",
-            "searchType": "image",
-            "key": key,
-            "cx": cx,
-            "num": 8
-        }
-        
-        try:
-            response = requests.get(url, params=params, timeout=30)
-            if response.status_code != 200:
-                print(f"Google Image Search API Error: {response.status_code} - {response.text}")
-            response.raise_for_status()
-            items = response.json().get('items', [])
-            return [item['link'] for item in items]
-        except Exception as e:
-            print(f"Image search error for '{query}': {e}")
-            return []
-
-    @classmethod
     def download_image(cls, image_url, prefix, item_id):
+        if not image_url:
+            return None
+            
+        # Handle protocol-relative URLs (e.g., //upload.wikimedia.org/...)
+        if image_url.startswith('//'):
+            image_url = 'https:' + image_url
+            
         filename = f"{prefix}_{item_id}.jpg"
         local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         
+        headers = {"User-Agent": "LeisureLedger/1.0 (agoergen@gmail.com)"}
+        
         try:
-            response = requests.get(image_url, stream=True, timeout=30)
+            response = requests.get(image_url, headers=headers, stream=True, timeout=30)
             response.raise_for_status()
             with open(local_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
