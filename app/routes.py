@@ -628,7 +628,10 @@ def add_book(ol_id):
         cover_filename = None
         covers = details.get('covers', [])
         if covers:
-            cover_filename = OpenLibraryService.download_book_cover(covers[0])
+            cover_filename = OpenLibraryService.download_book_cover(cover_id=covers[0])
+        else:
+            # Try by OLID if no specific cover ID is provided in details
+            cover_filename = OpenLibraryService.download_book_cover(ol_id=ol_id)
 
         # Summary/Description (can be a string or a dict)
         description = details.get('description', '')

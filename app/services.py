@@ -266,12 +266,17 @@ class OpenLibraryService:
             return None
 
     @classmethod
-    def download_book_cover(cls, cover_id):
-        if not cover_id:
+    def download_book_cover(cls, cover_id=None, ol_id=None):
+        if not cover_id and not ol_id:
             return None
             
-        url = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
-        filename = f"book_{cover_id}.jpg"
+        if cover_id:
+            url = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
+            filename = f"book_{cover_id}.jpg"
+        else:
+            url = f"https://covers.openlibrary.org/b/olid/{ol_id}-L.jpg"
+            filename = f"book_{ol_id}.jpg"
+
         local_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
         
         if os.path.exists(local_path):
