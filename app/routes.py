@@ -399,6 +399,10 @@ from app.services import IGDBService
 def games_list():
     all_games = Game.query.order_by(Game.date_finished.asc()).all()
     
+    # Get distinct franchises for the dropdown
+    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
+    franchise_list = [f[0] for f in distinct_franchises]
+    
     # Group by year
     grouped = OrderedDict()
     for game in all_games:
@@ -407,7 +411,7 @@ def games_list():
             grouped[year] = []
         grouped[year].append(game)
     
-    return render_template('games.html', grouped_games=grouped, total_count=len(all_games), now=datetime.now())
+    return render_template('games.html', grouped_games=grouped, total_count=len(all_games), now=datetime.now(), distinct_franchises=franchise_list)
 
 @main.route('/games/search', methods=['GET', 'POST'])
 @login_required
@@ -419,6 +423,10 @@ def search_game():
     pre_plat = request.args.get('pre_plat', '')
     pre_rewatch = request.args.get('pre_rewatch', 'false')
     pre_variant = request.args.get('pre_variant', '')
+    
+    # Get distinct franchises for the dropdown
+    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
+    franchise_list = [f[0] for f in distinct_franchises]
     
     if request.method == 'POST':
         query = request.form.get('query')
@@ -435,7 +443,8 @@ def search_game():
                          pre_plat=pre_plat,
                          pre_rewatch=pre_rewatch,
                          pre_variant=pre_variant,
-                         datetime=datetime)
+                         datetime=datetime,
+                         distinct_franchises=franchise_list)
 
 @main.route('/games/add/<int:igdb_id>', methods=['POST'])
 @login_required
@@ -449,6 +458,7 @@ def add_game(igdb_id):
         platform_played = request.form.get('platform_played')
         is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
         variant = request.form.get('variant')
+        franchise_input = request.form.get('franchise')
         
         try:
             date_finished = datetime.strptime(date_finished_str, '%Y-%m-%d').date() if date_finished_str else datetime.now().date()
@@ -476,7 +486,7 @@ def add_game(igdb_id):
             game.external_id = str(igdb_id)
             game.developer = developers
             game.publisher = publishers
-            game.franchise = ", ".join([f['name'] for f in details.get('franchises', [])])
+            game.franchise = franchise_input or ", ".join([f['name'] for f in details.get('franchises', [])])
             game.summary = details.get('summary')
             game.genres = ", ".join([g['name'] for g in details.get('genres', [])])
             game.user_score = details.get('rating')
@@ -500,7 +510,7 @@ def add_game(igdb_id):
                 external_id=str(igdb_id),
                 developer=developers,
                 publisher=publishers,
-                franchise=", ".join([f['name'] for f in details.get('franchises', [])]),
+                franchise=franchise_input or ", ".join([f['name'] for f in details.get('franchises', [])]),
                 summary=details.get('summary'),
                 genres=", ".join([g['name'] for g in details.get('genres', [])]),
                 user_score=details.get('rating'),
