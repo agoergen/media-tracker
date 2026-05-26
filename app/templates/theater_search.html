@@ -50,7 +50,7 @@
             <button class="btn btn-secondary" onclick="cancelSelection()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;">&larr; Back to results</button>
         </div>
 
-        <form id="trackForm" method="POST">
+        <form id="trackForm" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="poster_url" id="selectedPosterUrl">
             <input type="hidden" name="title" id="formTitle">
             <input type="hidden" name="show_type" id="formType">
@@ -71,7 +71,13 @@
             </div>
 
             <div style="margin-top: 2rem;">
-                <label style="font-weight: bold; display: block; margin-bottom: 10px;">Select a Poster:</label>
+                <label style="font-weight: bold; display: block; margin-bottom: 10px;">Select a Poster or Upload Your Own:</label>
+                
+                <div style="margin-bottom: 1.5rem; padding: 1rem; border: 1px dashed #ccc; border-radius: 8px; background: #fafafa;">
+                    <label for="poster_file" style="display: block; margin-bottom: 5px; font-size: 0.9rem;">Upload manual image (Overrides selection):</label>
+                    <input type="file" id="poster_file" name="poster_file" accept="image/*">
+                </div>
+
                 <div id="posterSelection" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 8px;">
                     <p style="color: #999; font-size: 0.9rem;">Click "Search Posters" to find artwork...</p>
                 </div>

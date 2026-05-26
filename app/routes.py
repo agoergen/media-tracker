@@ -1,5 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
 from flask_login import login_user, logout_user, current_user, login_required
+from werkzeug.utils import secure_filename
+import os
 from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService, WikipediaService, IBDBService
 from app.models import Movie, TVSeason, User, Game, Book, Theater
 from app import db
@@ -794,8 +796,22 @@ def add_theater_ibdb(slug_id):
     location = request.form.get('location')
     is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
     selected_image = request.form.get('poster_url')
-    
-    # 1. Fetch extra details from IBDB
+
+    # Check for manual file upload
+    poster_file = request.files.get('poster_file')
+    poster_filename = None
+
+    if poster_file and poster_file.filename != '':
+        # Handle manual upload (Highest priority)
+        filename = secure_filename(f"theater_manual_{slug_id}_{poster_file.filename}")
+        poster_file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+        poster_filename = filename
+    elif selected_image:
+        # Handle Wikipedia selection (Second priority)
+        poster_filename = ImageSearchService.download_image(selected_image, 'theater', slug_id.split('-')[-1])
+
+    # 1. Fetch extra details from IBDB (Opening date, Original Theater)
+
     details = IBDBService.get_show_details(slug_id)
     opening_date_str = details.get('opening_date')
     original_theater = details.get('theater')
