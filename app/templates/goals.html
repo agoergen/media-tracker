@@ -4,7 +4,21 @@
 
 {% block content %}
     <div style="margin-top: 3rem; max-width: 900px; margin-left: auto; margin-right: auto;">
-        <h1>Your Tracking Goals ({{ year }})</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Your Tracking Goals ({{ year }})</h1>
+            
+            <!-- Year Selector -->
+            <form id="yearSelector" style="display: flex; align-items: center; gap: 10px;">
+                <label for="view_year" style="font-size: 0.9rem; color: var(--text-muted);">Switch Year:</label>
+                <select name="view_year" id="view_year" onchange="window.location.href='/goals/' + this.value" 
+                        style="padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--white);">
+                    {% for y in nav_years %}
+                        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+
         <p style="color: var(--text-muted); margin-bottom: 2rem;">
             Set yearly targets and list specific titles you want to experience.
         </p>
@@ -34,14 +48,26 @@
                     <div style="margin-top: 5px; font-size: 0.75rem; color: var(--text-muted);">Avg: {{ stats.books.avg }} | Max: {{ stats.books.max }} ({{ stats.books.max_year }})</div>
                 </div>
             </div>
-            <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;">Save Yearly Goals</button>
+            <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;">Save {{ year }} Goals</button>
         </form>
 
         <!-- Specific Title Goals -->
-        <h2 style="margin-bottom: 1.5rem;">Target Titles</h2>
-        <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">
-            List specific items you plan to experience this year. When tracked, they'll grant a ⭐ reward on your dashboard!
-        </p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+            <div>
+                <h2 style="margin: 0;">Target Titles</h2>
+                <p style="color: var(--text-muted); margin: 5px 0 0 0; font-size: 0.9rem;">
+                    List specific items you plan to experience in {{ year }}.
+                </p>
+            </div>
+            
+            <!-- Validate Button -->
+            <form method="POST">
+                <input type="hidden" name="action" value="validate_targets">
+                <button type="submit" class="btn btn-secondary" style="background: #8e44ad; color: #fff; border: none; padding: 10px 20px;">
+                    🔄 Validate All Targets for {{ year }}
+                </button>
+            </form>
+        </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem;">
             {% for cat in ['movie', 'tv', 'game', 'book'] %}

@@ -33,9 +33,11 @@ def logout():
     return redirect(url_for('main.index'))
 
 @main.route('/goals', methods=['GET', 'POST'])
+@main.route('/goals/<int:view_year>', methods=['GET', 'POST'])
 @login_required
-def goals():
-    current_year = datetime.now().year
+def goals(view_year=None):
+    if view_year is None:
+        view_year = datetime.now().year
     
     if request.method == 'POST':
         action = request.form.get('action')
@@ -46,9 +48,9 @@ def goals():
             game_goal = int(request.form.get('game_goal', 0))
             book_goal = int(request.form.get('book_goal', 0))
             
-            goal = Goal.query.filter_by(year=current_year).first()
+            goal = Goal.query.filter_by(year=view_year).first()
             if not goal:
-                goal = Goal(year=current_year)
+                goal = Goal(year=view_year)
                 db.session.add(goal)
                 
             goal.movie_goal = movie_goal
@@ -57,16 +59,16 @@ def goals():
             goal.book_goal = book_goal
             
             db.session.commit()
-            flash(f"Your {current_year} goals have been updated!")
+            flash(f"Your {view_year} goals have been updated!")
             
         elif action == 'add_future_goal':
             category = request.form.get('category')
             title = request.form.get('title', '').strip()
             if title and category:
-                new_future = FutureMediaGoal(year=current_year, category=category, title=title)
+                new_future = FutureMediaGoal(year=view_year, category=category, title=title)
                 db.session.add(new_future)
                 db.session.commit()
-                flash(f"Added '{title}' to your future {category} goals!")
+                flash(f"Added '{title}' to your {view_year} {category} targets!")
 
         elif action == 'delete_future_goal':
             goal_id = request.form.get('goal_id')
@@ -74,30 +76,51 @@ def goals():
             if f_goal:
                 db.session.delete(f_goal)
                 db.session.commit()
-                flash("Specific goal removed.")
+                flash("Target removed.")
 
-        return redirect(url_for('main.goals'))
+        elif action == 'validate_targets':
+            # Manual check: Scan ledger for matches to targets for the view_year
+            future_goals = FutureMediaGoal.query.filter_by(year=view_year).all()
+            completed_count = 0
+            for fg in future_goals:
+                prev_status = fg.is_completed
+                # Check corresponding table
+                if fg.category == 'movie':
+                    match = Movie.query.filter(db.extract('year', Movie.date_watched) == view_year, Movie.title.ilike(fg.title)).first()
+                elif fg.category == 'tv':
+                    match = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == view_year, TVSeason.series_title.ilike(fg.title)).first()
+                elif fg.category == 'game':
+                    match = Game.query.filter(db.extract('year', Game.date_finished) == view_year, Game.title.ilike(fg.title)).first()
+                elif fg.category == 'book':
+                    match = Book.query.filter(db.extract('year', Book.date_finished) == view_year, Book.title.ilike(fg.title)).first()
+                
+                fg.is_completed = True if match else False
+                if fg.is_completed and not prev_status:
+                    completed_count += 1
+            
+            db.session.commit()
+            flash(f"Validation complete! {completed_count} targets newly marked as completed for {view_year}.")
 
-    # Calculate Statistics
+        return redirect(url_for('main.goals', view_year=view_year))
+
+    # Calculate Statistics (Relative to the view_year)
     stats = {}
     
     def get_category_stats(model, date_field):
-        # Group by year and count, filter out null dates AND the current year
+        # Group by year and count, filter out null dates AND years >= view_year
         counts = db.session.query(
             db.extract('year', date_field).label('year'), 
             db.func.count(model.id).label('count')
         ).filter(
             date_field.isnot(None),
-            db.extract('year', date_field) < current_year
+            db.extract('year', date_field) < view_year
         ).group_by('year').all()
         
         if not counts:
             return {"avg": 0, "max": 0, "max_year": "N/A"}
             
-        # counts is list of (year, count)
         vals = [c.count for c in counts]
         max_val = max(vals)
-        # Find the year for that max val
         max_year = [int(c.year) for c in counts if c.count == max_val][0]
         
         return {
@@ -111,16 +134,26 @@ def goals():
     stats['games'] = get_category_stats(Game, Game.date_finished)
     stats['books'] = get_category_stats(Book, Book.date_finished)
 
-    current_goal = Goal.query.filter_by(year=current_year).first()
-    future_goals = FutureMediaGoal.query.filter_by(year=current_year).all()
+    # Current state for the viewed year
+    current_goal = Goal.query.filter_by(year=view_year).first()
+    future_goals = FutureMediaGoal.query.filter_by(year=view_year).all()
     
-    # Group future goals by category
     grouped_future = {"movie": [], "tv": [], "game": [], "book": []}
     for fg in future_goals:
         grouped_future[fg.category].append(fg)
 
+    # List of years for navigation (all years with media + current year)
+    years_with_media = set()
+    for model, field in [(Movie, Movie.date_watched), (TVSeason, TVSeason.date_watched), 
+                         (Game, Game.date_finished), (Book, Book.date_finished)]:
+        res = db.session.query(db.extract('year', field)).filter(field.isnot(None)).distinct().all()
+        years_with_media.update([int(r[0]) for r in res])
+    
+    years_with_media.add(datetime.now().year)
+    nav_years = sorted(list(years_with_media), reverse=True)
+
     return render_template('goals.html', stats=stats, current_goal=current_goal, 
-                         grouped_future=grouped_future, year=current_year)
+                         grouped_future=grouped_future, year=view_year, nav_years=nav_years)
 
 @main.route('/')
 def index():
