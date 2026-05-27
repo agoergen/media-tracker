@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'force_fix_goal'
-down_revision = 'add_goal_model'
+down_revision = 'fix_goal_schema'
 branch_labels = None
 depends_on = None
 
