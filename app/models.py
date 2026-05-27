@@ -84,6 +84,16 @@ class Theater(db.Model):
     poster_path = db.Column(db.String(255))
     summary = db.Column(db.Text)
 
+class Goal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer, nullable=False)
+    movie_goal = db.Column(db.Integer, default=0)
+    tv_goal = db.Column(db.Integer, default=0)
+    game_goal = db.Column(db.Integer, default=0)
+    book_goal = db.Column(db.Integer, default=0)
+    
+    __table_args__ = (db.UniqueConstraint('year', name='unique_year_goal'),)
+
 class TVSeason(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     series_title = db.Column(db.String(255), nullable=False)

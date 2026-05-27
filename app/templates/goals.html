@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}LeisureLedger: Goals{% endblock %}
+
+{% block content %}
+    <div style="margin-top: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">
+        <h1>Your Tracking Goals ({{ year }})</h1>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">
+            Set yearly targets based on your historical tracking patterns.
+        </p>
+
+        <form method="POST" style="background: var(--card-bg); padding: 2.5rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2.5rem;">
+                <!-- Movies -->
+                <div class="form-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 8px;">Movie Goal</label>
+                    <input type="number" name="movie_goal" value="{{ current_goal.movie_goal if current_goal else 0 }}" 
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
+                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
+                        Historical Avg: <strong>{{ stats.movies.avg }}</strong> / Max Year: <strong>{{ stats.movies.max }}</strong>
+                    </div>
+                </div>
+
+                <!-- TV -->
+                <div class="form-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 8px;">TV Seasons Goal</label>
+                    <input type="number" name="tv_goal" value="{{ current_goal.tv_goal if current_goal else 0 }}" 
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
+                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
+                        Historical Avg: <strong>{{ stats.tv.avg }}</strong> / Max Year: <strong>{{ stats.tv.max }}</strong>
+                    </div>
+                </div>
+
+                <!-- Games -->
+                <div class="form-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 8px;">Games Goal</label>
+                    <input type="number" name="game_goal" value="{{ current_goal.game_goal if current_goal else 0 }}" 
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
+                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
+                        Historical Avg: <strong>{{ stats.games.avg }}</strong> / Max Year: <strong>{{ stats.games.max }}</strong>
+                    </div>
+                </div>
+
+                <!-- Books -->
+                <div class="form-group">
+                    <label style="font-weight: 600; display: block; margin-bottom: 8px;">Books Goal</label>
+                    <input type="number" name="book_goal" value="{{ current_goal.book_goal if current_goal else 0 }}" 
+                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
+                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
+                        Historical Avg: <strong>{{ stats.books.avg }}</strong> / Max Year: <strong>{{ stats.books.max }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 3rem;">
+                <button type="submit" class="btn" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Save {{ year }} Goals</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

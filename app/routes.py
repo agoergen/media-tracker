@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 import os
 from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService, WikipediaService, IBDBService
-from app.models import Movie, TVSeason, User, Game, Book, Theater
+from app.models import Movie, TVSeason, User, Game, Book, Theater, Goal
 from app import db
 from datetime import datetime
 from collections import OrderedDict
@@ -26,11 +26,58 @@ def login():
         flash('Invalid username or password')
     return render_template('login.html')
 
-@main.route('/logout')
+@main.route('/goals', methods=['GET', 'POST'])
 @login_required
-def logout():
-    logout_user()
-    return redirect(url_for('main.index'))
+def goals():
+    current_year = datetime.now().year
+    
+    if request.method == 'POST':
+        movie_goal = int(request.form.get('movie_goal', 0))
+        tv_goal = int(request.form.get('tv_goal', 0))
+        game_goal = int(request.form.get('game_goal', 0))
+        book_goal = int(request.form.get('book_goal', 0))
+        
+        goal = Goal.query.filter_by(year=current_year).first()
+        if not goal:
+            goal = Goal(year=current_year)
+            db.session.add(goal)
+            
+        goal.movie_goal = movie_goal
+        goal.tv_goal = tv_goal
+        goal.game_goal = game_goal
+        goal.book_goal = book_goal
+        
+        db.session.commit()
+        flash(f"Your {current_year} goals have been updated!")
+        return redirect(url_for('main.goals'))
+
+    # Calculate Statistics
+    stats = {}
+    
+    def get_category_stats(model, date_field):
+        # Group by year and count, filter out null dates
+        counts = db.session.query(
+            db.extract('year', date_field).label('year'), 
+            db.func.count(model.id)
+        ).filter(date_field.isnot(None)).group_by('year').all()
+        
+        if not counts:
+            return {"avg": 0, "max": 0}
+            
+        vals = [c[1] for c in counts]
+        return {
+            "avg": round(sum(vals) / len(vals), 1),
+            "max": max(vals)
+        }
+
+    stats['movies'] = get_category_stats(Movie, Movie.date_watched)
+    stats['tv'] = get_category_stats(TVSeason, TVSeason.date_watched)
+    stats['games'] = get_category_stats(Game, Game.date_finished)
+    stats['books'] = get_category_stats(Book, Book.date_finished)
+
+    current_goal = Goal.query.filter_by(year=current_year).first()
+    
+    return render_template('goals.html', stats=stats, current_goal=current_goal, year=current_year)
 
 @main.route('/')
 def index():
@@ -54,6 +101,8 @@ def index():
     theater_this_year = Theater.query.filter(db.extract('year', Theater.date_watched) == current_year).count()
     
     recent_theater = Theater.query.order_by(Theater.date_watched.desc()).limit(5).all()
+    
+    current_goal = Goal.query.filter_by(year=current_year).first()
 
     return render_template('index.html', 
                          recent_movies=recent_movies, 
@@ -68,7 +117,8 @@ def index():
                          books_this_year=books_this_year,
                          recent_books=recent_books,
                          theater_this_year=theater_this_year,
-                         recent_theater=recent_theater)
+                         recent_theater=recent_theater,
+                         current_goal=current_goal)
 
 # MOVIE ROUTES
 @main.route('/movies')

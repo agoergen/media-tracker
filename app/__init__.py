@@ -38,7 +38,7 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_globals():
         from datetime import datetime
-        from app.models import Movie, TVSeason, Game, Book, Theater
+        from app.models import Movie, TVSeason, Game, Book, Theater, Goal
         return {
             'datetime': datetime,
             'now': datetime.now(),
@@ -46,7 +46,8 @@ def create_app(config_class=Config):
             'TVSeason': TVSeason,
             'Game': Game,
             'Book': Book,
-            'Theater': Theater
+            'Theater': Theater,
+            'Goal': Goal
         }
 
     return app

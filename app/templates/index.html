@@ -8,30 +8,71 @@
         <p style="color: var(--text-muted); font-size: 1.25rem;">Track your journey through cinema, television, gaming, literature, and the arts.</p>
         
         <div class="stats-grid">
+            <!-- Movies -->
             <a href="{{ url_for('main.movies_list') }}" class="stat-card">
                 <h3>Movies</h3>
                 <span class="count">{{ movie_count }}</span>
                 <span class="label">{{ movies_this_year }} watched in {{ datetime.now().year }}</span>
+                {% if current_goal and current_goal.movie_goal > 0 %}
+                    <div class="progress-container">
+                        <div class="progress-bar {% if movies_this_year >= current_goal.movie_goal %}complete{% endif %}" 
+                             style="width: {{ [100, (movies_this_year / current_goal.movie_goal * 100)]|min }}%"></div>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right;">
+                        Goal: {{ current_goal.movie_goal }}
+                    </div>
+                {% endif %}
             </a>
             
+            <!-- Television -->
             <a href="{{ url_for('main.tv_list') }}" class="stat-card">
                 <h3>Television</h3>
                 <span class="count">{{ tv_count }}</span>
                 <span class="label">{{ tv_this_year }} seasons in {{ datetime.now().year }}</span>
+                {% if current_goal and current_goal.tv_goal > 0 %}
+                    <div class="progress-container">
+                        <div class="progress-bar {% if tv_this_year >= current_goal.tv_goal %}complete{% endif %}" 
+                             style="width: {{ [100, (tv_this_year / current_goal.tv_goal * 100)]|min }}%"></div>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right;">
+                        Goal: {{ current_goal.tv_goal }}
+                    </div>
+                {% endif %}
             </a>
             
+            <!-- Games -->
             <a href="{{ url_for('main.games_list') }}" class="stat-card">
                 <h3>Games</h3>
                 <span class="count">{{ game_count }}</span>
                 <span class="label">{{ games_this_year }} finished in {{ datetime.now().year }}</span>
+                {% if current_goal and current_goal.game_goal > 0 %}
+                    <div class="progress-container">
+                        <div class="progress-bar {% if games_this_year >= current_goal.game_goal %}complete{% endif %}" 
+                             style="width: {{ [100, (games_this_year / current_goal.game_goal * 100)]|min }}%"></div>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right;">
+                        Goal: {{ current_goal.game_goal }}
+                    </div>
+                {% endif %}
             </a>
 
+            <!-- Books -->
             <a href="{{ url_for('main.books_list') }}" class="stat-card">
                 <h3>Books</h3>
                 <span class="count">{{ Book.query.count() }}</span>
                 <span class="label">{{ books_this_year }} books in {{ datetime.now().year }}</span>
+                {% if current_goal and current_goal.book_goal > 0 %}
+                    <div class="progress-container">
+                        <div class="progress-bar {% if books_this_year >= current_goal.book_goal %}complete{% endif %}" 
+                             style="width: {{ [100, (books_this_year / current_goal.book_goal * 100)]|min }}%"></div>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right;">
+                        Goal: {{ current_goal.book_goal }}
+                    </div>
+                {% endif %}
             </a>
 
+            <!-- Theater -->
             <a href="{{ url_for('main.theater_list') }}" class="stat-card">
                 <h3>Theater</h3>
                 <span class="count">{{ Theater.query.count() }}</span>
@@ -69,23 +110,6 @@
                     <div>
                         <div style="font-weight: 500;">{{ season.series_title }} (S{{ season.season_number }})</div>
                         <div style="font-size: 0.85rem; color: var(--text-muted);">{{ season.date_watched.strftime('%b %d, %Y') }}</div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </section>
-
-        <section>
-            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Games</h2>
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                {% for game in recent_games %}
-                <div style="display: flex; gap: 15px; align-items: center;">
-                    {% if game.poster_path %}
-                        <img src="{{ url_for('main.serve_poster', filename=game.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
-                    {% endif %}
-                    <div>
-                        <div style="font-weight: 500;">{{ game.title }}</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ game.date_finished.strftime('%b %d, %Y') }}</div>
                     </div>
                 </div>
                 {% endfor %}
