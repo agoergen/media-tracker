@@ -61,11 +61,14 @@ def goals():
     stats = {}
     
     def get_category_stats(model, date_field):
-        # Group by year and count, filter out null dates
+        # Group by year and count, filter out null dates AND the current year
         counts = db.session.query(
             db.extract('year', date_field).label('year'), 
             db.func.count(model.id)
-        ).filter(date_field.isnot(None)).group_by('year').all()
+        ).filter(
+            date_field.isnot(None),
+            db.extract('year', date_field) < current_year
+        ).group_by('year').all()
         
         if not counts:
             return {"avg": 0, "max": 0}
