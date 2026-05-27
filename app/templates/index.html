@@ -32,6 +32,10 @@
                             <div class="progress-bar revisit" 
                                  style="width: {{ [100, (movies_this_year / current_goal.movie_goal * 100)]|min }}%"></div>
                         </div>
+                        <div style="margin-top: 10px; display: flex; gap: 4px; color: #f1c40f; font-size: 1rem;">
+                            {% for i in range([3, stars.movie]|min) %}⭐{% endfor %}
+                            {% if stars.movie == 0 %}<span style="font-size: 0.7rem; color: #ccc;">No targets met yet</span>{% endif %}
+                        </div>
                     </div>
                 {% endif %}
             </a>
@@ -59,6 +63,10 @@
                         <div class="progress-container" style="height: 6px; margin-top: 4px;">
                             <div class="progress-bar revisit" 
                                  style="width: {{ [100, (tv_this_year / current_goal.tv_goal * 100)]|min }}%"></div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 4px; color: #f1c40f; font-size: 1rem;">
+                            {% for i in range([3, stars.tv]|min) %}⭐{% endfor %}
+                            {% if stars.tv == 0 %}<span style="font-size: 0.7rem; color: #ccc;">No targets met yet</span>{% endif %}
                         </div>
                     </div>
                 {% endif %}
@@ -88,6 +96,10 @@
                             <div class="progress-bar revisit" 
                                  style="width: {{ [100, (games_this_year / current_goal.game_goal * 100)]|min }}%"></div>
                         </div>
+                        <div style="margin-top: 10px; display: flex; gap: 4px; color: #f1c40f; font-size: 1rem;">
+                            {% for i in range([3, stars.game]|min) %}⭐{% endfor %}
+                            {% if stars.game == 0 %}<span style="font-size: 0.7rem; color: #ccc;">No targets met yet</span>{% endif %}
+                        </div>
                     </div>
                 {% endif %}
             </a>
@@ -115,6 +127,10 @@
                         <div class="progress-container" style="height: 6px; margin-top: 4px;">
                             <div class="progress-bar revisit" 
                                  style="width: {{ [100, (books_this_year / current_goal.book_goal * 100)]|min }}%"></div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 4px; color: #f1c40f; font-size: 1rem;">
+                            {% for i in range([3, stars.book]|min) %}⭐{% endfor %}
+                            {% if stars.book == 0 %}<span style="font-size: 0.7rem; color: #ccc;">No targets met yet</span>{% endif %}
                         </div>
                     </div>
                 {% endif %}

@@ -94,6 +94,13 @@ class Goal(db.Model):
     
     __table_args__ = (db.UniqueConstraint('year', name='unique_year_goal'),)
 
+class FutureMediaGoal(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer, nullable=False)
+    category = db.Column(db.String(50), nullable=False) # movie, tv, game, book
+    title = db.Column(db.String(255), nullable=False)
+    is_completed = db.Column(db.Boolean, default=False)
+
 class TVSeason(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     series_title = db.Column(db.String(255), nullable=False)

@@ -3,58 +3,86 @@
 {% block title %}LeisureLedger: Goals{% endblock %}
 
 {% block content %}
-    <div style="margin-top: 3rem; max-width: 800px; margin-left: auto; margin-right: auto;">
+    <div style="margin-top: 3rem; max-width: 900px; margin-left: auto; margin-right: auto;">
         <h1>Your Tracking Goals ({{ year }})</h1>
         <p style="color: var(--text-muted); margin-bottom: 2rem;">
-            Set yearly targets based on your historical tracking patterns.
+            Set yearly targets and list specific titles you want to experience.
         </p>
 
-        <form method="POST" style="background: var(--card-bg); padding: 2.5rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2.5rem;">
-                <!-- Movies -->
+        <!-- Yearly Goal Settings -->
+        <form method="POST" style="background: var(--card-bg); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 3rem;">
+            <input type="hidden" name="action" value="set_goals">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
                 <div class="form-group">
                     <label style="font-weight: 600; display: block; margin-bottom: 8px;">Movie Goal</label>
-                    <input type="number" name="movie_goal" value="{{ current_goal.movie_goal if current_goal else 0 }}" 
-                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
-                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-                        Historical Avg: <strong>{{ stats.movies.avg }}</strong> / Max Year: <strong>{{ stats.movies.max }} ({{ stats.movies.max_year }})</strong>
-                    </div>
+                    <input type="number" name="movie_goal" value="{{ current_goal.movie_goal if current_goal else 0 }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="margin-top: 5px; font-size: 0.75rem; color: var(--text-muted);">Avg: {{ stats.movies.avg }} | Max: {{ stats.movies.max }} ({{ stats.movies.max_year }})</div>
                 </div>
-
-                <!-- TV -->
                 <div class="form-group">
                     <label style="font-weight: 600; display: block; margin-bottom: 8px;">TV Seasons Goal</label>
-                    <input type="number" name="tv_goal" value="{{ current_goal.tv_goal if current_goal else 0 }}" 
-                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
-                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-                        Historical Avg: <strong>{{ stats.tv.avg }}</strong> / Max Year: <strong>{{ stats.tv.max }} ({{ stats.tv.max_year }})</strong>
-                    </div>
+                    <input type="number" name="tv_goal" value="{{ current_goal.tv_goal if current_goal else 0 }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="margin-top: 5px; font-size: 0.75rem; color: var(--text-muted);">Avg: {{ stats.tv.avg }} | Max: {{ stats.tv.max }} ({{ stats.tv.max_year }})</div>
                 </div>
-
-                <!-- Games -->
                 <div class="form-group">
                     <label style="font-weight: 600; display: block; margin-bottom: 8px;">Games Goal</label>
-                    <input type="number" name="game_goal" value="{{ current_goal.game_goal if current_goal else 0 }}" 
-                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
-                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-                        Historical Avg: <strong>{{ stats.games.avg }}</strong> / Max Year: <strong>{{ stats.games.max }} ({{ stats.games.max_year }})</strong>
-                    </div>
+                    <input type="number" name="game_goal" value="{{ current_goal.game_goal if current_goal else 0 }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="margin-top: 5px; font-size: 0.75rem; color: var(--text-muted);">Avg: {{ stats.games.avg }} | Max: {{ stats.games.max }} ({{ stats.games.max_year }})</div>
                 </div>
-
-                <!-- Books -->
                 <div class="form-group">
                     <label style="font-weight: 600; display: block; margin-bottom: 8px;">Books Goal</label>
-                    <input type="number" name="book_goal" value="{{ current_goal.book_goal if current_goal else 0 }}" 
-                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
-                    <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-                        Historical Avg: <strong>{{ stats.books.avg }}</strong> / Max Year: <strong>{{ stats.books.max }} ({{ stats.books.max_year }})</strong>
-                    </div>
+                    <input type="number" name="book_goal" value="{{ current_goal.book_goal if current_goal else 0 }}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="margin-top: 5px; font-size: 0.75rem; color: var(--text-muted);">Avg: {{ stats.books.avg }} | Max: {{ stats.books.max }} ({{ stats.books.max_year }})</div>
                 </div>
             </div>
-
-            <div style="margin-top: 3rem;">
-                <button type="submit" class="btn" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Save {{ year }} Goals</button>
-            </div>
+            <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;">Save Yearly Goals</button>
         </form>
+
+        <!-- Specific Title Goals -->
+        <h2 style="margin-bottom: 1.5rem;">Target Titles</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">
+            List specific items you plan to experience this year. When tracked, they'll grant a ⭐ reward on your dashboard!
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem;">
+            {% for cat in ['movie', 'tv', 'game', 'book'] %}
+            <div style="background: var(--white); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column;">
+                <h3 style="text-transform: capitalize; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
+                    {% if cat == 'movie' %}🎬{% elif cat == 'tv' %}📺{% elif cat == 'game' %}🎮{% else %}📚{% endif %}
+                    {{ cat }} Targets
+                </h3>
+                
+                <!-- Add New -->
+                <form method="POST" style="display: flex; gap: 8px; margin-bottom: 1.5rem;">
+                    <input type="hidden" name="action" value="add_future_goal">
+                    <input type="hidden" name="category" value="{{ cat }}">
+                    <input type="text" name="title" placeholder="Add specific {{ cat }}..." required 
+                           style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.9rem;">
+                    <button type="submit" class="btn" style="padding: 0 12px;">+</button>
+                </form>
+
+                <!-- List -->
+                <div style="flex: 1;">
+                    {% if grouped_future[cat] %}
+                        <ul style="list-style: none;">
+                            {% for fg in grouped_future[cat] %}
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+                                <span style="{% if fg.is_completed %}text-decoration: line-through; color: #aaa;{% endif %}">
+                                    {% if fg.is_completed %}⭐ {% endif %}{{ fg.title }}
+                                </span>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="action" value="delete_future_goal">
+                                    <input type="hidden" name="goal_id" value="{{ fg.id }}">
+                                    <button type="submit" style="background: none; border: none; color: #ff4444; cursor: pointer; font-size: 0.8rem;" onclick="return confirm('Remove target?')">Del</button>
+                                </form>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p style="color: #ccc; font-size: 0.85rem; font-style: italic;">No specific {{ cat }} targets set.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 {% endblock %}

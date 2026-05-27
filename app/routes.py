@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 import os
 from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService, WikipediaService, IBDBService
-from app.models import Movie, TVSeason, User, Game, Book, Theater, Goal
+from app.models import Movie, TVSeason, User, Game, Book, Theater, Goal, FutureMediaGoal
 from app import db
 from datetime import datetime
 from collections import OrderedDict
@@ -38,23 +38,44 @@ def goals():
     current_year = datetime.now().year
     
     if request.method == 'POST':
-        movie_goal = int(request.form.get('movie_goal', 0))
-        tv_goal = int(request.form.get('tv_goal', 0))
-        game_goal = int(request.form.get('game_goal', 0))
-        book_goal = int(request.form.get('book_goal', 0))
+        action = request.form.get('action')
         
-        goal = Goal.query.filter_by(year=current_year).first()
-        if not goal:
-            goal = Goal(year=current_year)
-            db.session.add(goal)
+        if action == 'set_goals':
+            movie_goal = int(request.form.get('movie_goal', 0))
+            tv_goal = int(request.form.get('tv_goal', 0))
+            game_goal = int(request.form.get('game_goal', 0))
+            book_goal = int(request.form.get('book_goal', 0))
             
-        goal.movie_goal = movie_goal
-        goal.tv_goal = tv_goal
-        goal.game_goal = game_goal
-        goal.book_goal = book_goal
-        
-        db.session.commit()
-        flash(f"Your {current_year} goals have been updated!")
+            goal = Goal.query.filter_by(year=current_year).first()
+            if not goal:
+                goal = Goal(year=current_year)
+                db.session.add(goal)
+                
+            goal.movie_goal = movie_goal
+            goal.tv_goal = tv_goal
+            goal.game_goal = game_goal
+            goal.book_goal = book_goal
+            
+            db.session.commit()
+            flash(f"Your {current_year} goals have been updated!")
+            
+        elif action == 'add_future_goal':
+            category = request.form.get('category')
+            title = request.form.get('title', '').strip()
+            if title and category:
+                new_future = FutureMediaGoal(year=current_year, category=category, title=title)
+                db.session.add(new_future)
+                db.session.commit()
+                flash(f"Added '{title}' to your future {category} goals!")
+
+        elif action == 'delete_future_goal':
+            goal_id = request.form.get('goal_id')
+            f_goal = FutureMediaGoal.query.get(goal_id)
+            if f_goal:
+                db.session.delete(f_goal)
+                db.session.commit()
+                flash("Specific goal removed.")
+
         return redirect(url_for('main.goals'))
 
     # Calculate Statistics
@@ -91,8 +112,15 @@ def goals():
     stats['books'] = get_category_stats(Book, Book.date_finished)
 
     current_goal = Goal.query.filter_by(year=current_year).first()
+    future_goals = FutureMediaGoal.query.filter_by(year=current_year).all()
     
-    return render_template('goals.html', stats=stats, current_goal=current_goal, year=current_year)
+    # Group future goals by category
+    grouped_future = {"movie": [], "tv": [], "game": [], "book": []}
+    for fg in future_goals:
+        grouped_future[fg.category].append(fg)
+
+    return render_template('goals.html', stats=stats, current_goal=current_goal, 
+                         grouped_future=grouped_future, year=current_year)
 
 @main.route('/')
 def index():
@@ -132,6 +160,14 @@ def index():
     
     current_goal = Goal.query.filter_by(year=current_year).first()
 
+    # Completed Future Goals (Stars)
+    stars = {
+        "movie": FutureMediaGoal.query.filter_by(year=current_year, category='movie', is_completed=True).count(),
+        "tv": FutureMediaGoal.query.filter_by(year=current_year, category='tv', is_completed=True).count(),
+        "game": FutureMediaGoal.query.filter_by(year=current_year, category='game', is_completed=True).count(),
+        "book": FutureMediaGoal.query.filter_by(year=current_year, category='book', is_completed=True).count(),
+    }
+
     return render_template('index.html', 
                          recent_movies=recent_movies, 
                          movie_count=movie_count,
@@ -150,7 +186,8 @@ def index():
                          recent_books=recent_books,
                          theater_this_year=theater_this_year,
                          recent_theater=recent_theater,
-                         current_goal=current_goal)
+                         current_goal=current_goal,
+                         stars=stars)
 
 # MOVIE ROUTES
 @main.route('/movies')
@@ -298,6 +335,13 @@ def add_movie(tmdb_id):
                 new_movie.wikipedia_url = f"https://www.wikidata.org/wiki/{wikidata_id}"
 
             db.session.add(new_movie)
+            
+            # Check for future goal completion
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='movie', is_completed=False).filter(FutureMediaGoal.title.ilike(new_movie.title)).first()
+            if future:
+                future.is_completed = True
+                flash(f"⭐ Goal Title Completed: {new_movie.title}!")
+
             flash(f"Added {new_movie.title} to your tracker!")
         
         db.session.commit()
@@ -444,6 +488,13 @@ def add_tv_season(series_id):
                 new_season.trailer_url = f"https://www.youtube.com/embed/{trailer}"
 
             db.session.add(new_season)
+            
+            # Check for future goal completion
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='tv', is_completed=False).filter(FutureMediaGoal.title.ilike(new_season.series_title)).first()
+            if future:
+                future.is_completed = True
+                flash(f"⭐ Goal Title Completed: {new_season.series_title}!")
+
             flash(f"Added {new_season.series_title} Season {new_season.season_number} to your tracker!")
         
         db.session.commit()
@@ -608,6 +659,13 @@ def add_game(igdb_id):
                 status='Finished'
             )
             db.session.add(new_game)
+            
+            # Check for future goal completion
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='game', is_completed=False).filter(FutureMediaGoal.title.ilike(new_game.title)).first()
+            if future:
+                future.is_completed = True
+                flash(f"⭐ Goal Title Completed: {new_game.title}!")
+
             flash(f"Added {new_game.title} to your tracker!")
         
         db.session.commit()
@@ -805,6 +863,13 @@ def add_book(book_id):
             storygraph_rating=rating
         )
         db.session.add(new_book)
+        
+        # Check for future goal completion
+        future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='book', is_completed=False).filter(FutureMediaGoal.title.ilike(new_book.title)).first()
+        if future:
+            future.is_completed = True
+            flash(f"⭐ Goal Title Completed: {new_book.title}!")
+
         flash(f"Added {new_book.title} to your tracker!")
     
     db.session.commit()
