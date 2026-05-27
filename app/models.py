@@ -109,10 +109,3 @@ class TVSeason(db.Model):
     plot = db.Column(db.Text)
     trailer_url = db.Column(db.String(255))
     imdb_id = db.Column(db.String(20))
-
-class Goal(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    year = db.Column(db.Integer, nullable=False)
-    title = db.Column(db.String(255), nullable=False)
-    format = db.Column(db.String(100))
-    completed = db.Column(db.Boolean, default=False)
