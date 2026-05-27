@@ -17,7 +17,7 @@
                     <input type="number" name="movie_goal" value="{{ current_goal.movie_goal if current_goal else 0 }}" 
                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
                     <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-                        Historical Avg: <strong>{{ stats.movies.avg }}</strong> / Max Year: <strong>{{ stats.movies.max }}</strong>
+                        Historical Avg: <strong>{{ stats.movies.avg }}</strong> / Max Year: <strong>{{ stats.movies.max }} ({{ stats.movies.max_year }})</strong>
                     </div>
                 </div>
 
@@ -27,7 +27,7 @@
                     <input type="number" name="tv_goal" value="{{ current_goal.tv_goal if current_goal else 0 }}" 
                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
                     <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-                        Historical Avg: <strong>{{ stats.tv.avg }}</strong> / Max Year: <strong>{{ stats.tv.max }}</strong>
+                        Historical Avg: <strong>{{ stats.tv.avg }}</strong> / Max Year: <strong>{{ stats.tv.max }} ({{ stats.tv.max_year }})</strong>
                     </div>
                 </div>
 
@@ -37,7 +37,7 @@
                     <input type="number" name="game_goal" value="{{ current_goal.game_goal if current_goal else 0 }}" 
                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
                     <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-                        Historical Avg: <strong>{{ stats.games.avg }}</strong> / Max Year: <strong>{{ stats.games.max }}</strong>
+                        Historical Avg: <strong>{{ stats.games.avg }}</strong> / Max Year: <strong>{{ stats.games.max }} ({{ stats.games.max_year }})</strong>
                     </div>
                 </div>
 
@@ -47,7 +47,7 @@
                     <input type="number" name="book_goal" value="{{ current_goal.book_goal if current_goal else 0 }}" 
                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.1rem;">
                     <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
-                        Historical Avg: <strong>{{ stats.books.avg }}</strong> / Max Year: <strong>{{ stats.books.max }}</strong>
+                        Historical Avg: <strong>{{ stats.books.avg }}</strong> / Max Year: <strong>{{ stats.books.max }} ({{ stats.books.max_year }})</strong>
                     </div>
                 </div>
             </div>

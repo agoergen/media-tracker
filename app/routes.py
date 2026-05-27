@@ -64,19 +64,25 @@ def goals():
         # Group by year and count, filter out null dates AND the current year
         counts = db.session.query(
             db.extract('year', date_field).label('year'), 
-            db.func.count(model.id)
+            db.func.count(model.id).label('count')
         ).filter(
             date_field.isnot(None),
             db.extract('year', date_field) < current_year
         ).group_by('year').all()
         
         if not counts:
-            return {"avg": 0, "max": 0}
+            return {"avg": 0, "max": 0, "max_year": "N/A"}
             
-        vals = [c[1] for c in counts]
+        # counts is list of (year, count)
+        vals = [c.count for c in counts]
+        max_val = max(vals)
+        # Find the year for that max val
+        max_year = [int(c.year) for c in counts if c.count == max_val][0]
+        
         return {
             "avg": round(sum(vals) / len(vals), 1),
-            "max": max(vals)
+            "max": max_val,
+            "max_year": max_year
         }
 
     stats['movies'] = get_category_stats(Movie, Movie.date_watched)
