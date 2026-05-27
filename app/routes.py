@@ -26,6 +26,12 @@ def login():
         flash('Invalid username or password')
     return render_template('login.html')
 
+@main.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('main.index'))
+
 @main.route('/goals', methods=['GET', 'POST'])
 @login_required
 def goals():
