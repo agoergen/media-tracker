@@ -377,6 +377,16 @@ def delete_movie(movie_id):
     title = movie.title
     db.session.delete(movie)
     db.session.commit()
+    
+    # Re-evaluate future goal status
+    current_year = datetime.now().year
+    still_exists = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year, Movie.title.ilike(title)).first()
+    if not still_exists:
+        future = FutureMediaGoal.query.filter_by(year=current_year, category='movie', title=title, is_completed=True).first()
+        if future:
+            future.is_completed = False
+            db.session.commit()
+
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.movies_list'))
 
@@ -527,10 +537,21 @@ def edit_tv_season(season_id):
 @login_required
 def delete_tv_season(season_id):
     season = TVSeason.query.get_or_404(season_id)
-    title = f"{season.series_title} S{season.season_number}"
+    series_title = season.series_title
+    display_title = f"{season.series_title} S{season.season_number}"
     db.session.delete(season)
     db.session.commit()
-    flash(f"Removed {title} from your tracker.")
+    
+    # Re-evaluate future goal status
+    current_year = datetime.now().year
+    still_exists = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == current_year, TVSeason.series_title.ilike(series_title)).first()
+    if not still_exists:
+        future = FutureMediaGoal.query.filter_by(year=current_year, category='tv', title=series_title, is_completed=True).first()
+        if future:
+            future.is_completed = False
+            db.session.commit()
+
+    flash(f"Removed {display_title} from your tracker.")
     return redirect(url_for('main.tv_list'))
 
 
@@ -703,6 +724,16 @@ def delete_game(game_id):
     title = game.title
     db.session.delete(game)
     db.session.commit()
+    
+    # Re-evaluate future goal status
+    current_year = datetime.now().year
+    still_exists = Game.query.filter(db.extract('year', Game.date_finished) == current_year, Game.title.ilike(title)).first()
+    if not still_exists:
+        future = FutureMediaGoal.query.filter_by(year=current_year, category='game', title=title, is_completed=True).first()
+        if future:
+            future.is_completed = False
+            db.session.commit()
+
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.games_list'))
 
@@ -903,6 +934,16 @@ def delete_book(book_id):
     title = book.title
     db.session.delete(book)
     db.session.commit()
+    
+    # Re-evaluate future goal status
+    current_year = datetime.now().year
+    still_exists = Book.query.filter(db.extract('year', Book.date_finished) == current_year, Book.title.ilike(title)).first()
+    if not still_exists:
+        future = FutureMediaGoal.query.filter_by(year=current_year, category='book', title=title, is_completed=True).first()
+        if future:
+            future.is_completed = False
+            db.session.commit()
+
     flash(f"Removed {title} from your tracker.")
     return redirect(url_for('main.books_list'))
 
