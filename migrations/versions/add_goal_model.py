@@ -17,10 +17,17 @@ depends_on = None
 
 
 def upgrade():
-    # Use inspector to check if table already exists
+    # Use inspector to check if table already exists AND has correct schema
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     tables = inspector.get_table_names()
+    
+    if 'goal' in tables:
+        columns = [c['name'] for c in inspector.get_columns('goal')]
+        if 'movie_goal' not in columns:
+            # Contaminated table from duplicate model, drop it
+            op.drop_table('goal')
+            tables.remove('goal')
     
     if 'goal' not in tables:
         op.create_table('goal',
