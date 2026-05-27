@@ -181,6 +181,25 @@
         </section>
 
         <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Games</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for game in recent_games %}
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if game.poster_path %}
+                        <img src="{{ url_for('main.serve_poster', filename=game.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
+                    {% else %}
+                        <div style="width: 40px; height: 60px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center;">🎮</div>
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 500;">{{ game.title }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ game.date_finished.strftime('%b %d, %Y') if game.date_finished else 'N/A' }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section>
             <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Books</h2>
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 {% for book in recent_books %}
