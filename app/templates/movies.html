@@ -52,11 +52,17 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="toggle-details" onclick="toggleDetails('{{ movie.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ movie.title }}</span>
+                                <span class="toggle-details" onclick="toggleDetails('{{ movie.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">
+                                    {{ movie.title }}
+                                </span>
+                                {% if movie.date_watched and (movie.date_watched.year, 'movie', movie.title.lower()) in target_map %}
+                                    <span title="Target Goal Met!" style="color: #f1c40f; cursor: help; margin-left: 5px;">⭐</span>
+                                {% endif %}
                                 <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
-                                    Dir: {{ movie.director.split(',')[0] if movie.director else 'N/A' }}
+                                    {{ movie.release_year or 'N/A' }}
                                 </div>
                             </td>
+
                             <td class="hide-mobile">{{ "%.1f"|format(movie.user_score) if movie.user_score else 'N/A' }}</td>
                             <td>
                                 {% if current_user.is_authenticated %}

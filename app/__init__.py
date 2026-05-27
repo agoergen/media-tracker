@@ -39,6 +39,15 @@ def create_app(config_class=Config):
     def inject_globals():
         from datetime import datetime
         from app.models import Movie, TVSeason, Game, Book, Theater, Goal, FutureMediaGoal
+        
+        # Build a map of target titles for efficient lookup in templates
+        # Format: {(year, category, title.lower()): True}
+        try:
+            all_targets = FutureMediaGoal.query.all()
+            target_map = {(tg.year, tg.category, tg.title.lower()): True for tg in all_targets}
+        except:
+            target_map = {}
+
         return {
             'datetime': datetime,
             'now': datetime.now(),
@@ -48,7 +57,8 @@ def create_app(config_class=Config):
             'Book': Book,
             'Theater': Theater,
             'Goal': Goal,
-            'FutureMediaGoal': FutureMediaGoal
+            'FutureMediaGoal': FutureMediaGoal,
+            'target_map': target_map
         }
 
     return app

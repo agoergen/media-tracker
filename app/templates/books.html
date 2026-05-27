@@ -31,9 +31,9 @@
                         <tr>
                             <th>#</th>
                             <th>Cover</th>
-                            <th>Title & Author</th>
+                            <th>Title</th>
                             <th class="hide-mobile">Rating</th>
-                            <th>{% if current_user.is_authenticated %}Tracking Info{% else %}Finished{% endif %}</th>
+                            <th>Finished</th>
                             {% if current_user.is_authenticated %}
                                 <th>Actions</th>
                             {% endif %}
@@ -48,11 +48,16 @@
                                 {% if book.poster_path %}
                                     <img src="{{ url_for('main.serve_poster', filename=book.poster_path.lstrip('/')) }}" alt="{{ book.title }} cover" style="border-radius: 2px; width: 45px;" loading="lazy">
                                 {% else %}
-                                    <div style="width: 45px; height: 68px; background: #ddd; border-radius: 2px;"></div>
+                                    <div style="width: 45px; height: 68px; background: #ddd; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">📚</div>
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="toggle-details" onclick="toggleDetails('{{ book.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ book.title }}</span>
+                                <span class="toggle-details" onclick="toggleDetails('{{ book.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">
+                                    {{ book.title }}
+                                </span>
+                                {% if book.date_finished and (book.date_finished.year, 'book', book.title.lower()) in target_map %}
+                                    <span title="Target Goal Met!" style="color: #f1c40f; cursor: help; margin-left: 5px;">⭐</span>
+                                {% endif %}
                                 <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
                                     {{ book.author }}
                                     {% if book.format %}<span style="color: #e67e22;"> | {{ book.format }}</span>{% endif %}
@@ -71,14 +76,13 @@
                                         <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
                                             <input type="date" name="date_finished" value="{{ book.date_finished.strftime('%Y-%m-%d') if book.date_finished else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
                                             <select name="format" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px;">
-                                                <option value="">Format...</option>
-                                                {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
+                                                {% for f in ['Audiobook', 'E-Book', 'Physical', 'Other'] %}
                                                     <option value="{{ f }}" {% if book.format == f %}selected{% endif %}>{{ f }}</option>
                                                 {% endfor %}
                                             </select>
                                         </div>
                                         <div style="display: flex; align-items: center; justify-content: space-between;">
-                                            <input type="number" step="0.05" name="rating" value="{{ book.storygraph_rating or '' }}" placeholder="StoryGraph Rating" style="padding: 2px; font-size: 0.75rem; border: 1px solid #ccc; border-radius: 3px; width: 80px;">
+                                            <input type="number" step="0.01" name="rating" value="{{ book.storygraph_rating or '' }}" placeholder="Rating" style="padding: 2px; font-size: 0.75rem; border: 1px solid #ccc; border-radius: 3px; width: 60px;">
                                             <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;">
                                                 <input type="checkbox" name="is_rewatch" {% if book.is_revisit %}checked{% endif %}> Reread?
                                             </label>
@@ -88,19 +92,15 @@
                                 {% else %}
                                     <div style="font-size: 0.9rem;">
                                         {{ book.date_finished.strftime('%Y-%m-%d') if book.date_finished else '' }}
-                                        {% if book.format %}<br><small style="color: #666;">via {{ book.format }}</small>{% endif %}
                                         {% if book.is_revisit %}<br><small style="color: #27ae60;">(Reread)</small>{% endif %}
                                     </div>
                                 {% endif %}
                             </td>
                             {% if current_user.is_authenticated %}
                                 <td>
-                                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                                        <button class="btn btn-secondary" style="padding: 2px 5px; font-size: 0.75rem;" onclick="researchBook('{{ book.id }}', '{{ book.title | replace("'", "\\'") }}', '{{ book.date_finished.strftime('%Y-%m-%d') if book.date_finished else '' }}', '{{ book.format or '' }}', '{{ book.storygraph_rating or '' }}', {{ 'true' if book.is_revisit else 'false' }})">Re-search</button>
-                                        <form action="{{ url_for('main.delete_book', book_id=book.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this book?');">
-                                            <button type="submit" class="btn btn-delete">Del</button>
-                                        </form>
-                                    </div>
+                                    <form action="{{ url_for('main.delete_book', book_id=book.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this book?');">
+                                        <button type="submit" class="btn btn-delete">Del</button>
+                                    </form>
                                 </td>
                             {% endif %}
                         </tr>
@@ -111,18 +111,20 @@
                                         {% if book.poster_path %}
                                             <img src="{{ url_for('main.serve_poster', filename=book.poster_path.lstrip('/')) }}" alt="{{ book.title }} cover" style="border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%;" loading="lazy">
                                         {% endif %}
-                                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-                                            {% if book.google_books_url %}
-                                                <a href="{{ book.google_books_url }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #e0e0e0; color: #000; padding: 6px;">Google Books</a>
-                                            {% endif %}
-                                            <a href="https://www.google.com/search?q=What+are+some+books+I+might+enjoy+if+I+enjoyed+{{ book.title | urlencode }}" target="_blank" class="btn btn-secondary" style="width: 100%; text-align: center; box-sizing: border-box; background: #8e44ad; color: #fff; padding: 6px; font-size: 0.75rem; line-height: 1.2;">Ask Google for Similar</a>
-                                        </div>
                                     </div>
                                     <div style="flex: 1; min-width: 250px;">
-                                        <p><strong>Author:</strong> {{ book.author or 'N/A' }}</p>
+                                        <p><strong>Author:</strong> {{ book.author }}</p>
                                         <p><strong>Page Count:</strong> {{ book.page_count or 'N/A' }}</p>
                                         <p><strong>Genres:</strong> {{ book.genres or 'N/A' }}</p>
-                                        <p><strong>Summary:</strong> {{ book.summary }}</p>
+                                        <p><strong>Release Year:</strong> {{ book.release_year or 'N/A' }}</p>
+                                        <div style="margin-top: 15px; font-size: 0.95rem; line-height: 1.6; color: #444;">
+                                            {{ book.summary }}
+                                        </div>
+                                        {% if book.google_books_url %}
+                                            <div style="margin-top: 15px;">
+                                                <a href="{{ book.google_books_url }}" target="_blank" class="btn btn-secondary" style="background: #4285F4; color: #fff; padding: 6px 12px; font-size: 0.85rem;">View on Google Books</a>
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </td>
@@ -150,13 +152,6 @@
             }
         }
 
-        function researchBook(id, title, date, format, rating, isRewatch) {
-            let newTitle = prompt("Re-search book:", title);
-            if (newTitle) {
-                window.location.href = `/books/search?query=${encodeURIComponent(newTitle)}&replace_id=${id}&pre_date=${date}&pre_format=${encodeURIComponent(format)}&pre_rating=${rating}&pre_rewatch=${isRewatch}`;
-            }
-        }
-
         const filterInput = document.getElementById('bookFilter');
         filterInput.addEventListener('input', function() {
             const query = this.value.toLowerCase().trim();
@@ -165,8 +160,8 @@
             if (query.length > 0) {
                 document.querySelectorAll('.movie-row').forEach(row => {
                     const searchData = row.getAttribute('data-search') || '';
-                    const movie_id = row.id.replace('row-', '');
-                    const detailRow = document.getElementById('details-' + movie_id);
+                    const book_id = row.id.replace('row-', '');
+                    const detailRow = document.getElementById('details-' + book_id);
 
                     if (searchData.includes(query)) {
                         row.style.display = '';

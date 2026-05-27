@@ -60,7 +60,12 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="toggle-details" onclick="toggleDetails('{{ game.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ game.title }}</span>
+                                <span class="toggle-details" onclick="toggleDetails('{{ game.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">
+                                    {{ game.title }}
+                                </span>
+                                {% if game.date_finished and (game.date_finished.year, 'game', game.title.lower()) in target_map %}
+                                    <span title="Target Goal Met!" style="color: #f1c40f; cursor: help; margin-left: 5px;">⭐</span>
+                                {% endif %}
                                 <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
                                     {{ game.platform_played }}
                                     {% if game.variant %}<span style="color: #e67e22;"> ({{ game.variant }})</span>{% endif %}
