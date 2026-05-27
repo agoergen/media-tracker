@@ -44,6 +44,8 @@ def index():
     recent_tv = TVSeason.query.order_by(TVSeason.date_watched.desc()).limit(5).all()
     tv_count = TVSeason.query.count()
 
+    recent_books = Book.query.order_by(Book.date_finished.desc()).limit(5).all()
+
     current_year = datetime.now().year
     movies_this_year = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year).count()
     games_this_year = Game.query.filter(db.extract('year', Game.date_finished) == current_year).count()
@@ -64,6 +66,7 @@ def index():
                          tv_count=tv_count,
                          tv_this_year=tv_this_year,
                          books_this_year=books_this_year,
+                         recent_books=recent_books,
                          theater_this_year=theater_this_year,
                          recent_theater=recent_theater)
 
