@@ -109,10 +109,23 @@ def index():
     recent_books = Book.query.order_by(Book.date_finished.desc()).limit(5).all()
 
     current_year = datetime.now().year
+    
+    # Movies
     movies_this_year = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year).count()
+    movies_new_this_year = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year, Movie.is_revisit == False).count()
+    
+    # Games
     games_this_year = Game.query.filter(db.extract('year', Game.date_finished) == current_year).count()
+    games_new_this_year = Game.query.filter(db.extract('year', Game.date_finished) == current_year, Game.is_revisit == False).count()
+    
+    # TV
     tv_this_year = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == current_year).count()
+    tv_new_this_year = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == current_year, TVSeason.is_revisit == False).count()
+    
+    # Books
     books_this_year = Book.query.filter(db.extract('year', Book.date_finished) == current_year).count()
+    books_new_this_year = Book.query.filter(db.extract('year', Book.date_finished) == current_year, Book.is_revisit == False).count()
+
     theater_this_year = Theater.query.filter(db.extract('year', Theater.date_watched) == current_year).count()
     
     recent_theater = Theater.query.order_by(Theater.date_watched.desc()).limit(5).all()
@@ -123,13 +136,17 @@ def index():
                          recent_movies=recent_movies, 
                          movie_count=movie_count,
                          movies_this_year=movies_this_year,
+                         movies_new_this_year=movies_new_this_year,
                          recent_games=recent_games,
                          game_count=game_count,
                          games_this_year=games_this_year,
+                         games_new_this_year=games_new_this_year,
                          recent_tv=recent_tv,
                          tv_count=tv_count,
                          tv_this_year=tv_this_year,
+                         tv_new_this_year=tv_new_this_year,
                          books_this_year=books_this_year,
+                         books_new_this_year=books_new_this_year,
                          recent_books=recent_books,
                          theater_this_year=theater_this_year,
                          recent_theater=recent_theater,

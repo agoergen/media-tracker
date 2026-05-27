@@ -14,12 +14,24 @@
                 <span class="count">{{ movie_count }}</span>
                 <span class="label">{{ movies_this_year }} watched in {{ datetime.now().year }}</span>
                 {% if current_goal and current_goal.movie_goal > 0 %}
-                    <div class="progress-container">
-                        <div class="progress-bar {% if movies_this_year >= current_goal.movie_goal %}complete{% endif %}" 
-                             style="width: {{ [100, (movies_this_year / current_goal.movie_goal * 100)]|min }}%"></div>
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right;">
-                        Goal: {{ current_goal.movie_goal }}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                            <span>New Media</span>
+                            <span>{{ movies_new_this_year }} / {{ current_goal.movie_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar {% if movies_new_this_year >= current_goal.movie_goal %}complete{% endif %}" 
+                                 style="width: {{ [100, (movies_new_this_year / current_goal.movie_goal * 100)]|min }}%"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">
+                            <span>All Media</span>
+                            <span>{{ movies_this_year }} / {{ current_goal.movie_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar revisit" 
+                                 style="width: {{ [100, (movies_this_year / current_goal.movie_goal * 100)]|min }}%"></div>
+                        </div>
                     </div>
                 {% endif %}
             </a>
@@ -30,12 +42,24 @@
                 <span class="count">{{ tv_count }}</span>
                 <span class="label">{{ tv_this_year }} seasons in {{ datetime.now().year }}</span>
                 {% if current_goal and current_goal.tv_goal > 0 %}
-                    <div class="progress-container">
-                        <div class="progress-bar {% if tv_this_year >= current_goal.tv_goal %}complete{% endif %}" 
-                             style="width: {{ [100, (tv_this_year / current_goal.tv_goal * 100)]|min }}%"></div>
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right;">
-                        Goal: {{ current_goal.tv_goal }}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                            <span>New Media</span>
+                            <span>{{ tv_new_this_year }} / {{ current_goal.tv_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar {% if tv_new_this_year >= current_goal.tv_goal %}complete{% endif %}" 
+                                 style="width: {{ [100, (tv_new_this_year / current_goal.tv_goal * 100)]|min }}%"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">
+                            <span>All Media</span>
+                            <span>{{ tv_this_year }} / {{ current_goal.tv_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar revisit" 
+                                 style="width: {{ [100, (tv_this_year / current_goal.tv_goal * 100)]|min }}%"></div>
+                        </div>
                     </div>
                 {% endif %}
             </a>
@@ -46,12 +70,24 @@
                 <span class="count">{{ game_count }}</span>
                 <span class="label">{{ games_this_year }} finished in {{ datetime.now().year }}</span>
                 {% if current_goal and current_goal.game_goal > 0 %}
-                    <div class="progress-container">
-                        <div class="progress-bar {% if games_this_year >= current_goal.game_goal %}complete{% endif %}" 
-                             style="width: {{ [100, (games_this_year / current_goal.game_goal * 100)]|min }}%"></div>
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right;">
-                        Goal: {{ current_goal.game_goal }}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                            <span>New Media</span>
+                            <span>{{ games_new_this_year }} / {{ current_goal.game_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar {% if games_new_this_year >= current_goal.game_goal %}complete{% endif %}" 
+                                 style="width: {{ [100, (games_new_this_year / current_goal.game_goal * 100)]|min }}%"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">
+                            <span>All Media</span>
+                            <span>{{ games_this_year }} / {{ current_goal.game_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar revisit" 
+                                 style="width: {{ [100, (games_this_year / current_goal.game_goal * 100)]|min }}%"></div>
+                        </div>
                     </div>
                 {% endif %}
             </a>
@@ -62,12 +98,24 @@
                 <span class="count">{{ Book.query.count() }}</span>
                 <span class="label">{{ books_this_year }} books in {{ datetime.now().year }}</span>
                 {% if current_goal and current_goal.book_goal > 0 %}
-                    <div class="progress-container">
-                        <div class="progress-bar {% if books_this_year >= current_goal.book_goal %}complete{% endif %}" 
-                             style="width: {{ [100, (books_this_year / current_goal.book_goal * 100)]|min }}%"></div>
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; text-align: right;">
-                        Goal: {{ current_goal.book_goal }}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                            <span>New Media</span>
+                            <span>{{ books_new_this_year }} / {{ current_goal.book_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar {% if books_new_this_year >= current_goal.book_goal %}complete{% endif %}" 
+                                 style="width: {{ [100, (books_new_this_year / current_goal.book_goal * 100)]|min }}%"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">
+                            <span>All Media</span>
+                            <span>{{ books_this_year }} / {{ current_goal.book_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar revisit" 
+                                 style="width: {{ [100, (books_this_year / current_goal.book_goal * 100)]|min }}%"></div>
+                        </div>
                     </div>
                 {% endif %}
             </a>

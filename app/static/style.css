@@ -263,3 +263,7 @@ td {
 .progress-bar.complete {
     background: var(--success);
 }
+
+.progress-bar.revisit {
+    background: var(--danger);
+}
