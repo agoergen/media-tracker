@@ -56,6 +56,7 @@ erDiagram
         bigint budget
         bigint revenue
         string trailer_url
+        boolean is_private
     }
     TVSeason {
         int id PK
@@ -71,6 +72,7 @@ erDiagram
         float user_score
         text plot
         string trailer_url
+        boolean is_private
     }
     Game {
         int id PK
@@ -91,6 +93,7 @@ erDiagram
         float user_score
         float critic_score
         string poster_path
+        boolean is_private
     }
     Book {
         int id PK
@@ -106,6 +109,7 @@ erDiagram
         string poster_path
         int page_count
         text genres
+        boolean is_private
     }
     Theater {
         int id PK
@@ -119,6 +123,7 @@ erDiagram
         string show_type
         string poster_path
         text summary
+        boolean is_private
     }
     Goal {
         int id PK
@@ -202,10 +207,13 @@ Dashboard Stats for Year (e.g. 2026)
 * **Target Validation Backend**:
   Clicking "Validate Targets" triggers a bulk background query. For every target title in the `FutureMediaGoal` table, the app queries the respective media tables using case-insensitive SQL matching (`ILIKE`) to verify if the user tracked that title during that calendar year. If a match is found, `FutureMediaGoal.is_completed` is set to `True`.
 
----
+## 6. Operations, Deployment & Usability Upgrades
 
-## 6. Operations & Deployment
-
-* **Authentication**: Two user roles are supported via Flask-Login. Read-only visitors can view tables and progress statistics; only authenticated Admins can make modifications.
+* **Authentication & Session Persistence**: Two user roles are supported via Flask-Login. Read-only visitors can view tables and progress statistics; only authenticated Admins can make modifications. Login sessions are persisted across browser closures by setting persistent cookies via `login_user(user, remember=True)` in `routes.py`.
+* **Privacy Mode**: Supports marking media entries (Movies, TV Seasons, Games, Books, Theater Shows) as private. 
+  * If a visitor is logged out (`not current_user.is_authenticated`), list pages and "Recent" dashboard cards filter out private records using SQL query filtering: `.filter_by(is_private=False)`.
+  * To prevent aggregate statistics and progress bars from showing inconsistent math, count queries (e.g. `Movie.query.count()`) include private items in totals even when logged out.
+* **Mobile-Responsive Navigation Layout**: Exposes navigation links (Admin panel, Yearly Goals, and Logout) on mobile viewports. The previous design hid links under media queries. The current design in `app/static/style.css` utilizes a vertical flex grid layout with wrap-flex behavior under `@media (max-width: 768px)`, ensuring full administrator and user control is accessible on all screen sizes.
 * **Database migrations**: Alembic (via Flask-Migrate) manages database schema changes.
 * **Production Bootstrapping**: The app uses a Gunicorn configuration declared in a `Procfile`. On startup, Gunicorn executes `flask db upgrade` first, ensuring that all migrations are applied to the live PostgreSQL instance before launching the web server.
+* **Railway Build Environment Patch (`mise.toml`)**: Due to GitHub attestation verification errors during Railway's Python 3.12.3 package compilation phase, a custom `mise.toml` was added to the repository root with `python.github_attestations = false` to bypass the verification check and ensure successful builds.

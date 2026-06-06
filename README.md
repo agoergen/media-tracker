@@ -10,6 +10,9 @@ A lightweight, premium web application for tracking your journey through cinema,
     - **Books**: Powered by Google Books and OpenLibrary.
     - **Theater**: Live scraping from IBDB with Wikipedia/Wikidata enrichment for summaries and runtimes.
 - **Visual Ledger**: Beautiful, minimalist design with local poster storage (no hotlinking).
+- **Privacy Mode**: Support for private media items. When logged out, visitors cannot see private items in listings or "Recent" lists, but aggregate statistics remain consistent.
+- **Session Persistence**: Login sessions are kept alive across browser sessions via persistent cookies (`remember=True`).
+- **Mobile Usability**: A fully responsive mobile navigation layout that wraps links cleanly instead of hiding them, ensuring admin actions can be performed on smaller devices.
 - **Yearly Goals**: 
     - Set specific targets for each category.
     - Dual-progress bars (New Media vs. All Media).

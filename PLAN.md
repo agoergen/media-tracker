@@ -36,3 +36,4 @@ The application uses separate database tables for each media type to capture spe
 5. [DONE] **Theater Integration**: Live IBDB search, Wikipedia descriptions, and manual poster uploads.
 6. [DONE] **Goals & Statistics**: Yearly targets, historical benchmarks, dual-progress bars, and star-based rewards.
 7. [DONE] **Deployment**: Fully deployed on Railway with persistent asset storage.
+8. [DONE] **Privacy & Usability Upgrades**: Mark media items as private, persist sessions using cookies, and implement responsive mobile navigation layout.
