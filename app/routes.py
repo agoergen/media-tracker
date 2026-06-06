@@ -158,16 +158,27 @@ def goals(view_year=None):
 @main.route('/')
 def index():
     # Latest 5 of each category
-    recent_movies = Movie.query.order_by(Movie.date_watched.desc()).limit(5).all()
+    recent_movies_q = Movie.query
+    recent_games_q = Game.query
+    recent_tv_q = TVSeason.query
+    recent_books_q = Book.query
+    
+    if not current_user.is_authenticated:
+        recent_movies_q = recent_movies_q.filter_by(is_private=False)
+        recent_games_q = recent_games_q.filter_by(is_private=False)
+        recent_tv_q = recent_tv_q.filter_by(is_private=False)
+        recent_books_q = recent_books_q.filter_by(is_private=False)
+
+    recent_movies = recent_movies_q.order_by(Movie.date_watched.desc()).limit(5).all()
     movie_count = Movie.query.count()
     
-    recent_games = Game.query.order_by(Game.date_finished.desc()).limit(5).all()
+    recent_games = recent_games_q.order_by(Game.date_finished.desc()).limit(5).all()
     game_count = Game.query.count()
 
-    recent_tv = TVSeason.query.order_by(TVSeason.date_watched.desc()).limit(5).all()
+    recent_tv = recent_tv_q.order_by(TVSeason.date_watched.desc()).limit(5).all()
     tv_count = TVSeason.query.count()
 
-    recent_books = Book.query.order_by(Book.date_finished.desc()).limit(5).all()
+    recent_books = recent_books_q.order_by(Book.date_finished.desc()).limit(5).all()
 
     current_year = datetime.now().year
     
@@ -189,7 +200,10 @@ def index():
 
     theater_this_year = Theater.query.filter(db.extract('year', Theater.date_watched) == current_year).count()
     
-    recent_theater = Theater.query.order_by(Theater.date_watched.desc()).limit(5).all()
+    recent_theater_q = Theater.query
+    if not current_user.is_authenticated:
+        recent_theater_q = recent_theater_q.filter_by(is_private=False)
+    recent_theater = recent_theater_q.order_by(Theater.date_watched.desc()).limit(5).all()
     
     current_goal = Goal.query.filter_by(year=current_year).first()
 
@@ -225,7 +239,10 @@ def index():
 # MOVIE ROUTES
 @main.route('/movies')
 def movies_list():
-    all_movies = Movie.query.order_by(Movie.date_watched.asc()).all()
+    query = Movie.query
+    if not current_user.is_authenticated:
+        query = query.filter_by(is_private=False)
+    all_movies = query.order_by(Movie.date_watched.asc()).all()
     
     # Group by year
     grouped = OrderedDict()
@@ -335,6 +352,7 @@ def add_movie(tmdb_id):
                 movie.provider = watched_at
             if request.form.get('is_rewatch'):
                 movie.is_revisit = is_rewatch_input
+            movie.is_private = True if request.form.get('is_private') == 'on' else False
                 
             flash(f"Refreshed details for {movie.title}!")
         else:
@@ -345,6 +363,7 @@ def add_movie(tmdb_id):
                 external_id=str(tmdb_id),
                 provider=watched_at,
                 is_revisit=is_rewatch_input,
+                is_private=True if request.form.get('is_private') == 'on' else False,
                 director=director,
                 writer=writer,
                 leading_actors=leading_actors,
@@ -398,6 +417,7 @@ def edit_movie(movie_id):
 
     movie.provider = request.form.get('watched_at')
     movie.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
+    movie.is_private = True if request.form.get('is_private') == 'on' else False
     
     db.session.commit()
     flash(f"Updated tracking for {movie.title}.")
@@ -427,7 +447,10 @@ def delete_movie(movie_id):
 # TV ROUTES
 @main.route('/tv')
 def tv_list():
-    all_seasons = TVSeason.query.order_by(TVSeason.date_watched.asc()).all()
+    query = TVSeason.query
+    if not current_user.is_authenticated:
+        query = query.filter_by(is_private=False)
+    all_seasons = query.order_by(TVSeason.date_watched.asc()).all()
     
     grouped = OrderedDict()
     for season in all_seasons:
@@ -509,6 +532,7 @@ def add_tv_season(series_id):
                 season.network = watched_at
             if request.form.get('is_rewatch'):
                 season.is_revisit = is_rewatch_input
+            season.is_private = True if request.form.get('is_private') == 'on' else False
                 
             flash(f"Refreshed details for {season.series_title} S{season.season_number}!")
         else:
@@ -522,7 +546,8 @@ def add_tv_season(series_id):
                 poster_path=poster_filename,
                 user_score=details.get('vote_average'),
                 plot=details.get('overview'),
-                is_revisit=is_rewatch_input
+                is_revisit=is_rewatch_input,
+                is_private=True if request.form.get('is_private') == 'on' else False
             )
             
             videos = details.get('videos', {}).get('results', [])
@@ -561,6 +586,7 @@ def edit_tv_season(season_id):
 
     season.network = request.form.get('watched_at')
     season.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
+    season.is_private = True if request.form.get('is_private') == 'on' else False
     
     db.session.commit()
     flash(f"Updated tracking for {season.series_title} S{season.season_number}.")
@@ -591,7 +617,10 @@ def delete_tv_season(season_id):
 # GAME ROUTES
 @main.route('/games')
 def games_list():
-    all_games = Game.query.order_by(Game.date_finished.asc()).all()
+    query = Game.query
+    if not current_user.is_authenticated:
+        query = query.filter_by(is_private=False)
+    all_games = query.order_by(Game.date_finished.asc()).all()
     
     distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
     franchise_list = [f[0] for f in distinct_franchises]
@@ -690,6 +719,7 @@ def add_game(igdb_id):
                 game.variant = variant
             if franchise_input:
                 game.franchise = franchise_input
+            game.is_private = True if request.form.get('is_private') == 'on' else False
                 
             flash(f"Refreshed details for {game.title}!")
         else:
@@ -710,7 +740,8 @@ def add_game(igdb_id):
                 is_revisit=is_rewatch,
                 variant=variant,
                 date_finished=date_finished,
-                status='Finished'
+                status='Finished',
+                is_private=True if request.form.get('is_private') == 'on' else False
             )
             db.session.add(new_game)
             
@@ -745,6 +776,7 @@ def edit_game(game_id):
     game.variant = request.form.get('variant')
     game.franchise = request.form.get('franchise')
     game.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
+    game.is_private = True if request.form.get('is_private') == 'on' else False
     
     db.session.commit()
     flash(f"Updated tracking for {game.title}.")
@@ -774,7 +806,10 @@ def delete_game(game_id):
 # BOOK ROUTES
 @main.route('/books')
 def books_list():
-    all_books = Book.query.order_by(Book.date_finished.asc()).all()
+    query = Book.query
+    if not current_user.is_authenticated:
+        query = query.filter_by(is_private=False)
+    all_books = query.order_by(Book.date_finished.asc()).all()
     
     grouped = OrderedDict()
     for book in all_books:
@@ -909,6 +944,7 @@ def add_book(book_id):
             book.is_revisit = is_rewatch
         if rating:
             book.storygraph_rating = rating
+        book.is_private = True if request.form.get('is_private') == 'on' else False
             
         flash(f"Refreshed details for {book.title}!")
     else:
@@ -924,7 +960,8 @@ def add_book(book_id):
             format=book_format,
             is_revisit=is_rewatch,
             date_finished=date_finished,
-            storygraph_rating=rating
+            storygraph_rating=rating,
+            is_private=True if request.form.get('is_private') == 'on' else False
         )
         db.session.add(new_book)
         
@@ -955,6 +992,7 @@ def edit_book(book_id):
     book.format = request.form.get('format')
     book.storygraph_rating = request.form.get('rating', type=float)
     book.is_revisit = True if request.form.get('is_rewatch') == 'on' else False
+    book.is_private = True if request.form.get('is_private') == 'on' else False
     
     db.session.commit()
     flash(f"Updated tracking for {book.title}.")
@@ -983,7 +1021,10 @@ def delete_book(book_id):
 # THEATER ROUTES
 @main.route('/theater')
 def theater_list():
-    all_shows = Theater.query.order_by(Theater.date_watched.asc()).all()
+    query = Theater.query
+    if not current_user.is_authenticated:
+        query = query.filter_by(is_private=False)
+    all_shows = query.order_by(Theater.date_watched.asc()).all()
     grouped = OrderedDict()
     for show in all_shows:
         year = show.date_watched.year if show.date_watched else "Unknown"
@@ -1024,6 +1065,7 @@ def add_theater_ibdb(slug_id):
     date_watched_str = request.form.get('date_watched')
     location = request.form.get('location')
     is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+    is_private = True if request.form.get('is_private') == 'on' else False
     selected_image = request.form.get('poster_url')
 
     # Check for manual file upload
@@ -1084,6 +1126,7 @@ def add_theater_ibdb(slug_id):
         show.date_watched = date_watched
         show.location = location
         show.is_revisit = is_rewatch
+        show.is_private = is_private
         show.release_year = release_year or show.release_year
         show.original_theater = original_theater
         show.run_time = runtime
@@ -1102,6 +1145,7 @@ def add_theater_ibdb(slug_id):
             date_watched=date_watched,
             location=location,
             is_revisit=is_rewatch,
+            is_private=is_private,
             release_year=release_year,
             original_theater=original_theater,
             run_time=runtime,

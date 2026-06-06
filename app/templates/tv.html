@@ -55,6 +55,9 @@
                                 <span class="toggle-details" onclick="toggleDetails('{{ season.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">
                                     {{ season.series_title }} (Season {{ season.season_number }})
                                 </span>
+                                {% if season.is_private %}
+                                    <span title="Private Entry (only show when logged in)" style="font-size: 0.75rem; color: #7f8c8d; font-style: italic; margin-left: 5px;">(Private)</span>
+                                {% endif %}
                                 {% if season.date_watched and (season.date_watched.year, 'tv', season.series_title.lower()) in target_map %}
                                     <span title="Target Goal Met!" style="color: #f1c40f; cursor: help; margin-left: 5px;">⭐</span>
                                 {% endif %}
@@ -76,9 +79,14 @@
                                             </select>
                                         </div>
                                         <div style="display: flex; align-items: center; justify-content: space-between;">
-                                            <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;">
-                                                <input type="checkbox" name="is_rewatch" {% if season.is_revisit %}checked{% endif %}> Rewatch?
-                                            </label>
+                                            <div style="display: flex; gap: 8px;">
+                                                <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;">
+                                                    <input type="checkbox" name="is_rewatch" {% if season.is_revisit %}checked{% endif %}> Rewatch?
+                                                </label>
+                                                <label style="font-size: 0.75rem; color: #666; display: flex; align-items: center; gap: 3px;" title="Private entry (only show when logged in)">
+                                                    <input type="checkbox" name="is_private" {% if season.is_private %}checked{% endif %}> Private?
+                                                </label>
+                                            </div>
                                             <button type="submit" class="btn btn-success" style="padding: 2px 8px; font-size: 0.75rem;">Save</button>
                                         </div>
                                     </form>

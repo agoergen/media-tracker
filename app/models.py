@@ -34,6 +34,7 @@ class Movie(db.Model):
     revenue = db.Column(db.BigInteger)
     trailer_url = db.Column(db.String(255))
     wikipedia_url = db.Column(db.String(255))
+    is_private = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
 
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -54,6 +55,7 @@ class Game(db.Model):
     user_score = db.Column(db.Float)
     critic_score = db.Column(db.Float)
     poster_path = db.Column(db.String(255)) # Local path to cover art
+    is_private = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
 
 class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -70,6 +72,7 @@ class Book(db.Model):
     page_count = db.Column(db.Integer)
     genres = db.Column(db.Text)
     google_books_url = db.Column(db.String(255))
+    is_private = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
 
 class Theater(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -83,6 +86,7 @@ class Theater(db.Model):
     show_type = db.Column(db.String(100)) # Play, Musical
     poster_path = db.Column(db.String(255))
     summary = db.Column(db.Text)
+    is_private = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
 
 class Goal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -116,3 +120,4 @@ class TVSeason(db.Model):
     plot = db.Column(db.Text)
     trailer_url = db.Column(db.String(255))
     imdb_id = db.Column(db.String(20))
+    is_private = db.Column(db.Boolean, default=False, server_default='false', nullable=False)

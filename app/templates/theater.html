@@ -54,6 +54,9 @@
                             </td>
                             <td>
                                 <span class="toggle-details" onclick="toggleDetails('{{ show.id }}')" style="font-weight: bold; color: #2c3e50; cursor: pointer; text-decoration: underline;">{{ show.title }}</span>
+                                {% if show.is_private %}
+                                    <span title="Private Entry (only show when logged in)" style="font-size: 0.75rem; color: #7f8c8d; font-style: italic; margin-left: 5px;">(Private)</span>
+                                {% endif %}
                                 <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">
                                     {{ show.release_year or 'N/A' }}
                                 </div>
