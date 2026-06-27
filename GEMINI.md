@@ -26,6 +26,7 @@
 - **Privacy Mode**: Support for private entries (`is_private` flag) which hide items from list views and dashboard 'Recent' lists for logged-out visitors, while still aggregating into overall totals.
 - **Session Persistence**: Persistent login session using `remember=True` cookie duration.
 - **Mobile Navigation**: Pure-CSS grid wrapping responsive layout to expose all navigation links on mobile viewports.
+- **Metrics**: Admin-only metrics view supporting calendar year and "All Time" filters. Aggregates and displays author, format, platform, provider, and revisit percentages via custom distribution bars.
 
 ## Goal System
 - **Yearly Tracking**: Goals are scoped to specific calendar years.

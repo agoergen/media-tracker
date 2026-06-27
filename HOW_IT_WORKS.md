@@ -206,6 +206,12 @@ Dashboard Stats for Year (e.g. 2026)
   * **All Media**: Counts total entries for the calendar year regardless of revisit status (displayed in red).
 * **Target Validation Backend**:
   Clicking "Validate Targets" triggers a bulk background query. For every target title in the `FutureMediaGoal` table, the app queries the respective media tables using case-insensitive SQL matching (`ILIKE`) to verify if the user tracked that title during that calendar year. If a match is found, `FutureMediaGoal.is_completed` is set to `True`.
+* **Metrics Calculation Pipeline**:
+  The `/metrics` and `/metrics/<view_year>` routes fetch all media records from the database. It constructs a unique list of years from all watch/completion dates to render navigation filters. For the selected year (or all-time if 'all' is selected), the pipeline aggregates:
+  * **Books**: Total reads, format distribution percentages, revisit rates, and co-author splits (comma-separated authors are parsed and counted individually).
+  * **Games**: Total completions, platform distribution percentages, top 5 franchises, and replay rates.
+  * **TV**: Total episode sum and season revisit counts.
+  * **Movies**: Platform/provider distribution percentages (e.g. Netflix, Theater, etc.) and rewatch counts.
 
 ## 6. Operations, Deployment & Usability Upgrades
 

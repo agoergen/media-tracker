@@ -18,6 +18,7 @@ A lightweight, premium web application for tracking your journey through cinema,
     - Dual-progress bars (New Media vs. All Media).
     - Earn ⭐ icons for completing specific "Target Titles" each year.
 - **Historical Insights**: Browse your tracking history and goal progress by year.
+- **Detailed Metrics & Distributions**: A private Metrics dashboard providing year-by-year and lifetime statistics (author counts, format preferences, franchise tracking, and platform breakdowns) with responsive visual distribution bar charts.
 - **Admin Security**: Flask-Login protected Create/Update/Delete operations.
 
 ## Tech Stack
