@@ -39,3 +39,8 @@ coverage.xml
 .idea/
 app.db
 *.db
+
+# Database backup utility and dumps
+backup_db.py
+leisureledger_backup_*.json
+
