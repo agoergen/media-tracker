@@ -43,5 +43,6 @@ app.db
 # Database backup utility and dumps
 backup_db.py
 backup.bat
+backups/
 leisureledger_backup_*.json
 
