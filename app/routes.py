@@ -1208,3 +1208,145 @@ def trigger_backfill_books():
     except Exception as e:
         flash(f"Error during book backfill: {str(e)}")
     return redirect(url_for('main.books_list'))
+
+@main.route('/metrics')
+@main.route('/metrics/<string:view_year>')
+@login_required
+def metrics(view_year=None):
+    # Fetch all items
+    all_books = Book.query.all()
+    all_games = Game.query.all()
+    all_tv = TVSeason.query.all()
+    all_movies = Movie.query.all()
+
+    # Determine unique years with data
+    data_years = set()
+    for b in all_books:
+        if b.date_finished:
+            data_years.add(b.date_finished.year)
+    for g in all_games:
+        if g.date_finished:
+            data_years.add(g.date_finished.year)
+    for t in all_tv:
+        if t.date_watched:
+            data_years.add(t.date_watched.year)
+    for m in all_movies:
+        if m.date_watched:
+            data_years.add(m.date_watched.year)
+
+    # Ensure current year is in the list
+    current_year = datetime.now().year
+    data_years.add(current_year)
+    sorted_years = sorted(list(data_years), reverse=True)
+
+    # Set default view_year
+    if not view_year:
+        view_year = str(current_year)
+
+    # Filter items based on selected year (or keep all for 'all')
+    if view_year == 'all':
+        filtered_books = all_books
+        filtered_games = all_games
+        filtered_tv = all_tv
+        filtered_movies = all_movies
+    else:
+        try:
+            target_year = int(view_year)
+        except ValueError:
+            target_year = current_year
+            view_year = str(current_year)
+            
+        filtered_books = [b for b in all_books if b.date_finished and b.date_finished.year == target_year]
+        filtered_games = [g for g in all_games if g.date_finished and g.date_finished.year == target_year]
+        filtered_tv = [t for t in all_tv if t.date_watched and t.date_watched.year == target_year]
+        filtered_movies = [m for m in all_movies if m.date_watched and m.date_watched.year == target_year]
+
+    # Calculate Books Metrics
+    total_books = len(filtered_books)
+    
+    author_counts = {}
+    for b in filtered_books:
+        if b.author:
+            parts = [p.strip() for p in b.author.split(',') if p.strip()]
+            for p in parts:
+                author_counts[p] = author_counts.get(p, 0) + 1
+        else:
+            author_counts['Unknown'] = author_counts.get('Unknown', 0) + 1
+    sorted_authors = sorted(author_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    format_counts = {}
+    for b in filtered_books:
+        fmt = b.format or 'Unknown'
+        format_counts[fmt] = format_counts.get(fmt, 0) + 1
+    sorted_formats = sorted(format_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    book_revisits = sum(1 for b in filtered_books if b.is_revisit)
+    book_new = total_books - book_revisits
+
+    # Calculate Games Metrics
+    total_games = len(filtered_games)
+    
+    franchise_counts = {}
+    for g in filtered_games:
+        fran = g.franchise.strip() if g.franchise and g.franchise.strip() else 'No Franchise'
+        franchise_counts[fran] = franchise_counts.get(fran, 0) + 1
+    sorted_franchises = sorted(franchise_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    platform_counts = {}
+    for g in filtered_games:
+        plat = g.platform_played or 'Unknown'
+        platform_counts[plat] = platform_counts.get(plat, 0) + 1
+    sorted_platforms = sorted(platform_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    game_revisits = sum(1 for g in filtered_games if g.is_revisit)
+    game_new = total_games - game_revisits
+
+    # Calculate TV Metrics
+    total_tv_seasons = len(filtered_tv)
+    total_episodes = sum(s.episode_count for s in filtered_tv if s.episode_count)
+    tv_revisits = sum(1 for s in filtered_tv if s.is_revisit)
+
+    # Calculate Movies Metrics
+    total_movies = len(filtered_movies)
+    
+    provider_counts = {}
+    for m in filtered_movies:
+        prov = m.provider or 'Not Specified'
+        provider_counts[prov] = provider_counts.get(prov, 0) + 1
+    sorted_providers = sorted(provider_counts.items(), key=lambda x: x[1], reverse=True)
+    
+    movie_revisits = sum(1 for m in filtered_movies if m.is_revisit)
+
+    # Package all metrics
+    metrics_data = {
+        'books': {
+            'total': total_books,
+            'authors': sorted_authors,
+            'formats': sorted_formats,
+            'revisits': book_revisits,
+            'new': book_new
+        },
+        'games': {
+            'total': total_games,
+            'franchises': sorted_franchises,
+            'platforms': sorted_platforms,
+            'revisits': game_revisits,
+            'new': game_new
+        },
+        'tv': {
+            'total_seasons': total_tv_seasons,
+            'episodes': total_episodes,
+            'revisits': tv_revisits
+        },
+        'movies': {
+            'total': total_movies,
+            'providers': sorted_providers,
+            'revisits': movie_revisits
+        }
+    }
+
+    return render_template('metrics.html',
+                           view_year=view_year,
+                           sorted_years=sorted_years,
+                           metrics=metrics_data)
+

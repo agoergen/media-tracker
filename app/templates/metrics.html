@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}Metrics - LeisureLedger{% endblock %}
+
+{% block content %}
+<div class="dashboard-hero">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 2rem; gap: 1rem;">
+        <h1>Metrics</h1>
+        <div class="metrics-selector-container">
+            <a href="{{ url_for('main.metrics', view_year='all') }}" class="metrics-pill {% if view_year == 'all' %}active{% endif %}">All Time</a>
+            {% for yr in sorted_years %}
+                <a href="{{ url_for('main.metrics', view_year=yr) }}" class="metrics-pill {% if view_year == yr|string %}active{% endif %}">{{ yr }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        <!-- Books Card -->
+        <div class="metrics-card">
+            <h2>Books</h2>
+            <div class="metrics-summary">
+                <span class="count">{{ metrics.books.total }}</span>
+                <span class="label">total books read</span>
+            </div>
+            
+            {% if metrics.books.total > 0 %}
+                <div class="metrics-section">
+                    <h3>Format</h3>
+                    {% for fmt, count in metrics.books.formats %}
+                        {% set pct = (count / metrics.books.total * 100)|round|int %}
+                        <div class="dist-row">
+                            <div class="dist-info">
+                                <span class="dist-name">{{ fmt }}</span>
+                                <span class="dist-num">{{ count }}/{{ metrics.books.total }} ({{ pct }}%)</span>
+                            </div>
+                            <div class="dist-bar"><div class="dist-fill" style="width: {{ pct }}%;"></div></div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="metrics-section">
+                    <h3>Authors (Top 5)</h3>
+                    {% for auth, count in metrics.books.authors[:5] %}
+                        {% set pct = (count / metrics.books.total * 100)|round|int %}
+                        <div class="dist-row">
+                            <div class="dist-info">
+                                <span class="dist-name">{{ auth }}</span>
+                                <span class="dist-num">{{ count }}/{{ metrics.books.total }} ({{ pct }}%)</span>
+                            </div>
+                            <div class="dist-bar"><div class="dist-fill" style="width: {{ pct }}%;"></div></div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="metrics-section">
+                    <h3>Revisits</h3>
+                    {% set rev_pct = (metrics.books.revisits / metrics.books.total * 100)|round|int %}
+                    {% set new_pct = (metrics.books.new / metrics.books.total * 100)|round|int %}
+                    <div class="dist-row">
+                        <div class="dist-info">
+                            <span class="dist-name">New Reads</span>
+                            <span class="dist-num">{{ metrics.books.new }}/{{ metrics.books.total }} ({{ new_pct }}%)</span>
+                        </div>
+                        <div class="dist-bar"><div class="dist-fill" style="width: {{ new_pct }}%;"></div></div>
+                    </div>
+                    <div class="dist-row">
+                        <div class="dist-info">
+                            <span class="dist-name">Re-reads</span>
+                            <span class="dist-num">{{ metrics.books.revisits }}/{{ metrics.books.total }} ({{ rev_pct }}%)</span>
+                        </div>
+                        <div class="dist-bar"><div class="dist-fill revisit" style="width: {{ rev_pct }}%;"></div></div>
+                    </div>
+                </div>
+            {% else %}
+                <p class="no-data">No books tracked for this period.</p>
+            {% endif %}
+        </div>
+
+        <!-- Games Card -->
+        <div class="metrics-card">
+            <h2>Games</h2>
+            <div class="metrics-summary">
+                <span class="count">{{ metrics.games.total }}</span>
+                <span class="label">total games finished</span>
+            </div>
+
+            {% if metrics.games.total > 0 %}
+                <div class="metrics-section">
+                    <h3>Platform</h3>
+                    {% for plat, count in metrics.games.platforms %}
+                        {% set pct = (count / metrics.games.total * 100)|round|int %}
+                        <div class="dist-row">
+                            <div class="dist-info">
+                                <span class="dist-name">{{ plat }}</span>
+                                <span class="dist-num">{{ count }}/{{ metrics.games.total }} ({{ pct }}%)</span>
+                            </div>
+                            <div class="dist-bar"><div class="dist-fill" style="width: {{ pct }}%;"></div></div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="metrics-section">
+                    <h3>Franchise (Top 5)</h3>
+                    {% for fran, count in metrics.games.franchises[:5] %}
+                        {% set pct = (count / metrics.games.total * 100)|round|int %}
+                        <div class="dist-row">
+                            <div class="dist-info">
+                                <span class="dist-name">{{ fran }}</span>
+                                <span class="dist-num">{{ count }}/{{ metrics.games.total }} ({{ pct }}%)</span>
+                            </div>
+                            <div class="dist-bar"><div class="dist-fill" style="width: {{ pct }}%;"></div></div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="metrics-section">
+                    <h3>Revisits</h3>
+                    {% set rev_pct = (metrics.games.revisits / metrics.games.total * 100)|round|int %}
+                    {% set new_pct = (metrics.games.new / metrics.games.total * 100)|round|int %}
+                    <div class="dist-row">
+                        <div class="dist-info">
+                            <span class="dist-name">New Games</span>
+                            <span class="dist-num">{{ metrics.games.new }}/{{ metrics.games.total }} ({{ new_pct }}%)</span>
+                        </div>
+                        <div class="dist-bar"><div class="dist-fill" style="width: {{ new_pct }}%;"></div></div>
+                    </div>
+                    <div class="dist-row">
+                        <div class="dist-info">
+                            <span class="dist-name">Replays</span>
+                            <span class="dist-num">{{ metrics.games.revisits }}/{{ metrics.games.total }} ({{ rev_pct }}%)</span>
+                        </div>
+                        <div class="dist-bar"><div class="dist-fill revisit" style="width: {{ rev_pct }}%;"></div></div>
+                    </div>
+                </div>
+            {% else %}
+                <p class="no-data">No games tracked for this period.</p>
+            {% endif %}
+        </div>
+
+        <!-- TV Card -->
+        <div class="metrics-card">
+            <h2>Television</h2>
+            <div class="metrics-summary">
+                <span class="count">{{ metrics.tv.total_seasons }}</span>
+                <span class="label">total seasons watched</span>
+            </div>
+
+            <div class="metrics-section">
+                <h3>Episodes</h3>
+                <div class="dist-row">
+                    <div class="dist-info" style="margin-bottom: 0;">
+                        <span class="dist-name">Total Episodes Watched</span>
+                        <span class="dist-num" style="font-weight: 600;">{{ metrics.tv.episodes }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-section">
+                <h3>Revisits</h3>
+                {% if metrics.tv.total_seasons > 0 %}
+                    {% set rev_pct = (metrics.tv.revisits / metrics.tv.total_seasons * 100)|round|int %}
+                    {% set new_pct = (100 - rev_pct) %}
+                    <div class="dist-row">
+                        <div class="dist-info">
+                            <span class="dist-name">New Seasons</span>
+                            <span class="dist-num">{{ metrics.tv.total_seasons - metrics.tv.revisits }}/{{ metrics.tv.total_seasons }} ({{ new_pct }}%)</span>
+                        </div>
+                        <div class="dist-bar"><div class="dist-fill" style="width: {{ new_pct }}%;"></div></div>
+                    </div>
+                    <div class="dist-row">
+                        <div class="dist-info">
+                            <span class="dist-name">Re-watched Seasons</span>
+                            <span class="dist-num">{{ metrics.tv.revisits }}/{{ metrics.tv.total_seasons }} ({{ rev_pct }}%)</span>
+                        </div>
+                        <div class="dist-bar"><div class="dist-fill revisit" style="width: {{ rev_pct }}%;"></div></div>
+                    </div>
+                {% else %}
+                    <p class="no-data">No TV seasons tracked for this period.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Movies Card -->
+        <div class="metrics-card">
+            <h2>Movies</h2>
+            <div class="metrics-summary">
+                <span class="count">{{ metrics.movies.total }}</span>
+                <span class="label">total movies watched</span>
+            </div>
+
+            {% if metrics.movies.total > 0 %}
+                <div class="metrics-section">
+                    <h3>Platform / Provider</h3>
+                    {% for prov, count in metrics.movies.providers %}
+                        {% set pct = (count / metrics.movies.total * 100)|round|int %}
+                        <div class="dist-row">
+                            <div class="dist-info">
+                                <span class="dist-name">{{ prov if prov else 'Not Specified' }}</span>
+                                <span class="dist-num">{{ count }}/{{ metrics.movies.total }} ({{ pct }}%)</span>
+                            </div>
+                            <div class="dist-bar"><div class="dist-fill" style="width: {{ pct }}%;"></div></div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="metrics-section">
+                    <h3>Revisits</h3>
+                    {% set rev_pct = (metrics.movies.revisits / metrics.movies.total * 100)|round|int %}
+                    {% set new_pct = (100 - rev_pct) %}
+                    <div class="dist-row">
+                        <div class="dist-info">
+                            <span class="dist-name">New Watches</span>
+                            <span class="dist-num">{{ metrics.movies.total - metrics.movies.revisits }}/{{ metrics.movies.total }} ({{ new_pct }}%)</span>
+                        </div>
+                        <div class="dist-bar"><div class="dist-fill" style="width: {{ new_pct }}%;"></div></div>
+                    </div>
+                    <div class="dist-row">
+                        <div class="dist-info">
+                            <span class="dist-name">Re-watches</span>
+                            <span class="dist-num">{{ metrics.movies.revisits }}/{{ metrics.movies.total }} ({{ rev_pct }}%)</span>
+                        </div>
+                        <div class="dist-bar"><div class="dist-fill revisit" style="width: {{ rev_pct }}%;"></div></div>
+                    </div>
+                </div>
+            {% else %}
+                <p class="no-data">No movies tracked for this period.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
