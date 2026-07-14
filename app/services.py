@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 from flask import current_app
 
@@ -145,33 +146,61 @@ class IGDBService:
     CLIENT_ID = None
     CLIENT_SECRET = None
     _access_token = None
+    _token_expires_at = 0
 
     @classmethod
     def _get_token(cls):
-        if cls._access_token:
+        client_id = current_app.config.get('IGDB_CLIENT_ID')
+        client_secret = current_app.config.get('IGDB_CLIENT_SECRET')
+        
+        # Reuse token if it is set, matches current config, and is not expired (with 60s margin)
+        if (cls._access_token and 
+            cls.CLIENT_ID == client_id and 
+            cls.CLIENT_SECRET == client_secret and 
+            time.time() < cls._token_expires_at - 60):
             return cls._access_token
             
-        cls.CLIENT_ID = current_app.config.get('IGDB_CLIENT_ID')
-        cls.CLIENT_SECRET = current_app.config.get('IGDB_CLIENT_SECRET')
+        cls.CLIENT_ID = client_id
+        cls.CLIENT_SECRET = client_secret
         
-        url = f"https://id.twitch.tv/oauth2/token?client_id={cls.CLIENT_ID}&client_secret={cls.CLIENT_SECRET}&grant_type=client_credentials"
-        resp = requests.post(url)
-        resp.raise_for_status()
-        cls._access_token = resp.json()['access_token']
-        return cls._access_token
+        if not cls.CLIENT_ID or not cls.CLIENT_SECRET:
+            print("IGDB Warning: IGDB_CLIENT_ID or IGDB_CLIENT_SECRET is not configured.")
+            return None
+            
+        url = "https://id.twitch.tv/oauth2/token"
+        params = {
+            "client_id": cls.CLIENT_ID,
+            "client_secret": cls.CLIENT_SECRET,
+            "grant_type": "client_credentials"
+        }
+        try:
+            resp = requests.post(url, params=params, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+            cls._access_token = data['access_token']
+            expires_in = data.get('expires_in', 3600)
+            cls._token_expires_at = time.time() + expires_in
+            return cls._access_token
+        except Exception as e:
+            print(f"Failed to retrieve IGDB OAuth token: {e}")
+            cls._access_token = None
+            cls._token_expires_at = 0
+            return None
 
     @classmethod
     def search_games(cls, query):
-        token = cls._get_token()
-        url = "https://api.igdb.com/v4/games"
-        headers = {
-            "Client-ID": cls.CLIENT_ID,
-            "Authorization": f"Bearer {token}"
-        }
-        body = f'search "{query}"; fields name, first_release_date, cover.url; limit 10;'
-        
         try:
-            resp = requests.post(url, headers=headers, data=body)
+            token = cls._get_token()
+            if not token:
+                return []
+            url = "https://api.igdb.com/v4/games"
+            headers = {
+                "Client-ID": cls.CLIENT_ID,
+                "Authorization": f"Bearer {token}"
+            }
+            body = f'search "{query}"; fields name, first_release_date, cover.url; limit 10;'
+            
+            resp = requests.post(url, headers=headers, data=body, timeout=30)
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
@@ -180,16 +209,18 @@ class IGDBService:
 
     @classmethod
     def get_game_details(cls, igdb_id):
-        token = cls._get_token()
-        url = "https://api.igdb.com/v4/games"
-        headers = {
-            "Client-ID": cls.CLIENT_ID,
-            "Authorization": f"Bearer {token}"
-        }
-        body = f'fields name, summary, first_release_date, cover.url, genres.name, involved_companies.developer, involved_companies.publisher, involved_companies.company.name, platforms.name, franchises.name, rating, aggregated_rating; where id = {igdb_id};'
-        
         try:
-            resp = requests.post(url, headers=headers, data=body)
+            token = cls._get_token()
+            if not token:
+                return None
+            url = "https://api.igdb.com/v4/games"
+            headers = {
+                "Client-ID": cls.CLIENT_ID,
+                "Authorization": f"Bearer {token}"
+            }
+            body = f'fields name, summary, first_release_date, cover.url, genres.name, involved_companies.developer, involved_companies.publisher, involved_companies.company.name, platforms.name, franchises.name, rating, aggregated_rating; where id = {igdb_id};'
+            
+            resp = requests.post(url, headers=headers, data=body, timeout=30)
             resp.raise_for_status()
             results = resp.json()
             return results[0] if results else None
