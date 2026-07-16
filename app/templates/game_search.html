@@ -5,9 +5,21 @@
         <h1>Search Games (via IGDB)</h1>
         
         <form method="POST" class="search-form" id="mainSearchForm">
-            <input type="text" name="query" placeholder="Enter game title..." value="{{ query }}" required>
-            <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
-            <button type="submit" class="btn">Search</button>
+            <div style="display: flex; gap: 0.75rem; width: 100%; flex-wrap: wrap; align-items: center;">
+                <input type="text" name="query" placeholder="Enter game title..." value="{{ query }}" required style="flex: 1; min-width: 250px;">
+                <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+                <input type="hidden" name="pre_date" value="{{ pre_date or '' }}">
+                <input type="hidden" name="pre_plat" value="{{ pre_plat or '' }}">
+                <input type="hidden" name="pre_rewatch" value="{{ pre_rewatch or '' }}">
+                <input type="hidden" name="pre_variant" value="{{ pre_variant or '' }}">
+                <button type="submit" class="btn">Search</button>
+            </div>
+            <div style="width: 100%; margin-top: 0.5rem;">
+                <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-muted); cursor: pointer; user-select: none;">
+                    <input type="checkbox" name="exact_match" {% if exact_match %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;">
+                    Exact match only
+                </label>
+            </div>
         </form>
     </div>
 
@@ -40,6 +52,23 @@
                 </div>
             </div>
             {% endfor %}
+
+            <!-- Pagination -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding: 1rem 0; border-top: 1px solid var(--border-color); width: 100%;">
+                {% if page > 1 %}
+                    <a href="{{ url_for('main.search_game', query=query, exact_match='on' if exact_match else '', page=page-1, replace_id=replace_id, pre_date=pre_date, pre_plat=pre_plat, pre_rewatch=pre_rewatch, pre_variant=pre_variant) }}" class="btn btn-secondary">&larr; Previous Page</a>
+                {% else %}
+                    <span class="btn btn-secondary" style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">&larr; Previous Page</span>
+                {% endif %}
+                
+                <span style="font-size: 0.95rem; color: var(--text-muted); font-weight: 500;">Page {{ page }}</span>
+                
+                {% if results|length == limit %}
+                    <a href="{{ url_for('main.search_game', query=query, exact_match='on' if exact_match else '', page=page+1, replace_id=replace_id, pre_date=pre_date, pre_plat=pre_plat, pre_rewatch=pre_rewatch, pre_variant=pre_variant) }}" class="btn btn-secondary">Next Page &rarr;</a>
+                {% else %}
+                    <span class="btn btn-secondary" style="opacity: 0.5; cursor: not-allowed; pointer-events: none;">Next Page &rarr;</span>
+                {% endif %}
+            </div>
         {% elif query %}
             <p style="margin-top: 2rem;">No games found for "{{ query }}".</p>
         {% endif %}

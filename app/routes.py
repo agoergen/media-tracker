@@ -644,6 +644,10 @@ def search_game():
     pre_plat = request.args.get('pre_plat', '')
     pre_rewatch = request.args.get('pre_rewatch', 'false')
     pre_variant = request.args.get('pre_variant', '')
+    exact_match = request.args.get('exact_match', '') == 'on'
+    page = request.args.get('page', 1, type=int)
+    if page < 1:
+        page = 1
     
     distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
     franchise_list = [f[0] for f in distinct_franchises]
@@ -651,20 +655,31 @@ def search_game():
     if request.method == 'POST':
         query = request.form.get('query')
         replace_id = request.form.get('replace_id')
+        exact_match = request.form.get('exact_match') == 'on'
+        page = 1  # Reset to page 1 on new search query
+        pre_date = request.form.get('pre_date', '')
+        pre_plat = request.form.get('pre_plat', '')
+        pre_rewatch = request.form.get('pre_rewatch', 'false')
+        pre_variant = request.form.get('pre_variant', '')
     
+    limit = 10
     if query:
-        results = IGDBService.search_games(query)
+        offset = (page - 1) * limit
+        results = IGDBService.search_games(query, exact_match=exact_match, offset=offset, limit=limit)
         
     return render_template('game_search.html', 
-                         results=results, 
-                         query=query, 
-                         replace_id=replace_id,
-                         pre_date=pre_date,
-                         pre_plat=pre_plat,
-                         pre_rewatch=pre_rewatch,
-                         pre_variant=pre_variant,
-                         datetime=datetime,
-                         distinct_franchises=franchise_list)
+                          results=results, 
+                          query=query, 
+                          exact_match=exact_match,
+                          page=page,
+                          limit=limit,
+                          replace_id=replace_id,
+                          pre_date=pre_date,
+                          pre_plat=pre_plat,
+                          pre_rewatch=pre_rewatch,
+                          pre_variant=pre_variant,
+                          datetime=datetime,
+                          distinct_franchises=franchise_list)
 
 @main.route('/games/add/<int:igdb_id>', methods=['POST'])
 @login_required

@@ -188,7 +188,7 @@ class IGDBService:
             return None
 
     @classmethod
-    def search_games(cls, query):
+    def search_games(cls, query, exact_match=False, offset=0, limit=10):
         try:
             token = cls._get_token()
             if not token:
@@ -198,7 +198,11 @@ class IGDBService:
                 "Client-ID": cls.CLIENT_ID,
                 "Authorization": f"Bearer {token}"
             }
-            body = f'search "{query}"; fields name, first_release_date, cover.url; limit 10;'
+            escaped_query = query.replace('"', '\\"')
+            if exact_match:
+                body = f'where name ~ "{escaped_query}"; fields name, first_release_date, cover.url; limit {limit}; offset {offset};'
+            else:
+                body = f'search "{escaped_query}"; fields name, first_release_date, cover.url; limit {limit}; offset {offset};'
             
             resp = requests.post(url, headers=headers, data=body, timeout=30)
             resp.raise_for_status()
