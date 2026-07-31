@@ -214,6 +214,15 @@ class IGDBService:
                 body = f'search "{escaped_query}"; fields name, first_release_date, cover.url; limit {limit}; offset {offset};'
             
             resp = requests.post(url, headers=headers, data=body, timeout=30)
+            if resp.status_code == 401:
+                # Token might have been revoked/invalidated by Twitch, clear it and retry once
+                cls._access_token = None
+                cls._token_expires_at = 0
+                token = cls._get_token()
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
+                    resp = requests.post(url, headers=headers, data=body, timeout=30)
+            
             resp.raise_for_status()
             return resp.json()
         except Exception as e:
@@ -234,6 +243,15 @@ class IGDBService:
             body = f'fields name, summary, first_release_date, cover.url, genres.name, involved_companies.developer, involved_companies.publisher, involved_companies.company.name, platforms.name, franchises.name, rating, aggregated_rating; where id = {igdb_id};'
             
             resp = requests.post(url, headers=headers, data=body, timeout=30)
+            if resp.status_code == 401:
+                # Token might have been revoked/invalidated by Twitch, clear it and retry once
+                cls._access_token = None
+                cls._token_expires_at = 0
+                token = cls._get_token()
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
+                    resp = requests.post(url, headers=headers, data=body, timeout=30)
+                    
             resp.raise_for_status()
             results = resp.json()
             return results[0] if results else None
