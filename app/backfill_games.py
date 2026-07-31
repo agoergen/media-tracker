@@ -3,7 +3,7 @@ import csv
 from datetime import datetime
 from app import db
 from app.models import Game
-from app.services import IGDBService
+from app.services import IGDBService, safe_from_timestamp
 
 DATA = """Count,YearCount,Year,Title,Publisher,Platform Played,Original Platform,Franchise,Date Finished,Year Published,Replay?,,,,,
 1,1,2022,Guardians of the Galaxy,Square Enix,Playstation 5,Playstation 5,,1/22/22,2021,,,,,,
@@ -163,7 +163,7 @@ def run_backfill_games():
         if search_results:
             # Find best year match
             for res in search_results:
-                res_year = datetime.fromtimestamp(res['first_release_date']).year if res.get('first_release_date') else None
+                res_year = safe_from_timestamp(res['first_release_date']).year if res.get('first_release_date') else None
                 if str(res_year) == year_published:
                     igdb_id = res['id']
                     break
@@ -180,7 +180,7 @@ def run_backfill_games():
                 
                 # Release year
                 release_date_ts = details.get('first_release_date')
-                release_year = datetime.fromtimestamp(release_date_ts).year if release_date_ts else None
+                release_year = safe_from_timestamp(release_date_ts).year if release_date_ts else None
 
                 # Cover
                 cover_filename = None

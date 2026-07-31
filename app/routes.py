@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 import os
-from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService, WikipediaService, IBDBService
+from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService, WikipediaService, IBDBService, safe_from_timestamp
 from app.models import Movie, TVSeason, User, Game, Book, Theater, Goal, FutureMediaGoal
 from app import db
 from datetime import datetime
@@ -700,7 +700,7 @@ def add_game(igdb_id):
             date_finished = datetime.now().date()
 
         release_date_ts = details.get('first_release_date')
-        release_year = datetime.fromtimestamp(release_date_ts).year if release_date_ts else None
+        release_year = safe_from_timestamp(release_date_ts).year if release_date_ts else None
         
         involved = details.get('involved_companies', [])
         developers = ", ".join([ic['company']['name'] for ic in involved if ic.get('developer')])
@@ -1364,4 +1364,73 @@ def metrics(view_year=None):
                            view_year=view_year,
                            sorted_years=sorted_years,
                            metrics=metrics_data)
+
+@main.route('/igdb-test')
+@login_required
+def igdb_test():
+    import requests
+    from flask import jsonify
+    
+    client_id = current_app.config.get('IGDB_CLIENT_ID')
+    client_secret = current_app.config.get('IGDB_CLIENT_SECRET')
+    
+    results = {
+        "client_id_configured": bool(client_id),
+        "client_secret_configured": bool(client_secret),
+        "client_id_value_length": len(client_id) if client_id else 0,
+        "client_secret_value_length": len(client_secret) if client_secret else 0,
+        "token_retrieval": "Not attempted",
+        "search_retrieval": "Not attempted",
+        "errors": []
+    }
+    
+    if not client_id or not client_secret:
+        results["errors"].append("Missing client_id or client_secret in config. Please verify your environment/env files.")
+        return jsonify(results)
+        
+    # Test token retrieval
+    url = "https://id.twitch.tv/oauth2/token"
+    params = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "client_credentials"
+    }
+    token = None
+    try:
+        resp = requests.post(url, params=params, timeout=15)
+        results["token_status_code"] = resp.status_code
+        if resp.status_code == 200:
+            data = resp.json()
+            token = data.get('access_token')
+            results["token_retrieval"] = "Success"
+        else:
+            results["token_retrieval"] = f"Failed (HTTP {resp.status_code})"
+            results["errors"].append(f"Twitch Token response: {resp.text}")
+    except Exception as e:
+        results["token_retrieval"] = f"Exception: {str(e)}"
+        results["errors"].append(f"Token exception details: {str(e)}")
+        
+    if token:
+        # Test game search query
+        search_url = "https://api.igdb.com/v4/games"
+        headers = {
+            "Client-ID": client_id,
+            "Authorization": f"Bearer {token}"
+        }
+        body = 'search "Hades"; fields name; limit 2;'
+        try:
+            resp = requests.post(search_url, headers=headers, data=body, timeout=15)
+            results["search_status_code"] = resp.status_code
+            if resp.status_code == 200:
+                results["search_retrieval"] = "Success"
+                results["search_results"] = resp.json()
+            else:
+                results["search_retrieval"] = f"Failed (HTTP {resp.status_code})"
+                results["errors"].append(f"IGDB Search response: {resp.text}")
+        except Exception as e:
+            results["search_retrieval"] = f"Exception: {str(e)}"
+            results["errors"].append(f"Search exception details: {str(e)}")
+            
+    return jsonify(results)
+
 

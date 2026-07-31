@@ -2,6 +2,15 @@ import os
 import time
 import requests
 from flask import current_app
+from datetime import datetime, timedelta
+
+def safe_from_timestamp(timestamp):
+    if timestamp is None:
+        return None
+    try:
+        return datetime.fromtimestamp(timestamp)
+    except (OSError, ValueError):
+        return datetime(1970, 1, 1) + timedelta(seconds=timestamp)
 
 class OMDBService:
     @staticmethod

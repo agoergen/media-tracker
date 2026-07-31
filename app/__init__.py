@@ -39,6 +39,7 @@ def create_app(config_class=Config):
     def inject_globals():
         from datetime import datetime
         from app.models import Movie, TVSeason, Game, Book, Theater, Goal, FutureMediaGoal
+        from app.services import safe_from_timestamp
         
         # Build a map of target titles for efficient lookup in templates
         # Format: {(year, category, title.lower()): True}
@@ -50,6 +51,7 @@ def create_app(config_class=Config):
 
         return {
             'datetime': datetime,
+            'safe_from_timestamp': safe_from_timestamp,
             'now': datetime.now(),
             'Movie': Movie,
             'TVSeason': TVSeason,
