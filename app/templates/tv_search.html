@@ -65,7 +65,7 @@
                     <label for="watched_at">Watched At:</label>
                     <select id="watched_at" name="watched_at" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                         <option value="">Select Location...</option>
-                        {% for loc in ['Theater', 'Netflix', 'Paramount+', 'Hulu', 'Disney Plus', 'Apple TV+', 'Prime Video', 'Peacock', 'HBO Max', 'Max', 'Shudder', 'YouTube', 'Google TV', 'VOD', 'Plex', 'Crackle', 'Roku Channel', 'Tubi', 'Patreon', 'Blu-Ray', 'Other'] %}
+                        {% for loc in ['Theater', 'Netflix', 'Nebula', 'Paramount+', 'Hulu', 'Disney Plus', 'Apple TV+', 'Prime Video', 'Peacock', 'HBO Max', 'Max', 'Shudder', 'YouTube', 'Google TV', 'VOD', 'Plex', 'Crackle', 'Roku Channel', 'Tubi', 'Patreon', 'Blu-Ray', 'Other'] %}
                             <option value="{{ loc }}">{{ loc }}</option>
                         {% endfor %}
                     </select>
