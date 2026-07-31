@@ -119,7 +119,7 @@ class TMDBService:
                 "series_name": series_data.get('name'),
                 "network": series_data.get('networks', [{}])[0].get('name') if series_data.get('networks') else None,
                 "episode_count": season_data.get('episodes', []),
-                "poster_path": season_data.get('poster_path'),
+                "poster_path": season_data.get('poster_path') or series_data.get('poster_path'),
                 "vote_average": season_data.get('vote_average'),
                 "overview": season_data.get('overview') or series_data.get('overview'),
                 "videos": series_data.get('videos', {}),
