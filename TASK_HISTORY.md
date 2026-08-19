@@ -46,3 +46,8 @@
 - Modified `search_movie`, `search_tv`, `search_game`, and `search_book` in `app/routes.py` to forward context parameters.
 - Overhauled search templates (`movie_search.html`, `tv_search.html`, `game_search.html`, `book_search.html`) to use a single "Select" card button and a unified tabbed details confirmation block (Track, Up Next, Goals).
 - Confirmed template rendering and routing setup using automated verification scripts.
+
+## 2026-08-19 16:43:00
+- Protected external search boxes: wrapped them with `{% if current_user.is_authenticated %}` on `movies.html`, `tv.html`, `games.html`, `books.html`, and `theater.html` templates to hide them for logged-out users.
+- Added category-selectable universal search form to `index.html` (homepage hero section) for authenticated users.
+- Commited and pushed changes to origin main branch.
