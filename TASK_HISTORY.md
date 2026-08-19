@@ -51,3 +51,8 @@
 - Protected external search boxes: wrapped them with `{% if current_user.is_authenticated %}` on `movies.html`, `tv.html`, `games.html`, `books.html`, and `theater.html` templates to hide them for logged-out users.
 - Added category-selectable universal search form to `index.html` (homepage hero section) for authenticated users.
 - Commited and pushed changes to origin main branch.
+
+## 2026-08-19 16:50:00
+- Redesigned search templates confirmation panels: replaced the clumsy tabbed interface with a responsive 3-column side-by-side action card grid.
+- Implemented auto-highlighting border and "Recommended" badge on active action card based on search page navigation parameters.
+- Updated `walkthrough.md` with new layout specifications and verified operations.

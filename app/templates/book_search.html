@@ -3,6 +3,52 @@
 {% block title %}LeisureLedger: Search Books{% endblock %}
 
 {% block content %}
+    <style>
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .action-card {
+            background: var(--white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+
+        .action-card.highlighted {
+            border: 2px solid var(--text-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .recommendation-badge {
+            position: absolute;
+            top: -12px;
+            right: 12px;
+            background: var(--text-color);
+            color: var(--white);
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .action-card h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+    </style>
     <div style="margin-top: 2rem;">
         <h1>Search Books (via Google Books)</h1>
         
@@ -60,17 +106,9 @@
             <button class="btn btn-secondary" onclick="cancelSelection()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;">&larr; Back to results</button>
         </div>
 
-        {% if not replace_id %}
-        <!-- Tabs headers -->
-        <div class="action-selection-tabs" style="display: flex; gap: 10px; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
-            <button id="tab-btn-track" class="tab-btn active" onclick="switchActionTab('track')" style="background: none; border: none; font-weight: 600; font-size: 1.1rem; cursor: pointer; color: var(--primary-color); border-bottom: 2px solid var(--primary-color); margin-bottom: -12px; padding-bottom: 10px;">1. Track Completed</button>
-            <button id="tab-btn-up-next" class="tab-btn" onclick="switchActionTab('up-next')" style="background: none; border: none; font-weight: 600; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); padding-bottom: 10px;">2. Queue Up Next</button>
-            <button id="tab-btn-goals" class="tab-btn" onclick="switchActionTab('goals')" style="background: none; border: none; font-weight: 600; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); padding-bottom: 10px;">3. Add to Goals</button>
-        </div>
-        {% endif %}
-
-        <!-- Tab 1: Track Completed Form -->
-        <div id="panel-track" class="tab-panel">
+        {% if replace_id %}
+        <div class="action-card highlighted">
+            <h3>Update Tracked Book</h3>
             <form id="trackForm" method="POST">
                 <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
                 <input type="hidden" name="source" id="bookSource" value="google">
@@ -78,14 +116,12 @@
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
                     <div class="form-group">
                         <label for="date_finished">Finished On:</label>
-                        <input type="date" id="date_finished" name="date_finished" required 
-                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                        <input type="date" id="date_finished" name="date_finished" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                     </div>
                     
                     <div class="form-group">
                         <label for="format">Format:</label>
-                        <select id="format" name="format" 
-                                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                        <select id="format" name="format" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                             <option value="">Select Format...</option>
                             {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
                                 <option value="{{ f }}" {% if f == 'Audiobook' %}selected{% endif %}>{{ f }}</option>
@@ -95,8 +131,7 @@
 
                     <div class="form-group">
                         <label for="rating">StoryGraph Rating:</label>
-                        <input type="number" step="0.05" id="rating" name="rating" placeholder="e.g. 4.25"
-                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                        <input type="number" step="0.05" id="rating" name="rating" placeholder="e.g. 4.25" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                     </div>
                 </div>
 
@@ -110,47 +145,98 @@
                 </div>
 
                 <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-                    <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">
-                        {% if replace_id %}Confirm & Update{% else %}Confirm & Track{% endif %}
-                    </button>
+                    <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">Confirm & Update</button>
                 </div>
             </form>
         </div>
+        {% else %}
+        <div class="action-grid">
+            <!-- Card 1: Track Completed -->
+            <div id="card-track" class="action-card">
+                <h3>Track Completed</h3>
+                <form id="trackForm" method="POST" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; flex: 1;">
+                    <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+                    <input type="hidden" name="source" id="bookSource" value="google">
+                    
+                    <div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label for="date_finished" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Finished On:</label>
+                            <input type="date" id="date_finished" name="date_finished" required 
+                                   style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box;">
+                        </div>
 
-        <!-- Tab 2: Queue Up Next Form -->
-        <div id="panel-up-next" class="tab-panel" style="display: none;">
-            <form id="upNextForm" method="POST">
-                <input type="hidden" name="source" id="upNextBookSource" value="google">
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Queue this book into your Up Next list.</p>
-                <div class="form-group" style="max-width: 300px; margin-bottom: 1.5rem;">
-                    <label for="up_next_format">Format:</label>
-                    <select id="up_next_format" name="book_format" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
-                        <option value="">Select Format...</option>
-                        {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
-                            <option value="{{ f }}">{{ f }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div style="margin-top: 2rem;">
-                    <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">Confirm & Queue Up Next</button>
-                </div>
-            </form>
-        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label for="format" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Format:</label>
+                            <select id="format" name="format" 
+                                    style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background-color: var(--white); color: var(--text-color);">
+                                <option value="">Select Format...</option>
+                                {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
+                                    <option value="{{ f }}" {% if f == 'Audiobook' %}selected{% endif %}>{{ f }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
 
-        <!-- Tab 3: Add to Goals Form -->
-        <div id="panel-goals" class="tab-panel" style="display: none;">
-            <form id="goalsForm" method="POST">
-                <input type="hidden" name="source" id="goalsBookSource" value="google">
-                <div class="form-group" style="max-width: 300px; margin-bottom: 1.5rem;">
-                    <label for="goal_year">Target Goal Year:</label>
-                    <input type="number" id="goal_year" name="year" required value="{{ goal_year or now.year }}"
-                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
-                </div>
-                <div style="margin-top: 2rem;">
-                    <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">Confirm & Add to Goals</button>
-                </div>
-            </form>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label for="rating" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">StoryGraph Rating:</label>
+                            <input type="number" step="0.05" id="rating" name="rating" placeholder="e.g. 4.25" 
+                                   style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background-color: var(--white); color: var(--text-color);">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem;">
+                                <input type="checkbox" name="is_rewatch"> This is a reread
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem;">
+                                <input type="checkbox" name="is_private"> Private entry
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; font-size: 0.95rem;">Confirm & Track</button>
+                </form>
+            </div>
+
+            <!-- Card 2: Queue Up Next -->
+            <div id="card-up-next" class="action-card">
+                <h3>Queue Up Next</h3>
+                <form id="upNextForm" method="POST" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; flex: 1;">
+                    <input type="hidden" name="source" id="upNextBookSource" value="google">
+                    
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0; margin-bottom: 1.5rem; line-height: 1.5;">Queue this book into your short-term Up Next list.</p>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="up_next_format" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Format:</label>
+                            <select id="up_next_format" name="book_format" required 
+                                    style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background-color: var(--white); color: var(--text-color);">
+                                <option value="">Select Format...</option>
+                                {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
+                                    <option value="{{ f }}">{{ f }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; font-size: 0.95rem;">Confirm & Queue Up Next</button>
+                </form>
+            </div>
+
+            <!-- Card 3: Add to Goals -->
+            <div id="card-goals" class="action-card">
+                <h3>Add to Goals</h3>
+                <form id="goalsForm" method="POST" style="display: flex; flex-direction: column; height: 100%; justify-content: space-between; flex: 1;">
+                    <input type="hidden" name="source" id="goalsBookSource" value="google">
+                    
+                    <div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label for="goal_year" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Target Goal Year:</label>
+                            <input type="number" id="goal_year" name="year" required value="{{ goal_year or now.year }}"
+                                   style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background-color: var(--white); color: var(--text-color);">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; font-size: 0.95rem;">Confirm & Add to Goals</button>
+                </form>
+            </div>
         </div>
+        {% endif %}
     </div>
 
     <script>
@@ -168,26 +254,22 @@
         const ratingInput = document.getElementById("rating");
         const rewatchCheckbox = document.querySelector('input[name="is_rewatch"]');
 
-        function switchActionTab(tabName) {
-            // Hide all panels
-            document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
-            // Remove active style from tab buttons
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.style.color = 'var(--text-muted)';
-                btn.style.borderBottom = 'none';
-                btn.style.marginBottom = '0';
+        function highlightRecommendedCard(cardName) {
+            // Remove highlighted class and badges from all action cards
+            document.querySelectorAll('.action-card').forEach(card => {
+                card.classList.remove('highlighted');
+                const badge = card.querySelector('.recommendation-badge');
+                if (badge) badge.remove();
             });
 
-            // Show selected panel
-            const panel = document.getElementById(`panel-${tabName}`);
-            if (panel) panel.style.display = 'block';
-            
-            // Style active button
-            const activeBtn = document.getElementById(`tab-btn-${tabName}`);
-            if (activeBtn) {
-                activeBtn.style.color = 'var(--primary-color)';
-                activeBtn.style.borderBottom = '2px solid var(--primary-color)';
-                activeBtn.style.marginBottom = '-12px';
+            // Add highlight class and badge to active card
+            const activeCard = document.getElementById(`card-${cardName}`);
+            if (activeCard) {
+                activeCard.classList.add('highlighted');
+                const badge = document.createElement('span');
+                badge.className = 'recommendation-badge';
+                badge.innerText = 'Recommended';
+                activeCard.appendChild(badge);
             }
         }
 
@@ -216,22 +298,22 @@
             dateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
             // Sync formats
-            formatSelect.addEventListener('change', function() {
-                if (upNextFormatSelect) upNextFormatSelect.value = formatSelect.value;
-            });
-            if (upNextFormatSelect) {
+            if (formatSelect && upNextFormatSelect) {
+                formatSelect.addEventListener('change', function() {
+                    upNextFormatSelect.value = formatSelect.value;
+                });
                 upNextFormatSelect.addEventListener('change', function() {
                     formatSelect.value = upNextFormatSelect.value;
                 });
             }
 
-            // Auto-focus correct tab if request parameters exist
+            // Auto-highlight correct card if request parameters exist
             {% if up_next == '1' %}
-                switchActionTab('up-next');
+                highlightRecommendedCard('up-next');
             {% elif goal == '1' %}
-                switchActionTab('goals');
+                highlightRecommendedCard('goals');
             {% else %}
-                switchActionTab('track');
+                highlightRecommendedCard('track');
             {% endif %}
 
             confirmationContainer.style.display = "block";
