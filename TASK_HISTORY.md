@@ -29,3 +29,12 @@
 - Redesigned `goals.html` target listings into card grids matching `backlog.html`.
 - Added Queue button form (with limit validation of 10) on target cards.
 - Successfully verified integration with the verification script.
+
+## 2026-08-19 16:18:00
+- Completed Up Next Rebranding.
+- Renamed all `/backlog` URL routes and views in `app/routes.py` to `/up-next` and `up_next`.
+- Updated navigation link in `app/templates/base.html` to target the new page.
+- Rebranded heading and sub-items in `app/templates/backlog.html` and added a short-term description at the top of the page.
+- Updated badges, tooltips, and disabled states in `app/templates/goals.html` to reference Up Next.
+- Renamed backlog parameter logic and buttons to Up Next in search templates.
+- Successfully verified Flask route registration using the verification script.

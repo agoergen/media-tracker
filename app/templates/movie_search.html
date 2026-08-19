@@ -29,10 +29,10 @@
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    {% if request.args.get('backlog') == '1' %}
+                    {% if request.args.get('up_next') == '1' %}
                         {% if current_user.is_authenticated %}
-                            <form action="{{ url_for('main.add_backlog_item', category='movie', external_id=movie.id) }}" method="POST" style="display: inline-block;">
-                                <button type="submit" class="btn btn-secondary">Add to Backlog</button>
+                            <form action="{{ url_for('main.add_up_next_item', category='movie', external_id=movie.id) }}" method="POST" style="display: inline-block;">
+                                <button type="submit" class="btn btn-secondary">Add to Up Next</button>
                             </form>
                         {% endif %}
                     {% elif request.args.get('goal') == '1' %}

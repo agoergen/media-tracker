@@ -118,7 +118,10 @@
 
 <div class="backlog-container">
     <div class="backlog-header">
-        <h1>My Backlog</h1>
+        <h1>Up Next</h1>
+        <p style="color: var(--text-muted); margin-top: 8px;">
+            These are the items planned to read, play, or watch in the short term.
+        </p>
     </div>
 
     <div class="backlog-grid">
@@ -131,10 +134,10 @@
             }[cat] %}
             
             {% set search_url = {
-                'movie': url_for('main.search_movie', backlog=1),
-                'tv': url_for('main.search_tv', backlog=1),
-                'game': url_for('main.search_game', backlog=1),
-                'book': url_for('main.search_book', backlog=1)
+                'movie': url_for('main.search_movie', up_next=1),
+                'tv': url_for('main.search_tv', up_next=1),
+                'game': url_for('main.search_game', up_next=1),
+                'book': url_for('main.search_book', up_next=1)
             }[cat] %}
 
             <div class="backlog-column">
@@ -147,7 +150,7 @@
                     {% if grouped[cat]|length < 10 %}
                         <a href="{{ search_url }}" class="btn btn-secondary add-backlog-btn">+ Add {{ cat_title.rstrip('s') }}</a>
                     {% else %}
-                        <button class="btn btn-secondary add-backlog-btn" style="opacity: 0.5; cursor: not-allowed;" disabled>Backlog Full</button>
+                        <button class="btn btn-secondary add-backlog-btn" style="opacity: 0.5; cursor: not-allowed;" disabled>Up Next Full</button>
                     {% endif %}
                 {% endif %}
 
@@ -181,11 +184,11 @@
                                     </div>
                                     {% if current_user.is_authenticated %}
                                         <div class="backlog-item-actions">
-                                            <form action="{{ url_for('main.track_backlog_item', item_id=item.id) }}" method="POST" class="action-form">
+                                            <form action="{{ url_for('main.track_up_next_item', item_id=item.id) }}" method="POST" class="action-form">
                                                 <button type="submit" class="btn action-btn-small" style="background: var(--success);" title="Move to tracked list (as completed today)">Track</button>
                                             </form>
-                                            <form action="{{ url_for('main.delete_backlog_item', item_id=item.id) }}" method="POST" class="action-form">
-                                                <button type="submit" class="btn btn-secondary action-btn-small" style="color: var(--danger); border-color: var(--border-color);" title="Remove from backlog">Remove</button>
+                                            <form action="{{ url_for('main.delete_up_next_item', item_id=item.id) }}" method="POST" class="action-form">
+                                                <button type="submit" class="btn btn-secondary action-btn-small" style="color: var(--danger); border-color: var(--border-color);" title="Remove from Up Next">Remove</button>
                                             </form>
                                         </div>
                                     {% endif %}
@@ -193,7 +196,7 @@
                             </div>
                         {% endfor %}
                     {% else %}
-                        <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-top: 1rem;">No items queued.</p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-top: 1rem;">No items queued Up Next.</p>
                     {% endif %}
                 </div>
             </div>

@@ -39,9 +39,9 @@
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    {% if request.args.get('backlog') == '1' %}
+                    {% if request.args.get('up_next') == '1' %}
                         {% if current_user.is_authenticated %}
-                            <form action="{{ url_for('main.add_backlog_item', category='book', external_id=book.id) }}" method="POST" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <form action="{{ url_for('main.add_up_next_item', category='book', external_id=book.id) }}" method="POST" style="display: inline-flex; align-items: center; gap: 8px;">
                                 <input type="hidden" name="source" value="{{ book.source }}">
                                 <label style="font-size: 0.85rem; color: var(--text-muted);">Format:</label>
                                 <select name="book_format" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border-color);">
@@ -50,7 +50,7 @@
                                         <option value="{{ f }}">{{ f }}</option>
                                     {% endfor %}
                                 </select>
-                                <button type="submit" class="btn btn-secondary">Add to Backlog</button>
+                                <button type="submit" class="btn btn-secondary">Add to Up Next</button>
                             </form>
                         {% endif %}
                     {% elif request.args.get('goal') == '1' %}

@@ -1492,10 +1492,10 @@ def igdb_test():
             
     return jsonify(results)
 
-@main.route('/backlog')
-def backlog():
+@main.route('/up-next')
+def up_next():
     user_id = current_user.id if current_user.is_authenticated else "anonymous"
-    print(f"INFO: [backlog] User {user_id} accessed backlog page", file=sys.stdout)
+    print(f"INFO: [up_next] User {user_id} accessed Up Next page", file=sys.stdout)
     try:
         backlog_items = BacklogItem.query.all()
         grouped = {
@@ -1508,7 +1508,7 @@ def backlog():
             if item.category in grouped:
                 grouped[item.category].append(item)
                 
-        # Build set of goals for the current year to highlight on the backlog page
+        # Build set of goals for the current year to highlight on the Up Next page
         current_year = datetime.now().year
         goals = FutureMediaGoal.query.filter_by(year=current_year).all()
         goals_set = {}
@@ -1519,29 +1519,29 @@ def backlog():
 
         return render_template('backlog.html', grouped=grouped, goals_set=goals_set)
     except Exception as e:
-        print(f"ERROR: [backlog] Failed to retrieve backlog items: {str(e)}", file=sys.stdout)
+        print(f"ERROR: [up_next] Failed to retrieve Up Next items: {str(e)}", file=sys.stdout)
         traceback.print_exc(file=sys.stdout)
-        flash("An error occurred loading the backlog.")
+        flash("An error occurred loading the Up Next list.")
         return redirect(url_for('main.index'))
 
-@main.route('/backlog/add/<category>/<external_id>', methods=['POST'])
+@main.route('/up-next/add/<category>/<external_id>', methods=['POST'])
 @login_required
-def add_backlog_item(category, external_id):
+def add_up_next_item(category, external_id):
     user_id = current_user.id
-    print(f"INFO: [backlog] User {user_id} adding category '{category}', ID '{external_id}' to backlog", file=sys.stdout)
+    print(f"INFO: [up_next] User {user_id} adding category '{category}', ID '{external_id}' to Up Next", file=sys.stdout)
     
     if category not in ['movie', 'tv', 'game', 'book']:
-        print(f"WARNING: [backlog] Invalid category '{category}' requested by user {user_id}", file=sys.stdout)
+        print(f"WARNING: [up_next] Invalid category '{category}' requested by user {user_id}", file=sys.stdout)
         flash("Invalid media category.")
-        return redirect(url_for('main.backlog'))
+        return redirect(url_for('main.up_next'))
 
     # Check limit of 10
     try:
         count = BacklogItem.query.filter_by(category=category).count()
         if count >= 10:
-            print(f"WARNING: [backlog] User {user_id} attempted to add '{external_id}' to '{category}' backlog, but the limit of 10 has been reached.", file=sys.stdout)
-            flash(f"Your {category.upper()} backlog is full! (Limit is 10 items)")
-            return redirect(request.referrer or url_for('main.backlog'))
+            print(f"WARNING: [up_next] User {user_id} attempted to add '{external_id}' to '{category}' Up Next, but the limit of 10 has been reached.", file=sys.stdout)
+            flash(f"Your {category.upper()} Up Next list is full! (Limit is 10 items)")
+            return redirect(request.referrer or url_for('main.up_next'))
             
         title = None
         poster_path = None
@@ -1554,8 +1554,8 @@ def add_backlog_item(category, external_id):
         if category == 'movie':
             existing = BacklogItem.query.filter_by(category='movie', external_id=str(external_id)).first()
             if existing:
-                flash("This movie is already in your backlog!")
-                return redirect(url_for('main.backlog'))
+                flash("This movie is already on your Up Next list!")
+                return redirect(url_for('main.up_next'))
                 
             details = TMDBService.get_movie_details(external_id)
             if details:
@@ -1564,13 +1564,13 @@ def add_backlog_item(category, external_id):
                 if details.get('poster_path'):
                     poster_path = TMDBService.download_poster(details['poster_path'])
             else:
-                print(f"WARNING: [backlog] TMDB details not found for movie ID '{external_id}'", file=sys.stdout)
+                print(f"WARNING: [up_next] TMDB details not found for movie ID '{external_id}'", file=sys.stdout)
         elif category == 'tv':
             season_number = int(request.form.get('season_number', 1))
             existing = BacklogItem.query.filter_by(category='tv', external_id=str(external_id), season_number=season_number).first()
             if existing:
-                flash(f"Season {season_number} of this show is already in your backlog!")
-                return redirect(url_for('main.backlog'))
+                flash(f"Season {season_number} of this show is already on your Up Next list!")
+                return redirect(url_for('main.up_next'))
                 
             details = TMDBService.get_tv_details(external_id, season_number)
             if details:
@@ -1578,12 +1578,12 @@ def add_backlog_item(category, external_id):
                 if details.get('poster_path'):
                     poster_path = TMDBService.download_poster(details['poster_path'])
             else:
-                print(f"WARNING: [backlog] TMDB details not found for TV ID '{external_id}', season '{season_number}'", file=sys.stdout)
+                print(f"WARNING: [up_next] TMDB details not found for TV ID '{external_id}', season '{season_number}'", file=sys.stdout)
         elif category == 'game':
             existing = BacklogItem.query.filter_by(category='game', external_id=str(external_id)).first()
             if existing:
-                flash("This game is already in your backlog!")
-                return redirect(url_for('main.backlog'))
+                flash("This game is already on your Up Next list!")
+                return redirect(url_for('main.up_next'))
                 
             game_platform = request.form.get('game_platform')
             details = IGDBService.get_game_details(external_id)
@@ -1594,12 +1594,12 @@ def add_backlog_item(category, external_id):
                 if details.get('cover'):
                     poster_path = IGDBService.download_cover(details['cover']['url'])
             else:
-                print(f"WARNING: [backlog] IGDB details not found for game ID '{external_id}'", file=sys.stdout)
+                print(f"WARNING: [up_next] IGDB details not found for game ID '{external_id}'", file=sys.stdout)
         elif category == 'book':
             existing = BacklogItem.query.filter_by(category='book', external_id=str(external_id)).first()
             if existing:
-                flash("This book is already in your backlog!")
-                return redirect(url_for('main.backlog'))
+                flash("This book is already on your Up Next list!")
+                return redirect(url_for('main.up_next'))
                 
             book_format = request.form.get('book_format')
             book_source = request.form.get('source', 'google')
@@ -1615,7 +1615,7 @@ def add_backlog_item(category, external_id):
                     if image_url:
                         poster_path = GoogleBooksService.download_cover(image_url, external_id)
                 else:
-                    print(f"WARNING: [backlog] Google Books details not found for ID '{external_id}'", file=sys.stdout)
+                    print(f"WARNING: [up_next] Google Books details not found for ID '{external_id}'", file=sys.stdout)
             else: # openlibrary
                 details = OpenLibraryService.get_book_details(external_id)
                 if details:
@@ -1626,12 +1626,12 @@ def add_backlog_item(category, external_id):
                     else:
                         poster_path = OpenLibraryService.download_book_cover(ol_id=external_id)
                 else:
-                    print(f"WARNING: [backlog] OpenLibrary details not found for ID '{external_id}'", file=sys.stdout)
+                    print(f"WARNING: [up_next] OpenLibrary details not found for ID '{external_id}'", file=sys.stdout)
 
         if not title:
-            print(f"WARNING: [backlog] Unable to retrieve title for '{category}' backlog item with ID '{external_id}'", file=sys.stdout)
+            print(f"WARNING: [up_next] Unable to retrieve title for '{category}' item with ID '{external_id}'", file=sys.stdout)
             flash(f"Error fetching details from the API for {category}.")
-            return redirect(request.referrer or url_for('main.backlog'))
+            return redirect(request.referrer or url_for('main.up_next'))
 
         new_item = BacklogItem(
             category=category,
@@ -1646,55 +1646,55 @@ def add_backlog_item(category, external_id):
         )
         db.session.add(new_item)
         db.session.commit()
-        print(f"INFO: [backlog] Successfully added '{title}' ({category}) to backlog", file=sys.stdout)
-        flash(f"Added {title} to your {category} backlog!")
-        return redirect(url_for('main.backlog'))
+        print(f"INFO: [up_next] Successfully added '{title}' ({category}) to Up Next", file=sys.stdout)
+        flash(f"Added {title} to your Up Next list!")
+        return redirect(url_for('main.up_next'))
     except Exception as e:
         db.session.rollback()
-        print(f"ERROR: [backlog] Exception while adding backlog item: {str(e)}", file=sys.stdout)
+        print(f"ERROR: [up_next] Exception while adding Up Next item: {str(e)}", file=sys.stdout)
         traceback.print_exc(file=sys.stdout)
-        flash("An error occurred adding the item to the backlog.")
-        return redirect(request.referrer or url_for('main.backlog'))
+        flash("An error occurred adding the item to your Up Next list.")
+        return redirect(request.referrer or url_for('main.up_next'))
 
-@main.route('/backlog/delete/<int:item_id>', methods=['POST'])
+@main.route('/up-next/delete/<int:item_id>', methods=['POST'])
 @login_required
-def delete_backlog_item(item_id):
+def delete_up_next_item(item_id):
     user_id = current_user.id
     try:
         item = BacklogItem.query.get_or_404(item_id)
         title = item.title
         category = item.category
-        print(f"INFO: [backlog] User {user_id} deleting backlog item {item_id} ('{title}', '{category}')", file=sys.stdout)
+        print(f"INFO: [up_next] User {user_id} deleting Up Next item {item_id} ('{title}', '{category}')", file=sys.stdout)
         db.session.delete(item)
         db.session.commit()
-        print(f"INFO: [backlog] Successfully deleted backlog item {item_id}", file=sys.stdout)
-        flash(f"Removed {title} from your {category} backlog.")
+        print(f"INFO: [up_next] Successfully deleted Up Next item {item_id}", file=sys.stdout)
+        flash(f"Removed {title} from your {category} Up Next list.")
     except Exception as e:
         db.session.rollback()
-        print(f"ERROR: [backlog] Exception while deleting backlog item {item_id}: {str(e)}", file=sys.stdout)
+        print(f"ERROR: [up_next] Exception while deleting Up Next item {item_id}: {str(e)}", file=sys.stdout)
         traceback.print_exc(file=sys.stdout)
-        flash("An error occurred removing the item from the backlog.")
-    return redirect(url_for('main.backlog'))
+        flash("An error occurred removing the item from your Up Next list.")
+    return redirect(url_for('main.up_next'))
 
-@main.route('/backlog/track/<int:item_id>', methods=['POST'])
+@main.route('/up-next/track/<int:item_id>', methods=['POST'])
 @login_required
-def track_backlog_item(item_id):
+def track_up_next_item(item_id):
     user_id = current_user.id
     item = BacklogItem.query.get_or_404(item_id)
     category = item.category
     external_id = item.external_id
     title = item.title
     
-    print(f"INFO: [backlog] User {user_id} converting backlog item {item_id} ('{title}', '{category}') to tracked", file=sys.stdout)
+    print(f"INFO: [up_next] User {user_id} converting Up Next item {item_id} ('{title}', '{category}') to tracked", file=sys.stdout)
     now_date = datetime.now().date()
 
     try:
         if category == 'movie':
             details = TMDBService.get_movie_details(int(external_id))
             if not details:
-                print(f"WARNING: [backlog] TMDB details not found during track for movie ID '{external_id}'", file=sys.stdout)
+                print(f"WARNING: [up_next] TMDB details not found during track for movie ID '{external_id}'", file=sys.stdout)
                 flash("Error fetching movie details from TMDB.")
-                return redirect(url_for('main.backlog'))
+                return redirect(url_for('main.up_next'))
                 
             release_year = int(details.get('release_date', '0')[:4]) if details.get('release_date') else None
             credits = details.get('credits', {})
@@ -1760,9 +1760,9 @@ def track_backlog_item(item_id):
             season_number = item.season_number or 1
             details = TMDBService.get_tv_details(int(external_id), season_number)
             if not details:
-                print(f"WARNING: [backlog] TMDB details not found during track for TV ID '{external_id}', season '{season_number}'", file=sys.stdout)
+                print(f"WARNING: [up_next] TMDB details not found during track for TV ID '{external_id}', season '{season_number}'", file=sys.stdout)
                 flash("Error fetching TV details from TMDB.")
-                return redirect(url_for('main.backlog'))
+                return redirect(url_for('main.up_next'))
 
             poster_filename = item.poster_path
             if not poster_filename and details.get('poster_path'):
@@ -1801,9 +1801,9 @@ def track_backlog_item(item_id):
         elif category == 'game':
             details = IGDBService.get_game_details(int(external_id))
             if not details:
-                print(f"WARNING: [backlog] IGDB details not found during track for game ID '{external_id}'", file=sys.stdout)
+                print(f"WARNING: [up_next] IGDB details not found during track for game ID '{external_id}'", file=sys.stdout)
                 flash("Error fetching game details from IGDB.")
-                return redirect(url_for('main.backlog'))
+                return redirect(url_for('main.up_next'))
 
             release_date_ts = details.get('first_release_date')
             release_year = safe_from_timestamp(release_date_ts).year if release_date_ts else None
@@ -1890,9 +1890,9 @@ def track_backlog_item(item_id):
                             poster_filename = OpenLibraryService.download_book_cover(ol_id=external_id)
 
             if not title_b:
-                print(f"WARNING: [backlog] Book details not found during track for book ID '{external_id}' using source '{source}'", file=sys.stdout)
+                print(f"WARNING: [up_next] Book details not found during track for book ID '{external_id}' using source '{source}'", file=sys.stdout)
                 flash(f"Error fetching book details from {source.capitalize()}.")
-                return redirect(url_for('main.backlog'))
+                return redirect(url_for('main.up_next'))
 
             new_book = Book(
                 title=title_b,
@@ -1921,14 +1921,14 @@ def track_backlog_item(item_id):
 
         db.session.delete(item)
         db.session.commit()
-        print(f"INFO: [backlog] Successfully tracked backlog item {item_id} and removed from backlog", file=sys.stdout)
+        print(f"INFO: [up_next] Successfully tracked Up Next item {item_id} and removed from Up Next", file=sys.stdout)
     except Exception as e:
         db.session.rollback()
-        print(f"ERROR: [backlog] Exception while tracking backlog item {item_id}: {str(e)}", file=sys.stdout)
+        print(f"ERROR: [up_next] Exception while tracking Up Next item {item_id}: {str(e)}", file=sys.stdout)
         traceback.print_exc(file=sys.stdout)
-        flash("An error occurred moving the item from your backlog to tracked.")
+        flash("An error occurred moving the item from your Up Next list to tracked.")
         
-    return redirect(url_for('main.backlog'))
+    return redirect(url_for('main.up_next'))
 
 @main.route('/goals/add/<category>/<external_id>', methods=['POST'])
 @login_required
@@ -2054,7 +2054,7 @@ def queue_goal(goal_id):
     user_id = current_user.id
     target = FutureMediaGoal.query.get_or_404(goal_id)
     
-    print(f"INFO: [goals] User {user_id} queueing goal target ID {goal_id} ({target.title}) to backlog", file=sys.stdout)
+    print(f"INFO: [goals] User {user_id} queueing goal target ID {goal_id} ({target.title}) to Up Next", file=sys.stdout)
     
     if target.is_completed:
         flash("This goal is already completed!")
@@ -2063,13 +2063,13 @@ def queue_goal(goal_id):
     # Check if already in backlog
     existing = BacklogItem.query.filter_by(category=target.category, external_id=target.external_id).first()
     if existing:
-        flash(f"'{target.title}' is already in your backlog!")
+        flash(f"'{target.title}' is already on your Up Next list!")
         return redirect(url_for('main.goals', view_year=target.year))
         
     # Check space limit in backlog
     count = BacklogItem.query.filter_by(category=target.category).count()
     if count >= 10:
-        flash(f"Your {target.category.upper()} backlog is full! (Limit is 10 items)")
+        flash(f"Your {target.category.upper()} Up Next list is full! (Limit is 10 items)")
         return redirect(url_for('main.goals', view_year=target.year))
         
     # Create backlog item
@@ -2083,7 +2083,7 @@ def queue_goal(goal_id):
     db.session.add(item)
     db.session.commit()
     
-    flash(f"Queued '{target.title}' to your backlog!")
+    flash(f"Queued '{target.title}' to your Up Next list!")
     return redirect(url_for('main.goals', view_year=target.year))
 
 

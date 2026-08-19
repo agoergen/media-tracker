@@ -209,7 +209,7 @@
                                         <div class="goal-item-subtitle">
                                             {% if fg.release_year %}{{ fg.release_year }}{% endif %}
                                             {% if is_queued %}
-                                                {% if fg.release_year %}| {% endif %}<span style="color: var(--primary-color); font-weight: 500;">📥 Queued</span>
+                                                {% if fg.release_year %}| {% endif %}<span style="color: var(--primary-color); font-weight: 500;">📥 Up Next</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -219,10 +219,10 @@
                                                 {% set count = backlog_counts[fg.category] if backlog_counts else 0 %}
                                                 {% if count < 10 %}
                                                     <form action="{{ url_for('main.queue_goal', goal_id=fg.id) }}" method="POST" class="action-form">
-                                                        <button type="submit" class="btn action-btn-small" style="background: var(--success); color: white; border: none;" title="Queue this target in backlog">Queue</button>
+                                                        <button type="submit" class="btn action-btn-small" style="background: var(--success); color: white; border: none;" title="Queue this target Up Next">Queue</button>
                                                     </form>
                                                 {% else %}
-                                                    <button class="btn action-btn-small" style="background: #e2e8f0; color: #a0aec0; border: none; cursor: not-allowed;" disabled title="Backlog is full (limit 10)">Backlog Full</button>
+                                                    <button class="btn action-btn-small" style="background: #e2e8f0; color: #a0aec0; border: none; cursor: not-allowed;" disabled title="Up Next list is full (limit 10)">Up Next Full</button>
                                                 {% endif %}
                                             {% endif %}
                                             <form method="POST" class="action-form">
