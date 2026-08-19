@@ -174,9 +174,17 @@ def goals(view_year=None):
             queued_set[(item.category, item.external_id)] = True
         queued_set[(item.category, item.title.lower())] = True
 
+    # Build backlog counts for limit checks
+    backlog_counts = {
+        'movie': BacklogItem.query.filter_by(category='movie').count(),
+        'tv': BacklogItem.query.filter_by(category='tv').count(),
+        'game': BacklogItem.query.filter_by(category='game').count(),
+        'book': BacklogItem.query.filter_by(category='book').count()
+    }
+
     return render_template('goals.html', stats=stats, current_goal=current_goal, 
                          grouped_future=grouped_future, year=view_year, nav_years=nav_years,
-                         queued_set=queued_set)
+                         queued_set=queued_set, backlog_counts=backlog_counts)
 
 @main.route('/')
 def index():
@@ -1934,30 +1942,60 @@ def add_goal_target(category, external_id):
         flash("Invalid category.")
         return redirect(url_for('main.goals', view_year=target_year))
 
-    # Fetch title
+    # Fetch details, poster, and release year
     title = None
+    poster_path = None
+    release_year = None
+
     if category == 'movie':
         details = TMDBService.get_movie_details(external_id)
         if details:
             title = details.get('title')
+            release_year = int(details.get('release_date', '0')[:4]) if details.get('release_date') else None
+            if details.get('poster_path'):
+                poster_path = TMDBService.download_poster(details['poster_path'])
     elif category == 'tv':
         details = TMDBService.get_tv_details(external_id, 1) # Default season 1 to get show name
         if details:
             title = details.get('series_name')
+            release_year = int(details.get('first_air_date', '0')[:4]) if details.get('first_air_date') else None
+            if details.get('poster_path'):
+                poster_path = TMDBService.download_poster(details['poster_path'])
     elif category == 'game':
         details = IGDBService.get_game_details(external_id)
         if details:
             title = details.get('name')
+            release_date_ts = details.get('first_release_date')
+            release_year = safe_from_timestamp(release_date_ts).year if release_date_ts else None
+            if details.get('cover'):
+                poster_path = IGDBService.download_cover(details['cover']['url'])
     elif category == 'book':
         source = request.form.get('source', 'google')
         if source == 'google':
             details = GoogleBooksService.get_book_details(external_id)
             if details:
-                title = details.get('volumeInfo', {}).get('title')
+                volume_info = details.get('volumeInfo', {})
+                title = volume_info.get('title')
+                pub_date = volume_info.get('publishedDate')
+                release_year = int(pub_date[:4]) if pub_date else None
+                image_links = volume_info.get('imageLinks', {})
+                image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
+                if image_url:
+                    poster_path = GoogleBooksService.download_cover(image_url, external_id)
         else:
             details = OpenLibraryService.get_book_details(external_id)
             if details:
                 title = details.get('title')
+                pub_date = details.get('publish_date')
+                if pub_date:
+                    import re
+                    year_match = re.search(r'\b\d{4}\b', pub_date)
+                    release_year = int(year_match.group(0)) if year_match else None
+                covers = details.get('covers', [])
+                if covers:
+                    poster_path = OpenLibraryService.download_book_cover(cover_id=covers[0])
+                else:
+                    poster_path = OpenLibraryService.download_book_cover(ol_id=external_id)
 
     if not title:
         flash(f"Error fetching details from the API for {category}.")
@@ -1973,6 +2011,8 @@ def add_goal_target(category, external_id):
     existing_by_title = FutureMediaGoal.query.filter_by(year=target_year, category=category, is_completed=False).filter(FutureMediaGoal.title.ilike(title)).first()
     if existing_by_title:
         existing_by_title.external_id = str(external_id)
+        existing_by_title.poster_path = poster_path
+        existing_by_title.release_year = release_year
         db.session.commit()
         flash(f"Updated '{title}' with API reference in your {target_year} targets!")
         return redirect(url_for('main.goals', view_year=target_year))
@@ -1982,7 +2022,9 @@ def add_goal_target(category, external_id):
         category=category,
         title=title,
         external_id=str(external_id),
-        is_completed=False
+        is_completed=False,
+        poster_path=poster_path,
+        release_year=release_year
     )
     db.session.add(new_target)
     
@@ -2005,5 +2047,43 @@ def add_goal_target(category, external_id):
 
     db.session.commit()
     return redirect(url_for('main.goals', view_year=target_year))
+
+@main.route('/goals/queue/<int:goal_id>', methods=['POST'])
+@login_required
+def queue_goal(goal_id):
+    user_id = current_user.id
+    target = FutureMediaGoal.query.get_or_404(goal_id)
+    
+    print(f"INFO: [goals] User {user_id} queueing goal target ID {goal_id} ({target.title}) to backlog", file=sys.stdout)
+    
+    if target.is_completed:
+        flash("This goal is already completed!")
+        return redirect(url_for('main.goals', view_year=target.year))
+        
+    # Check if already in backlog
+    existing = BacklogItem.query.filter_by(category=target.category, external_id=target.external_id).first()
+    if existing:
+        flash(f"'{target.title}' is already in your backlog!")
+        return redirect(url_for('main.goals', view_year=target.year))
+        
+    # Check space limit in backlog
+    count = BacklogItem.query.filter_by(category=target.category).count()
+    if count >= 10:
+        flash(f"Your {target.category.upper()} backlog is full! (Limit is 10 items)")
+        return redirect(url_for('main.goals', view_year=target.year))
+        
+    # Create backlog item
+    item = BacklogItem(
+        category=target.category,
+        title=target.title,
+        external_id=target.external_id,
+        poster_path=target.poster_path,
+        release_year=target.release_year
+    )
+    db.session.add(item)
+    db.session.commit()
+    
+    flash(f"Queued '{target.title}' to your backlog!")
+    return redirect(url_for('main.goals', view_year=target.year))
 
 

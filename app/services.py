@@ -123,7 +123,8 @@ class TMDBService:
                 "vote_average": season_data.get('vote_average'),
                 "overview": season_data.get('overview') or series_data.get('overview'),
                 "videos": series_data.get('videos', {}),
-                "episode_count": len(season_data.get('episodes', []))
+                "episode_count": len(season_data.get('episodes', [])),
+                "first_air_date": series_data.get('first_air_date')
             }
         except requests.exceptions.RequestException as e:
             print(f"Error getting TMDB TV details: {e}")

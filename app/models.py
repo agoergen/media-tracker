@@ -105,6 +105,8 @@ class FutureMediaGoal(db.Model):
     title = db.Column(db.String(255), nullable=False)
     is_completed = db.Column(db.Boolean, default=False)
     external_id = db.Column(db.String(100))
+    poster_path = db.Column(db.String(255))
+    release_year = db.Column(db.Integer)
 
 class TVSeason(db.Model):
     id = db.Column(db.Integer, primary_key=True)

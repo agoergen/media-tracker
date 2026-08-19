@@ -3,7 +3,105 @@
 {% block title %}LeisureLedger: Goals{% endblock %}
 
 {% block content %}
-    <div style="margin-top: 3rem; max-width: 900px; margin-left: auto; margin-right: auto;">
+    <div style="margin-top: 3rem; max-width: 1400px; margin-left: auto; margin-right: auto; padding: 0 1rem;">
+        <style>
+            .goals-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 1.5rem;
+                align-items: start;
+            }
+            .goals-column {
+                background: var(--white);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 1.5rem;
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                min-height: 400px;
+            }
+            .column-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 2px solid var(--background-color);
+                padding-bottom: 0.75rem;
+            }
+            .column-header h2 {
+                font-size: 1.25rem;
+                margin: 0;
+                text-transform: capitalize;
+            }
+            .column-header .count {
+                background: var(--background-color);
+                padding: 2px 8px;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                color: var(--text-muted);
+            }
+            .goals-items {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .goal-item-card {
+                display: flex;
+                gap: 12px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                padding: 10px;
+                background: var(--white);
+                align-items: center;
+            }
+            .goal-item-poster {
+                width: 60px;
+                height: 90px;
+                object-fit: cover;
+                border-radius: 4px;
+                background-color: var(--background-color);
+                border: 1px solid var(--border-color);
+                flex-shrink: 0;
+            }
+            .goal-item-details {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                height: 90px;
+                min-width: 0; /* allows title truncation */
+            }
+            .goal-item-title {
+                font-weight: 600;
+                font-size: 0.95rem;
+                color: var(--text-color);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .goal-item-subtitle {
+                font-size: 0.8rem;
+                color: var(--text-muted);
+                margin-top: 2px;
+            }
+            .goal-item-actions {
+                display: flex;
+                gap: 6px;
+                margin-top: 6px;
+            }
+            .action-form {
+                display: inline;
+            }
+            .action-btn-small {
+                font-size: 0.75rem;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-weight: 500;
+                cursor: pointer;
+            }
+        </style>
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
             <h1>Your Tracking Goals ({{ year }})</h1>
             
@@ -48,69 +146,97 @@
                     <div style="margin-top: 5px; font-size: 0.75rem; color: var(--text-muted);">Avg: {{ stats.books.avg }} | Max: {{ stats.books.max }} ({{ stats.books.max_year }})</div>
                 </div>
             </div>
-            <button type="submit" class="btn" style="margin-top: 1.5rem; width: 100%;">Save {{ year }} Goals</button>
-        </form>
-
-        <!-- Specific Title Goals -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
-            <div>
-                <h2 style="margin: 0;">Target Titles</h2>
-                <p style="color: var(--text-muted); margin: 5px 0 0 0; font-size: 0.9rem;">
-                    List specific items you plan to experience in {{ year }}.
+            
+            <div style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
+                <button type="submit" class="btn" style="background: var(--success); color: #fff; border: none; padding: 10px 20px;">Save Yearly Goals</button>
+                
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+                    Currently tracking <strong>{{ stats.movies.avg + stats.tv.avg + stats.games.avg + stats.books.avg }}</strong> items/year across all categories.
                 </p>
             </div>
             
             <!-- Validate Button -->
             <form method="POST">
                 <input type="hidden" name="action" value="validate_targets">
-                <button type="submit" class="btn btn-secondary" style="background: #8e44ad; color: #fff; border: none; padding: 10px 20px;">
+                <button type="submit" class="btn btn-secondary" style="background: #8e44ad; color: #fff; border: none; padding: 10px 20px; margin-top: 1rem;">
                     🔄 Validate All Targets for {{ year }}
                 </button>
             </form>
-        </div>
+        </form>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem;">
+        <div class="goals-grid">
             {% for cat in ['movie', 'tv', 'game', 'book'] %}
-            <div style="background: var(--white); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column;">
-                <h3 style="text-transform: capitalize; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                    {% if cat == 'movie' %}🎬{% elif cat == 'tv' %}📺{% elif cat == 'game' %}🎮{% else %}📚{% endif %}
-                    {{ cat }} Targets
-                </h3>
+            {% set cat_title = {
+                'movie': 'Movies',
+                'tv': 'TV Seasons',
+                'game': 'Games',
+                'book': 'Books'
+            }[cat] %}
+            <div class="goals-column">
+                <div class="column-header">
+                    <h2>{{ cat_title }}</h2>
+                    <span class="count">{{ grouped_future[cat]|length }}</span>
+                </div>
                 
                 <!-- Add New -->
-                <div style="margin-bottom: 1.5rem;">
+                <div style="margin-bottom: 0.5rem;">
                     <a href="{{ {
                         'movie': url_for('main.search_movie', goal=1, goal_year=year),
                         'tv': url_for('main.search_tv', goal=1, goal_year=year),
                         'game': url_for('main.search_game', goal=1, goal_year=year),
                         'book': url_for('main.search_book', goal=1, goal_year=year)
-                    }[cat] }}" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 8px; text-decoration: none; text-align: center;">
+                    }[cat] }}" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 8px; text-decoration: none; text-align: center; display: block;">
                         + Search & Add Target
                     </a>
                 </div>
 
                 <!-- List -->
-                <div style="flex: 1;">
+                <div class="goals-items">
                     {% if grouped_future[cat] %}
-                        <ul style="list-style: none;">
-                            {% for fg in grouped_future[cat] %}
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
-                                <span style="{% if fg.is_completed %}text-decoration: line-through; color: #aaa;{% endif %}">
-                                    {% if fg.is_completed %}⭐ {% endif %}{{ fg.title }}
-                                    {% if queued_set and ((fg.category, fg.external_id) in queued_set or (fg.category, fg.title|lower) in queued_set) %}
-                                        <span class="badge" style="font-size: 0.75rem; background: #e5e7eb; color: #4b5563; padding: 2px 6px; border-radius: 4px; margin-left: 6px;" title="This target is queued in your backlog">📥 Queued</span>
-                                    {% endif %}
-                                </span>
-                                <form method="POST" style="display: inline;">
-                                    <input type="hidden" name="action" value="delete_future_goal">
-                                    <input type="hidden" name="goal_id" value="{{ fg.id }}">
-                                    <button type="submit" style="background: none; border: none; color: #ff4444; cursor: pointer; font-size: 0.8rem;" onclick="return confirm('Remove target?')">Del</button>
-                                </form>
-                            </li>
-                            {% endfor %}
-                        </ul>
+                        {% for fg in grouped_future[cat] %}
+                            {% set is_queued = queued_set and ((fg.category, fg.external_id) in queued_set or (fg.category, fg.title|lower) in queued_set) %}
+                            <div class="goal-item-card" style="{% if fg.is_completed %}opacity: 0.75; background: #fafafa;{% endif %}">
+                                {% if fg.poster_path %}
+                                    <img src="{{ url_for('main.serve_poster', filename=fg.poster_path.lstrip('/')) }}" alt="{{ fg.title }}" class="goal-item-poster">
+                                {% else %}
+                                    <div class="goal-item-poster" style="display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:#999; text-align:center; padding: 2px;">No Cover</div>
+                                {% endif %}
+                                <div class="goal-item-details">
+                                    <div>
+                                        <div class="goal-item-title" title="{{ fg.title }}" style="{% if fg.is_completed %}text-decoration: line-through; color: #888;{% endif %}">
+                                            {% if fg.is_completed %}⭐ {% endif %}{{ fg.title }}
+                                        </div>
+                                        <div class="goal-item-subtitle">
+                                            {% if fg.release_year %}{{ fg.release_year }}{% endif %}
+                                            {% if is_queued %}
+                                                {% if fg.release_year %}| {% endif %}<span style="color: var(--primary-color); font-weight: 500;">📥 Queued</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="goal-item-actions">
+                                        {% if current_user.is_authenticated %}
+                                            {% if not fg.is_completed and not is_queued %}
+                                                {% set count = backlog_counts[fg.category] if backlog_counts else 0 %}
+                                                {% if count < 10 %}
+                                                    <form action="{{ url_for('main.queue_goal', goal_id=fg.id) }}" method="POST" class="action-form">
+                                                        <button type="submit" class="btn action-btn-small" style="background: var(--success); color: white; border: none;" title="Queue this target in backlog">Queue</button>
+                                                    </form>
+                                                {% else %}
+                                                    <button class="btn action-btn-small" style="background: #e2e8f0; color: #a0aec0; border: none; cursor: not-allowed;" disabled title="Backlog is full (limit 10)">Backlog Full</button>
+                                                {% endif %}
+                                            {% endif %}
+                                            <form method="POST" class="action-form">
+                                                <input type="hidden" name="action" value="delete_future_goal">
+                                                <input type="hidden" name="goal_id" value="{{ fg.id }}">
+                                                <button type="submit" class="btn btn-secondary action-btn-small" style="color: var(--danger); border-color: var(--border-color);" onclick="return confirm('Remove target?')">Del</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     {% else %}
-                        <p style="color: #ccc; font-size: 0.85rem; font-style: italic;">No specific {{ cat }} targets set.</p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-top: 1rem;">No targets set.</p>
                     {% endif %}
                 </div>
             </div>
