@@ -7,6 +7,41 @@
         <h1>Welcome back.</h1>
         <p style="color: var(--text-muted); font-size: 1.25rem;">Track your journey through cinema, television, gaming, literature, and the arts.</p>
         
+        {% if current_user.is_authenticated %}
+        <form id="homepageSearchForm" method="GET" style="margin-top: 2rem; margin-bottom: 2rem; display: flex; gap: 8px; max-width: 800px; width: 100%;">
+            <select id="searchCategory" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: var(--white); color: var(--text-color); cursor: pointer;">
+                <option value="movie">Movies</option>
+                <option value="tv">Television</option>
+                <option value="game">Games</option>
+                <option value="book">Books</option>
+                <option value="theater">Theater</option>
+            </select>
+            <input type="text" name="q" placeholder="Search external database to track, queue, or set goal..." required
+                   style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem; background-color: var(--white); color: var(--text-color);">
+            <button type="submit" class="btn">Search</button>
+        </form>
+        <script>
+            document.getElementById('homepageSearchForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const cat = document.getElementById('searchCategory').value;
+                const query = this.querySelector('input[name="q"]').value;
+                let targetUrl = '';
+                if (cat === 'movie') {
+                    targetUrl = "{{ url_for('main.search_movie') }}";
+                } else if (cat === 'tv') {
+                    targetUrl = "{{ url_for('main.search_tv') }}";
+                } else if (cat === 'game') {
+                    targetUrl = "{{ url_for('main.search_game') }}";
+                } else if (cat === 'book') {
+                    targetUrl = "{{ url_for('main.search_book') }}";
+                } else if (cat === 'theater') {
+                    targetUrl = "{{ url_for('main.search_theater') }}";
+                }
+                window.location.href = `${targetUrl}?q=${encodeURIComponent(query)}`;
+            });
+        </script>
+        {% endif %}
+        
         <div class="stats-grid">
             <!-- Movies -->
             <a href="{{ url_for('main.movies_list') }}" class="stat-card">

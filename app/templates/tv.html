@@ -9,11 +9,13 @@
     </div>
 
     <!-- Universal API Search Form -->
+    {% if current_user.is_authenticated %}
     <form action="{{ url_for('main.search_tv') }}" method="GET" style="margin-top: 1rem; margin-bottom: 1rem; display: flex; gap: 8px; width: 100%;">
         <input type="text" name="q" placeholder="Search TMDB for TV shows to track, queue, or set as goal..." 
                style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem;">
         <button type="submit" class="btn">Search</button>
     </form>
+    {% endif %}
 
     <!-- Collapsible Local TV Filter Search -->
     <div id="localFilterContainer" style="display: none; margin-bottom: 1.5rem;">
