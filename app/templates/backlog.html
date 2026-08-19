@@ -162,7 +162,12 @@
                                 {% endif %}
                                 <div class="backlog-item-details">
                                     <div>
-                                        <div class="backlog-item-title" title="{{ item.title }}">{{ item.title }}</div>
+                                        <div class="backlog-item-title" title="{{ item.title }}">
+                                            {{ item.title }}
+                                            {% if goals_set and ((item.category, item.external_id) in goals_set or (item.category, item.title|lower) in goals_set) %}
+                                                <span title="Target Goal for {{ now.year }}" style="color: #f1c40f; cursor: help; margin-left: 4px;">⭐</span>
+                                            {% endif %}
+                                        </div>
                                         <div class="backlog-item-subtitle">
                                             {% if item.release_year %}{{ item.release_year }}{% endif %}
                                             {% if cat == 'tv' %}

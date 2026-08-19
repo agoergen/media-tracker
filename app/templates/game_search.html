@@ -59,6 +59,13 @@
                                 <button type="submit" class="btn btn-secondary">Add to Backlog</button>
                             </form>
                         {% endif %}
+                    {% elif request.args.get('goal') == '1' %}
+                        {% if current_user.is_authenticated %}
+                            <form action="{{ url_for('main.add_goal_target', category='game', external_id=game.id) }}" method="POST" style="display: inline-block;">
+                                <input type="hidden" name="year" value="{{ request.args.get('goal_year', now.year) }}">
+                                <button type="submit" class="btn btn-secondary">Add to Goals</button>
+                            </form>
+                        {% endif %}
                     {% else %}
                         <button class="btn btn-secondary" onclick="selectGame('{{ game.id }}', '{{ game.name | replace("'", "\\'") }}')">
                             {% if replace_id %}Update Game{% else %}Track Game...{% endif %}

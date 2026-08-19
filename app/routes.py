@@ -88,13 +88,25 @@ def goals(view_year=None):
                 prev_status = fg.is_completed
                 # Check corresponding table
                 if fg.category == 'movie':
-                    match = Movie.query.filter(db.extract('year', Movie.date_watched) == view_year, Movie.title.ilike(fg.title)).first()
+                    match = Movie.query.filter(
+                        db.extract('year', Movie.date_watched) == view_year,
+                        db.or_(Movie.external_id == fg.external_id, Movie.title.ilike(fg.title)) if fg.external_id else Movie.title.ilike(fg.title)
+                    ).first()
                 elif fg.category == 'tv':
-                    match = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == view_year, TVSeason.series_title.ilike(fg.title)).first()
+                    match = TVSeason.query.filter(
+                        db.extract('year', TVSeason.date_watched) == view_year,
+                        db.or_(TVSeason.external_id == fg.external_id, TVSeason.series_title.ilike(fg.title)) if fg.external_id else TVSeason.series_title.ilike(fg.title)
+                    ).first()
                 elif fg.category == 'game':
-                    match = Game.query.filter(db.extract('year', Game.date_finished) == view_year, Game.title.ilike(fg.title)).first()
+                    match = Game.query.filter(
+                        db.extract('year', Game.date_finished) == view_year,
+                        db.or_(Game.external_id == fg.external_id, Game.title.ilike(fg.title)) if fg.external_id else Game.title.ilike(fg.title)
+                    ).first()
                 elif fg.category == 'book':
-                    match = Book.query.filter(db.extract('year', Book.date_finished) == view_year, Book.title.ilike(fg.title)).first()
+                    match = Book.query.filter(
+                        db.extract('year', Book.date_finished) == view_year,
+                        db.or_(Book.external_id == fg.external_id, Book.title.ilike(fg.title)) if fg.external_id else Book.title.ilike(fg.title)
+                    ).first()
                 
                 fg.is_completed = True if match else False
                 if fg.is_completed and not prev_status:
@@ -154,8 +166,17 @@ def goals(view_year=None):
     years_with_media.add(datetime.now().year)
     nav_years = sorted(list(years_with_media), reverse=True)
 
+    # Build a lookup set of queued backlog items to display queued status badge
+    backlog_items = BacklogItem.query.all()
+    queued_set = {}
+    for item in backlog_items:
+        if item.external_id:
+            queued_set[(item.category, item.external_id)] = True
+        queued_set[(item.category, item.title.lower())] = True
+
     return render_template('goals.html', stats=stats, current_goal=current_goal, 
-                         grouped_future=grouped_future, year=view_year, nav_years=nav_years)
+                         grouped_future=grouped_future, year=view_year, nav_years=nav_years,
+                         queued_set=queued_set)
 
 @main.route('/')
 def index():
@@ -391,7 +412,9 @@ def add_movie(tmdb_id):
             db.session.add(new_movie)
             
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='movie', is_completed=False).filter(FutureMediaGoal.title.ilike(new_movie.title)).first()
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='movie', is_completed=False).filter(
+                db.or_(FutureMediaGoal.external_id == str(tmdb_id), FutureMediaGoal.title.ilike(new_movie.title))
+            ).first()
             if future:
                 future.is_completed = True
                 flash(f"⭐ Goal Title Completed: {new_movie.title}!")
@@ -435,9 +458,14 @@ def delete_movie(movie_id):
     
     # Re-evaluate future goal status
     current_year = datetime.now().year
-    still_exists = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year, Movie.title.ilike(title)).first()
+    still_exists = Movie.query.filter(
+        db.extract('year', Movie.date_watched) == current_year,
+        db.or_(Movie.external_id == str(movie.external_id), Movie.title.ilike(title))
+    ).first()
     if not still_exists:
-        future = FutureMediaGoal.query.filter_by(year=current_year, category='movie', title=title, is_completed=True).first()
+        future = FutureMediaGoal.query.filter_by(year=current_year, category='movie', is_completed=True).filter(
+            db.or_(FutureMediaGoal.external_id == str(movie.external_id), FutureMediaGoal.title.ilike(title))
+        ).first()
         if future:
             future.is_completed = False
             db.session.commit()
@@ -560,7 +588,9 @@ def add_tv_season(series_id):
             db.session.add(new_season)
             
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='tv', is_completed=False).filter(FutureMediaGoal.title.ilike(new_season.series_title)).first()
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='tv', is_completed=False).filter(
+                db.or_(FutureMediaGoal.external_id == str(series_id), FutureMediaGoal.title.ilike(new_season.series_title))
+            ).first()
             if future:
                 future.is_completed = True
                 flash(f"⭐ Goal Title Completed: {new_season.series_title}!")
@@ -605,9 +635,14 @@ def delete_tv_season(season_id):
     
     # Re-evaluate future goal status
     current_year = datetime.now().year
-    still_exists = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == current_year, TVSeason.series_title.ilike(series_title)).first()
+    still_exists = TVSeason.query.filter(
+        db.extract('year', TVSeason.date_watched) == current_year,
+        db.or_(TVSeason.external_id == str(season.external_id), TVSeason.series_title.ilike(series_title))
+    ).first()
     if not still_exists:
-        future = FutureMediaGoal.query.filter_by(year=current_year, category='tv', title=series_title, is_completed=True).first()
+        future = FutureMediaGoal.query.filter_by(year=current_year, category='tv', is_completed=True).filter(
+            db.or_(FutureMediaGoal.external_id == str(season.external_id), FutureMediaGoal.title.ilike(series_title))
+        ).first()
         if future:
             future.is_completed = False
             db.session.commit()
@@ -763,7 +798,9 @@ def add_game(igdb_id):
             db.session.add(new_game)
             
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='game', is_completed=False).filter(FutureMediaGoal.title.ilike(new_game.title)).first()
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='game', is_completed=False).filter(
+                db.or_(FutureMediaGoal.external_id == str(igdb_id), FutureMediaGoal.title.ilike(new_game.title))
+            ).first()
             if future:
                 future.is_completed = True
                 flash(f"⭐ Goal Title Completed: {new_game.title}!")
@@ -809,9 +846,14 @@ def delete_game(game_id):
     
     # Re-evaluate future goal status
     current_year = datetime.now().year
-    still_exists = Game.query.filter(db.extract('year', Game.date_finished) == current_year, Game.title.ilike(title)).first()
+    still_exists = Game.query.filter(
+        db.extract('year', Game.date_finished) == current_year,
+        db.or_(Game.external_id == str(game.external_id), Game.title.ilike(title))
+    ).first()
     if not still_exists:
-        future = FutureMediaGoal.query.filter_by(year=current_year, category='game', title=title, is_completed=True).first()
+        future = FutureMediaGoal.query.filter_by(year=current_year, category='game', is_completed=True).filter(
+            db.or_(FutureMediaGoal.external_id == str(game.external_id), FutureMediaGoal.title.ilike(title))
+        ).first()
         if future:
             future.is_completed = False
             db.session.commit()
@@ -983,7 +1025,9 @@ def add_book(book_id):
         db.session.add(new_book)
         
         # Check for future goal completion
-        future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='book', is_completed=False).filter(FutureMediaGoal.title.ilike(new_book.title)).first()
+        future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='book', is_completed=False).filter(
+            db.or_(FutureMediaGoal.external_id == str(book_id), FutureMediaGoal.title.ilike(new_book.title))
+        ).first()
         if future:
             future.is_completed = True
             flash(f"⭐ Goal Title Completed: {new_book.title}!")
@@ -1025,9 +1069,14 @@ def delete_book(book_id):
     
     # Re-evaluate future goal status
     current_year = datetime.now().year
-    still_exists = Book.query.filter(db.extract('year', Book.date_finished) == current_year, Book.title.ilike(title)).first()
+    still_exists = Book.query.filter(
+        db.extract('year', Book.date_finished) == current_year,
+        db.or_(Book.external_id == str(book.external_id), Book.title.ilike(title))
+    ).first()
     if not still_exists:
-        future = FutureMediaGoal.query.filter_by(year=current_year, category='book', title=title, is_completed=True).first()
+        future = FutureMediaGoal.query.filter_by(year=current_year, category='book', is_completed=True).filter(
+            db.or_(FutureMediaGoal.external_id == str(book.external_id), FutureMediaGoal.title.ilike(title))
+        ).first()
         if future:
             future.is_completed = False
             db.session.commit()
@@ -1451,7 +1500,16 @@ def backlog():
             if item.category in grouped:
                 grouped[item.category].append(item)
                 
-        return render_template('backlog.html', grouped=grouped)
+        # Build set of goals for the current year to highlight on the backlog page
+        current_year = datetime.now().year
+        goals = FutureMediaGoal.query.filter_by(year=current_year).all()
+        goals_set = {}
+        for g in goals:
+            if g.external_id:
+                goals_set[(g.category, g.external_id)] = True
+            goals_set[(g.category, g.title.lower())] = True
+
+        return render_template('backlog.html', grouped=grouped, goals_set=goals_set)
     except Exception as e:
         print(f"ERROR: [backlog] Failed to retrieve backlog items: {str(e)}", file=sys.stdout)
         traceback.print_exc(file=sys.stdout)
@@ -1681,7 +1739,9 @@ def track_backlog_item(item_id):
             db.session.add(new_movie)
 
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='movie', is_completed=False).filter(FutureMediaGoal.title.ilike(new_movie.title)).first()
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='movie', is_completed=False).filter(
+                db.or_(FutureMediaGoal.external_id == str(external_id), FutureMediaGoal.title.ilike(new_movie.title))
+            ).first()
             if future:
                 future.is_completed = True
                 flash(f"⭐ Goal Title Completed: {new_movie.title}!")
@@ -1721,7 +1781,9 @@ def track_backlog_item(item_id):
             db.session.add(new_season)
 
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='tv', is_completed=False).filter(FutureMediaGoal.title.ilike(new_season.series_title)).first()
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='tv', is_completed=False).filter(
+                db.or_(FutureMediaGoal.external_id == str(external_id), FutureMediaGoal.title.ilike(new_season.series_title))
+            ).first()
             if future:
                 future.is_completed = True
                 flash(f"⭐ Goal Title Completed: {new_season.series_title}!")
@@ -1772,7 +1834,9 @@ def track_backlog_item(item_id):
             db.session.add(new_game)
 
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='game', is_completed=False).filter(FutureMediaGoal.title.ilike(new_game.title)).first()
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='game', is_completed=False).filter(
+                db.or_(FutureMediaGoal.external_id == str(external_id), FutureMediaGoal.title.ilike(new_game.title))
+            ).first()
             if future:
                 future.is_completed = True
                 flash(f"⭐ Goal Title Completed: {new_game.title}!")
@@ -1838,7 +1902,9 @@ def track_backlog_item(item_id):
             db.session.add(new_book)
 
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='book', is_completed=False).filter(FutureMediaGoal.title.ilike(new_book.title)).first()
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='book', is_completed=False).filter(
+                db.or_(FutureMediaGoal.external_id == str(external_id), FutureMediaGoal.title.ilike(new_book.title))
+            ).first()
             if future:
                 future.is_completed = True
                 flash(f"⭐ Goal Title Completed: {new_book.title}!")
@@ -1855,5 +1921,89 @@ def track_backlog_item(item_id):
         flash("An error occurred moving the item from your backlog to tracked.")
         
     return redirect(url_for('main.backlog'))
+
+@main.route('/goals/add/<category>/<external_id>', methods=['POST'])
+@login_required
+def add_goal_target(category, external_id):
+    user_id = current_user.id
+    target_year = request.form.get('year', type=int) or datetime.now().year
+    
+    print(f"INFO: [goals] User {user_id} adding target category '{category}', ID '{external_id}' for year {target_year}", file=sys.stdout)
+    
+    if category not in ['movie', 'tv', 'game', 'book']:
+        flash("Invalid category.")
+        return redirect(url_for('main.goals', view_year=target_year))
+
+    # Fetch title
+    title = None
+    if category == 'movie':
+        details = TMDBService.get_movie_details(external_id)
+        if details:
+            title = details.get('title')
+    elif category == 'tv':
+        details = TMDBService.get_tv_details(external_id, 1) # Default season 1 to get show name
+        if details:
+            title = details.get('series_name')
+    elif category == 'game':
+        details = IGDBService.get_game_details(external_id)
+        if details:
+            title = details.get('name')
+    elif category == 'book':
+        source = request.form.get('source', 'google')
+        if source == 'google':
+            details = GoogleBooksService.get_book_details(external_id)
+            if details:
+                title = details.get('volumeInfo', {}).get('title')
+        else:
+            details = OpenLibraryService.get_book_details(external_id)
+            if details:
+                title = details.get('title')
+
+    if not title:
+        flash(f"Error fetching details from the API for {category}.")
+        return redirect(request.referrer or url_for('main.goals', view_year=target_year))
+
+    # Check duplicate
+    existing = FutureMediaGoal.query.filter_by(year=target_year, category=category, external_id=str(external_id)).first()
+    if existing:
+        flash(f"'{title}' is already set as a {category} target for {target_year}!")
+        return redirect(url_for('main.goals', view_year=target_year))
+
+    # Check if there's already a string-only match or create a new one
+    existing_by_title = FutureMediaGoal.query.filter_by(year=target_year, category=category, is_completed=False).filter(FutureMediaGoal.title.ilike(title)).first()
+    if existing_by_title:
+        existing_by_title.external_id = str(external_id)
+        db.session.commit()
+        flash(f"Updated '{title}' with API reference in your {target_year} targets!")
+        return redirect(url_for('main.goals', view_year=target_year))
+
+    new_target = FutureMediaGoal(
+        year=target_year,
+        category=category,
+        title=title,
+        external_id=str(external_id),
+        is_completed=False
+    )
+    db.session.add(new_target)
+    
+    # Check if target is already completed in the ledger
+    match = None
+    if category == 'movie':
+        match = Movie.query.filter(db.extract('year', Movie.date_watched) == target_year, db.or_(Movie.external_id == str(external_id), Movie.title.ilike(title))).first()
+    elif category == 'tv':
+        match = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == target_year, db.or_(TVSeason.external_id == str(external_id), TVSeason.series_title.ilike(title))).first()
+    elif category == 'game':
+        match = Game.query.filter(db.extract('year', Game.date_finished) == target_year, db.or_(Game.external_id == str(external_id), Game.title.ilike(title))).first()
+    elif category == 'book':
+        match = Book.query.filter(db.extract('year', Book.date_finished) == target_year, db.or_(Book.external_id == str(external_id), Book.title.ilike(title))).first()
+
+    if match:
+        new_target.is_completed = True
+        flash(f"⭐ Target '{title}' added and marked completed based on your ledger!")
+    else:
+        flash(f"Added '{title}' to your {target_year} {category} targets!")
+
+    db.session.commit()
+    return redirect(url_for('main.goals', view_year=target_year))
 
 

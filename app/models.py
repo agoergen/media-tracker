@@ -104,6 +104,7 @@ class FutureMediaGoal(db.Model):
     category = db.Column(db.String(50), nullable=False) # movie, tv, game, book
     title = db.Column(db.String(255), nullable=False)
     is_completed = db.Column(db.Boolean, default=False)
+    external_id = db.Column(db.String(100))
 
 class TVSeason(db.Model):
     id = db.Column(db.Integer, primary_key=True)
