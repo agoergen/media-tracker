@@ -1,7 +1,7 @@
 # LeisureLedger TASK_HISTORY.md
 
 ## Current Backlog
-- (None - All tasks completed)
+- None. All tasks completed.
 
 ## 2026-08-19 15:49:00
 - Completed implementation of the Backlog feature (both Phase 1 and Phase 2).
@@ -38,3 +38,11 @@
 - Updated badges, tooltips, and disabled states in `app/templates/goals.html` to reference Up Next.
 - Renamed backlog parameter logic and buttons to Up Next in search templates.
 - Successfully verified Flask route registration using the verification script.
+
+## 2026-08-19 16:37:00
+- Completed Search & Actions Unification feature.
+- Swapped external search inputs and local filters on media list templates (`movies.html`, `tv.html`, `games.html`, `books.html`, `theater.html`).
+- Integrated column-top search inputs inside Up Next and Goals list pages.
+- Modified `search_movie`, `search_tv`, `search_game`, and `search_book` in `app/routes.py` to forward context parameters.
+- Overhauled search templates (`movie_search.html`, `tv_search.html`, `game_search.html`, `book_search.html`) to use a single "Select" card button and a unified tabbed details confirmation block (Track, Up Next, Goals).
+- Confirmed template rendering and routing setup using automated verification scripts.

@@ -178,16 +178,21 @@
                     <span class="count">{{ grouped_future[cat]|length }}</span>
                 </div>
                 
-                <!-- Add New -->
-                <div style="margin-bottom: 0.5rem;">
-                    <a href="{{ {
-                        'movie': url_for('main.search_movie', goal=1, goal_year=year),
-                        'tv': url_for('main.search_tv', goal=1, goal_year=year),
-                        'game': url_for('main.search_game', goal=1, goal_year=year),
-                        'book': url_for('main.search_book', goal=1, goal_year=year)
-                    }[cat] }}" class="btn btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 8px; text-decoration: none; text-align: center; display: block;">
-                        + Search & Add Target
-                    </a>
+                <!-- Search & Add Target Input -->
+                <div style="margin-bottom: 0.5rem; width: 100%;">
+                    {% if current_user.is_authenticated %}
+                        <form action="{{ {
+                            'movie': url_for('main.search_movie'),
+                            'tv': url_for('main.search_tv'),
+                            'game': url_for('main.search_game'),
+                            'book': url_for('main.search_book')
+                        }[cat] }}" method="GET" style="width: 100%;">
+                            <input type="hidden" name="goal" value="1">
+                            <input type="hidden" name="goal_year" value="{{ year }}">
+                            <input type="text" name="q" placeholder="Search and add target..." required
+                                   style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; box-sizing: border-box;">
+                        </form>
+                    {% endif %}
                 </div>
 
                 <!-- List -->

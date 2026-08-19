@@ -148,9 +148,13 @@
                 
                 {% if current_user.is_authenticated %}
                     {% if grouped[cat]|length < 10 %}
-                        <a href="{{ search_url }}" class="btn btn-secondary add-backlog-btn">+ Add {{ cat_title.rstrip('s') }}</a>
+                        <form action="{{ search_url }}" method="GET" style="margin-bottom: 1rem; width: 100%;">
+                            <input type="hidden" name="up_next" value="1">
+                            <input type="text" name="q" placeholder="Search and queue..." required
+                                   style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; box-sizing: border-box;">
+                        </form>
                     {% else %}
-                        <button class="btn btn-secondary add-backlog-btn" style="opacity: 0.5; cursor: not-allowed;" disabled>Up Next Full</button>
+                        <button class="btn btn-secondary" style="width: 100%; opacity: 0.5; cursor: not-allowed; margin-bottom: 1rem; font-size: 0.85rem; padding: 8px;" disabled>Up Next Full</button>
                     {% endif %}
                 {% endif %}
 

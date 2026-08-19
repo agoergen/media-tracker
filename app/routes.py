@@ -289,11 +289,15 @@ def movies_list():
 @login_required
 def search_movie():
     results = []
-    query = request.args.get('query', '')
+    query = request.args.get('query', '') or request.args.get('q', '')
     replace_id = request.args.get('replace_id')
     pre_date = request.args.get('pre_date', '')
     pre_loc = request.args.get('pre_loc', '')
     pre_rewatch = request.args.get('pre_rewatch', 'false')
+    
+    up_next = request.args.get('up_next')
+    goal = request.args.get('goal')
+    goal_year = request.args.get('goal_year')
 
     if request.method == 'POST':
         query = request.form.get('query')
@@ -308,7 +312,10 @@ def search_movie():
                          replace_id=replace_id, 
                          pre_date=pre_date, 
                          pre_loc=pre_loc, 
-                         pre_rewatch=pre_rewatch)
+                         pre_rewatch=pre_rewatch,
+                         up_next=up_next,
+                         goal=goal,
+                         goal_year=goal_year)
 
 @main.route('/movies/add/<int:tmdb_id>', methods=['POST'])
 @login_required
@@ -503,12 +510,16 @@ def tv_list():
 @login_required
 def search_tv():
     results = []
-    query = request.args.get('query', '')
+    query = request.args.get('query', '') or request.args.get('q', '')
     replace_id = request.args.get('replace_id')
     pre_date = request.args.get('pre_date', '')
     pre_loc = request.args.get('pre_loc', '')
     pre_rewatch = request.args.get('pre_rewatch', 'false')
     pre_season = request.args.get('pre_season', '1')
+    
+    up_next = request.args.get('up_next')
+    goal = request.args.get('goal')
+    goal_year = request.args.get('goal_year')
 
     if request.method == 'POST':
         query = request.form.get('query')
@@ -524,7 +535,10 @@ def search_tv():
                          pre_date=pre_date,
                          pre_loc=pre_loc,
                          pre_rewatch=pre_rewatch,
-                         pre_season=pre_season)
+                         pre_season=pre_season,
+                         up_next=up_next,
+                         goal=goal,
+                         goal_year=goal_year)
 
 @main.route('/tv/add/<int:series_id>', methods=['POST'])
 @login_required
@@ -683,7 +697,7 @@ def games_list():
 @login_required
 def search_game():
     results = []
-    query = request.args.get('query', '')
+    query = request.args.get('query', '') or request.args.get('q', '')
     replace_id = request.args.get('replace_id')
     pre_date = request.args.get('pre_date', '')
     pre_plat = request.args.get('pre_plat', '')
@@ -694,6 +708,10 @@ def search_game():
     if page < 1:
         page = 1
     
+    up_next = request.args.get('up_next')
+    goal = request.args.get('goal')
+    goal_year = request.args.get('goal_year')
+
     distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
     franchise_list = [f[0] for f in distinct_franchises]
     
@@ -724,7 +742,10 @@ def search_game():
                           pre_rewatch=pre_rewatch,
                           pre_variant=pre_variant,
                           datetime=datetime,
-                          distinct_franchises=franchise_list)
+                          distinct_franchises=franchise_list,
+                          up_next=up_next,
+                          goal=goal,
+                          goal_year=goal_year)
 
 @main.route('/games/add/<int:igdb_id>', methods=['POST'])
 @login_required
@@ -891,12 +912,16 @@ def books_list():
 @login_required
 def search_book():
     results = []
-    query = request.args.get('query', '')
+    query = request.args.get('query', '') or request.args.get('q', '')
     replace_id = request.args.get('replace_id')
     pre_date = request.args.get('pre_date', '')
     pre_format = request.args.get('pre_format', '')
     pre_rewatch = request.args.get('pre_rewatch', 'false')
     
+    up_next = request.args.get('up_next')
+    goal = request.args.get('goal')
+    goal_year = request.args.get('goal_year')
+
     if request.method == 'POST':
         query = request.form.get('query', '').strip()
         replace_id = request.form.get('replace_id')
@@ -939,7 +964,10 @@ def search_book():
                          replace_id=replace_id,
                          pre_date=pre_date,
                          pre_format=pre_format,
-                         pre_rewatch=pre_rewatch)
+                         pre_rewatch=pre_rewatch,
+                         up_next=up_next,
+                         goal=goal,
+                         goal_year=goal_year)
 
 @main.route('/books/add/<book_id>', methods=['POST'])
 @login_required

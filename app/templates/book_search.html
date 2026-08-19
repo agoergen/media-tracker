@@ -39,31 +39,10 @@
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    {% if request.args.get('up_next') == '1' %}
-                        {% if current_user.is_authenticated %}
-                            <form action="{{ url_for('main.add_up_next_item', category='book', external_id=book.id) }}" method="POST" style="display: inline-flex; align-items: center; gap: 8px;">
-                                <input type="hidden" name="source" value="{{ book.source }}">
-                                <label style="font-size: 0.85rem; color: var(--text-muted);">Format:</label>
-                                <select name="book_format" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border-color);">
-                                    <option value="">Select Format...</option>
-                                    {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
-                                        <option value="{{ f }}">{{ f }}</option>
-                                    {% endfor %}
-                                </select>
-                                <button type="submit" class="btn btn-secondary">Add to Up Next</button>
-                            </form>
-                        {% endif %}
-                    {% elif request.args.get('goal') == '1' %}
-                        {% if current_user.is_authenticated %}
-                            <form action="{{ url_for('main.add_goal_target', category='book', external_id=book.id) }}" method="POST" style="display: inline-block;">
-                                <input type="hidden" name="source" value="{{ book.source }}">
-                                <input type="hidden" name="year" value="{{ request.args.get('goal_year', now.year) }}">
-                                <button type="submit" class="btn btn-secondary">Add to Goals</button>
-                            </form>
-                        {% endif %}
-                    {% else %}
+                <div style="margin-left: auto;">
+                    {% if current_user.is_authenticated %}
                         <button class="btn btn-secondary" onclick="selectBook('{{ book.id }}', '{{ book.title | replace("'", "\\'") }}', '{{ book.source }}')">
-                            {% if replace_id %}Update Book{% else %}Track Book{% endif %}
+                            Select
                         </button>
                     {% endif %}
                 </div>
@@ -77,54 +56,101 @@
     <!-- Selection Confirmation Container (Hidden by default) -->
     <div id="confirmationContainer" style="display: none; margin-top: 2rem; background: var(--white); padding: 2rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <h2 id="confirmTitle" style="margin: 0; font-size: 1.5rem;">Confirm Tracking</h2>
+            <h2 id="confirmTitle" style="margin: 0; font-size: 1.5rem;">Confirm Option</h2>
             <button class="btn btn-secondary" onclick="cancelSelection()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;">&larr; Back to results</button>
         </div>
 
-        <form id="trackForm" method="POST">
-            <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
-            <input type="hidden" name="source" id="bookSource" value="google">
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
-                <div class="form-group">
-                    <label for="date_finished">Finished On:</label>
-                    <input type="date" id="date_finished" name="date_finished" required 
-                           style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
-                </div>
+        {% if not replace_id %}
+        <!-- Tabs headers -->
+        <div class="action-selection-tabs" style="display: flex; gap: 10px; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); padding-bottom: 10px;">
+            <button id="tab-btn-track" class="tab-btn active" onclick="switchActionTab('track')" style="background: none; border: none; font-weight: 600; font-size: 1.1rem; cursor: pointer; color: var(--primary-color); border-bottom: 2px solid var(--primary-color); margin-bottom: -12px; padding-bottom: 10px;">1. Track Completed</button>
+            <button id="tab-btn-up-next" class="tab-btn" onclick="switchActionTab('up-next')" style="background: none; border: none; font-weight: 600; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); padding-bottom: 10px;">2. Queue Up Next</button>
+            <button id="tab-btn-goals" class="tab-btn" onclick="switchActionTab('goals')" style="background: none; border: none; font-weight: 600; font-size: 1.1rem; cursor: pointer; color: var(--text-muted); padding-bottom: 10px;">3. Add to Goals</button>
+        </div>
+        {% endif %}
+
+        <!-- Tab 1: Track Completed Form -->
+        <div id="panel-track" class="tab-panel">
+            <form id="trackForm" method="POST">
+                <input type="hidden" name="replace_id" value="{{ replace_id or '' }}">
+                <input type="hidden" name="source" id="bookSource" value="google">
                 
-                <div class="form-group">
-                    <label for="format">Format:</label>
-                    <select id="format" name="format" 
-                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+                    <div class="form-group">
+                        <label for="date_finished">Finished On:</label>
+                        <input type="date" id="date_finished" name="date_finished" required 
+                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="format">Format:</label>
+                        <select id="format" name="format" 
+                                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                            <option value="">Select Format...</option>
+                            {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
+                                <option value="{{ f }}" {% if f == 'Audiobook' %}selected{% endif %}>{{ f }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rating">StoryGraph Rating:</label>
+                        <input type="number" step="0.05" id="rating" name="rating" placeholder="e.g. 4.25"
+                               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 1rem; display: flex; gap: 20px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer;">
+                        <input type="checkbox" name="is_rewatch" style="width: 20px; height: 20px;"> This is a reread
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer;">
+                        <input type="checkbox" name="is_private" style="width: 20px; height: 20px;"> Private entry (only show when logged in)
+                    </label>
+                </div>
+
+                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">
+                        {% if replace_id %}Confirm & Update{% else %}Confirm & Track{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tab 2: Queue Up Next Form -->
+        <div id="panel-up-next" class="tab-panel" style="display: none;">
+            <form id="upNextForm" method="POST">
+                <input type="hidden" name="source" id="upNextBookSource" value="google">
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Queue this book into your Up Next list.</p>
+                <div class="form-group" style="max-width: 300px; margin-bottom: 1.5rem;">
+                    <label for="up_next_format">Format:</label>
+                    <select id="up_next_format" name="book_format" required style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                         <option value="">Select Format...</option>
                         {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
-                            <option value="{{ f }}" {% if f == 'Audiobook' %}selected{% endif %}>{{ f }}</option>
+                            <option value="{{ f }}">{{ f }}</option>
                         {% endfor %}
                     </select>
                 </div>
+                <div style="margin-top: 2rem;">
+                    <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">Confirm & Queue Up Next</button>
+                </div>
+            </form>
+        </div>
 
-                <div class="form-group">
-                    <label for="rating">StoryGraph Rating:</label>
-                    <input type="number" step="0.05" id="rating" name="rating" placeholder="e.g. 4.25"
+        <!-- Tab 3: Add to Goals Form -->
+        <div id="panel-goals" class="tab-panel" style="display: none;">
+            <form id="goalsForm" method="POST">
+                <input type="hidden" name="source" id="goalsBookSource" value="google">
+                <div class="form-group" style="max-width: 300px; margin-bottom: 1.5rem;">
+                    <label for="goal_year">Target Goal Year:</label>
+                    <input type="number" id="goal_year" name="year" required value="{{ goal_year or now.year }}"
                            style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 1rem;">
                 </div>
-            </div>
-
-            <div class="form-group" style="margin-top: 1rem; display: flex; gap: 20px; flex-wrap: wrap;">
-                <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer;">
-                    <input type="checkbox" name="is_rewatch" style="width: 20px; height: 20px;"> This is a reread
-                </label>
-                <label style="display: flex; align-items: center; gap: 10px; font-weight: 500; cursor: pointer;">
-                    <input type="checkbox" name="is_private" style="width: 20px; height: 20px;"> Private entry (only show when logged in)
-                </label>
-            </div>
-
-            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-                <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">
-                    {% if replace_id %}Confirm & Update{% else %}Confirm & Track{% endif %}
-                </button>
-            </div>
-        </form>
+                <div style="margin-top: 2rem;">
+                    <button type="submit" class="btn btn-success" style="padding: 1rem 2rem; font-size: 1rem;">Confirm & Add to Goals</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -133,36 +159,80 @@
         const mainSearchForm = document.getElementById("mainSearchForm");
         const trackForm = document.getElementById("trackForm");
         const bookSource = document.getElementById("bookSource");
+        const upNextBookSource = document.getElementById("upNextBookSource");
+        const goalsBookSource = document.getElementById("goalsBookSource");
         const confirmTitle = document.getElementById("confirmTitle");
         const dateInput = document.getElementById("date_finished");
         const formatSelect = document.getElementById("format");
+        const upNextFormatSelect = document.getElementById("up_next_format");
         const ratingInput = document.getElementById("rating");
         const rewatchCheckbox = document.querySelector('input[name="is_rewatch"]');
+
+        function switchActionTab(tabName) {
+            // Hide all panels
+            document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+            // Remove active style from tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.style.color = 'var(--text-muted)';
+                btn.style.borderBottom = 'none';
+                btn.style.marginBottom = '0';
+            });
+
+            // Show selected panel
+            const panel = document.getElementById(`panel-${tabName}`);
+            if (panel) panel.style.display = 'block';
+            
+            // Style active button
+            const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+            if (activeBtn) {
+                activeBtn.style.color = 'var(--primary-color)';
+                activeBtn.style.borderBottom = '2px solid var(--primary-color)';
+                activeBtn.style.marginBottom = '-12px';
+            }
+        }
 
         function selectBook(id, title, source) {
             resultsContainer.style.display = "none";
             mainSearchForm.style.display = "none";
             
-            confirmTitle.innerText = `Tracking: ${title}`;
+            confirmTitle.innerText = `Confirm Option: ${title}`;
+            
             trackForm.action = `/books/add/${id}`;
             bookSource.value = source;
+            if (upNextBookSource) upNextBookSource.value = source;
+            if (goalsBookSource) goalsBookSource.value = source;
             
-            const urlParams = new URLSearchParams(window.location.search);
-            const preDate = urlParams.get('pre_date');
-            const preFormat = urlParams.get('pre_format');
-            const preRewatch = urlParams.get('pre_rewatch');
-            const preRating = urlParams.get('pre_rating');
-
-            if (preDate) {
-                dateInput.value = preDate;
-            } else {
-                const today = new Date();
-                dateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const upNextForm = document.getElementById("upNextForm");
+            if (upNextForm) {
+                upNextForm.action = `/up-next/add/book/${id}`;
+            }
+            
+            const goalsForm = document.getElementById("goalsForm");
+            if (goalsForm) {
+                goalsForm.action = `/goals/add/book/${id}`;
             }
 
-            if (preFormat) formatSelect.value = decodeURIComponent(preFormat);
-            if (preRating) ratingInput.value = preRating;
-            rewatchCheckbox.checked = (preRewatch === 'true');
+            const today = new Date();
+            dateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            // Sync formats
+            formatSelect.addEventListener('change', function() {
+                if (upNextFormatSelect) upNextFormatSelect.value = formatSelect.value;
+            });
+            if (upNextFormatSelect) {
+                upNextFormatSelect.addEventListener('change', function() {
+                    formatSelect.value = upNextFormatSelect.value;
+                });
+            }
+
+            // Auto-focus correct tab if request parameters exist
+            {% if up_next == '1' %}
+                switchActionTab('up-next');
+            {% elif goal == '1' %}
+                switchActionTab('goals');
+            {% else %}
+                switchActionTab('track');
+            {% endif %}
 
             confirmationContainer.style.display = "block";
             window.scrollTo(0, 0);

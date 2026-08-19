@@ -5,15 +5,20 @@
 {% block content %}
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
         <h1>My Movies ({{ total_count }})</h1>
-        {% if current_user.is_authenticated %}
-            <a href="{{ url_for('main.search_movie') }}" class="btn">Add Movie</a>
-        {% endif %}
+        <button id="filterToggleBtn" class="btn btn-secondary">Filter List</button>
     </div>
 
-    <!-- Movie Filter Search -->
-    <div style="margin-top: 1rem; margin-bottom: 1rem;">
-        <input type="text" id="movieFilter" placeholder="Search my movies by title, director, or cast..." 
-               style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem;">
+    <!-- Universal API Search Form -->
+    <form action="{{ url_for('main.search_movie') }}" method="GET" style="margin-top: 1rem; margin-bottom: 1rem; display: flex; gap: 8px; width: 100%;">
+        <input type="text" name="q" placeholder="Search TMDB for movies to track, queue, or set as goal..." 
+               style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem;">
+        <button type="submit" class="btn">Search</button>
+    </form>
+
+    <!-- Collapsible Local Movie Filter Search -->
+    <div id="localFilterContainer" style="display: none; margin-bottom: 1.5rem;">
+        <input type="text" id="movieFilter" placeholder="Filter my movies by title, director, or cast..." 
+               style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem;">
     </div>
 
     {% set global_count = namespace(value=0) %}
@@ -226,6 +231,17 @@
 
                 // Show all movies
                 document.querySelectorAll('.movie-row').forEach(row => row.style.display = '');
+            }
+        });
+
+        // Toggle Local Filter visibility
+        document.getElementById('filterToggleBtn').addEventListener('click', function() {
+            const container = document.getElementById('localFilterContainer');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                document.getElementById('movieFilter').focus();
+            } else {
+                container.style.display = 'none';
             }
         });
     </script>
