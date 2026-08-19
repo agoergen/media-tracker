@@ -29,9 +29,17 @@
                     </div>
                 </div>
                 <div style="margin-left: auto;">
-                    <button class="btn btn-secondary" onclick="selectMovie('{{ movie.id }}', '{{ movie.title | replace("'", "\\'") }}')">
-                        {% if replace_id %}Update Movie{% else %}Track Movie{% endif %}
-                    </button>
+                    {% if request.args.get('backlog') == '1' %}
+                        {% if current_user.is_authenticated %}
+                            <form action="{{ url_for('main.add_backlog_item', category='movie', external_id=movie.id) }}" method="POST" style="display: inline-block;">
+                                <button type="submit" class="btn btn-secondary">Add to Backlog</button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <button class="btn btn-secondary" onclick="selectMovie('{{ movie.id }}', '{{ movie.title | replace("'", "\\'") }}')">
+                            {% if replace_id %}Update Movie{% else %}Track Movie{% endif %}
+                        </button>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}

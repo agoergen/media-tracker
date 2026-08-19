@@ -2,8 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 import os
+import sys
+import traceback
 from app.services import TMDBService, IGDBService, OpenLibraryService, GoogleBooksService, ImageSearchService, WikipediaService, IBDBService, safe_from_timestamp
-from app.models import Movie, TVSeason, User, Game, Book, Theater, Goal, FutureMediaGoal
+from app.models import Movie, TVSeason, User, Game, Book, Theater, Goal, FutureMediaGoal, BacklogItem
 from app import db
 from datetime import datetime
 from collections import OrderedDict
@@ -1432,5 +1434,426 @@ def igdb_test():
             results["errors"].append(f"Search exception details: {str(e)}")
             
     return jsonify(results)
+
+@main.route('/backlog')
+def backlog():
+    user_id = current_user.id if current_user.is_authenticated else "anonymous"
+    print(f"INFO: [backlog] User {user_id} accessed backlog page", file=sys.stdout)
+    try:
+        backlog_items = BacklogItem.query.all()
+        grouped = {
+            'movie': [],
+            'tv': [],
+            'game': [],
+            'book': []
+        }
+        for item in backlog_items:
+            if item.category in grouped:
+                grouped[item.category].append(item)
+                
+        return render_template('backlog.html', grouped=grouped)
+    except Exception as e:
+        print(f"ERROR: [backlog] Failed to retrieve backlog items: {str(e)}", file=sys.stdout)
+        traceback.print_exc(file=sys.stdout)
+        flash("An error occurred loading the backlog.")
+        return redirect(url_for('main.index'))
+
+@main.route('/backlog/add/<category>/<external_id>', methods=['POST'])
+@login_required
+def add_backlog_item(category, external_id):
+    user_id = current_user.id
+    print(f"INFO: [backlog] User {user_id} adding category '{category}', ID '{external_id}' to backlog", file=sys.stdout)
+    
+    if category not in ['movie', 'tv', 'game', 'book']:
+        print(f"WARNING: [backlog] Invalid category '{category}' requested by user {user_id}", file=sys.stdout)
+        flash("Invalid media category.")
+        return redirect(url_for('main.backlog'))
+
+    # Check limit of 10
+    try:
+        count = BacklogItem.query.filter_by(category=category).count()
+        if count >= 10:
+            print(f"WARNING: [backlog] User {user_id} attempted to add '{external_id}' to '{category}' backlog, but the limit of 10 has been reached.", file=sys.stdout)
+            flash(f"Your {category.upper()} backlog is full! (Limit is 10 items)")
+            return redirect(request.referrer or url_for('main.backlog'))
+            
+        title = None
+        poster_path = None
+        release_year = None
+        season_number = None
+        game_platform = None
+        book_format = None
+        book_source = None
+
+        if category == 'movie':
+            existing = BacklogItem.query.filter_by(category='movie', external_id=str(external_id)).first()
+            if existing:
+                flash("This movie is already in your backlog!")
+                return redirect(url_for('main.backlog'))
+                
+            details = TMDBService.get_movie_details(external_id)
+            if details:
+                title = details.get('title')
+                release_year = int(details.get('release_date', '0')[:4]) if details.get('release_date') else None
+                if details.get('poster_path'):
+                    poster_path = TMDBService.download_poster(details['poster_path'])
+            else:
+                print(f"WARNING: [backlog] TMDB details not found for movie ID '{external_id}'", file=sys.stdout)
+        elif category == 'tv':
+            season_number = int(request.form.get('season_number', 1))
+            existing = BacklogItem.query.filter_by(category='tv', external_id=str(external_id), season_number=season_number).first()
+            if existing:
+                flash(f"Season {season_number} of this show is already in your backlog!")
+                return redirect(url_for('main.backlog'))
+                
+            details = TMDBService.get_tv_details(external_id, season_number)
+            if details:
+                title = details.get('series_name')
+                if details.get('poster_path'):
+                    poster_path = TMDBService.download_poster(details['poster_path'])
+            else:
+                print(f"WARNING: [backlog] TMDB details not found for TV ID '{external_id}', season '{season_number}'", file=sys.stdout)
+        elif category == 'game':
+            existing = BacklogItem.query.filter_by(category='game', external_id=str(external_id)).first()
+            if existing:
+                flash("This game is already in your backlog!")
+                return redirect(url_for('main.backlog'))
+                
+            game_platform = request.form.get('game_platform')
+            details = IGDBService.get_game_details(external_id)
+            if details:
+                title = details.get('name')
+                release_date_ts = details.get('first_release_date')
+                release_year = safe_from_timestamp(release_date_ts).year if release_date_ts else None
+                if details.get('cover'):
+                    poster_path = IGDBService.download_cover(details['cover']['url'])
+            else:
+                print(f"WARNING: [backlog] IGDB details not found for game ID '{external_id}'", file=sys.stdout)
+        elif category == 'book':
+            existing = BacklogItem.query.filter_by(category='book', external_id=str(external_id)).first()
+            if existing:
+                flash("This book is already in your backlog!")
+                return redirect(url_for('main.backlog'))
+                
+            book_format = request.form.get('book_format')
+            book_source = request.form.get('source', 'google')
+            
+            if book_source == 'google':
+                details = GoogleBooksService.get_book_details(external_id)
+                if details:
+                    volume_info = details.get('volumeInfo', {})
+                    title = volume_info.get('title')
+                    release_year = int(volume_info.get('publishedDate', '0')[:4]) if volume_info.get('publishedDate') else None
+                    image_links = volume_info.get('imageLinks', {})
+                    image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
+                    if image_url:
+                        poster_path = GoogleBooksService.download_cover(image_url, external_id)
+                else:
+                    print(f"WARNING: [backlog] Google Books details not found for ID '{external_id}'", file=sys.stdout)
+            else: # openlibrary
+                details = OpenLibraryService.get_book_details(external_id)
+                if details:
+                    title = details.get('title')
+                    covers = details.get('covers', [])
+                    if covers:
+                        poster_path = OpenLibraryService.download_book_cover(cover_id=covers[0])
+                    else:
+                        poster_path = OpenLibraryService.download_book_cover(ol_id=external_id)
+                else:
+                    print(f"WARNING: [backlog] OpenLibrary details not found for ID '{external_id}'", file=sys.stdout)
+
+        if not title:
+            print(f"WARNING: [backlog] Unable to retrieve title for '{category}' backlog item with ID '{external_id}'", file=sys.stdout)
+            flash(f"Error fetching details from the API for {category}.")
+            return redirect(request.referrer or url_for('main.backlog'))
+
+        new_item = BacklogItem(
+            category=category,
+            title=title,
+            external_id=str(external_id),
+            poster_path=poster_path,
+            release_year=release_year,
+            season_number=season_number,
+            game_platform=game_platform,
+            book_format=book_format,
+            book_source=book_source
+        )
+        db.session.add(new_item)
+        db.session.commit()
+        print(f"INFO: [backlog] Successfully added '{title}' ({category}) to backlog", file=sys.stdout)
+        flash(f"Added {title} to your {category} backlog!")
+        return redirect(url_for('main.backlog'))
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR: [backlog] Exception while adding backlog item: {str(e)}", file=sys.stdout)
+        traceback.print_exc(file=sys.stdout)
+        flash("An error occurred adding the item to the backlog.")
+        return redirect(request.referrer or url_for('main.backlog'))
+
+@main.route('/backlog/delete/<int:item_id>', methods=['POST'])
+@login_required
+def delete_backlog_item(item_id):
+    user_id = current_user.id
+    try:
+        item = BacklogItem.query.get_or_404(item_id)
+        title = item.title
+        category = item.category
+        print(f"INFO: [backlog] User {user_id} deleting backlog item {item_id} ('{title}', '{category}')", file=sys.stdout)
+        db.session.delete(item)
+        db.session.commit()
+        print(f"INFO: [backlog] Successfully deleted backlog item {item_id}", file=sys.stdout)
+        flash(f"Removed {title} from your {category} backlog.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR: [backlog] Exception while deleting backlog item {item_id}: {str(e)}", file=sys.stdout)
+        traceback.print_exc(file=sys.stdout)
+        flash("An error occurred removing the item from the backlog.")
+    return redirect(url_for('main.backlog'))
+
+@main.route('/backlog/track/<int:item_id>', methods=['POST'])
+@login_required
+def track_backlog_item(item_id):
+    user_id = current_user.id
+    item = BacklogItem.query.get_or_404(item_id)
+    category = item.category
+    external_id = item.external_id
+    title = item.title
+    
+    print(f"INFO: [backlog] User {user_id} converting backlog item {item_id} ('{title}', '{category}') to tracked", file=sys.stdout)
+    now_date = datetime.now().date()
+
+    try:
+        if category == 'movie':
+            details = TMDBService.get_movie_details(int(external_id))
+            if not details:
+                print(f"WARNING: [backlog] TMDB details not found during track for movie ID '{external_id}'", file=sys.stdout)
+                flash("Error fetching movie details from TMDB.")
+                return redirect(url_for('main.backlog'))
+                
+            release_year = int(details.get('release_date', '0')[:4]) if details.get('release_date') else None
+            credits = details.get('credits', {})
+            crew = credits.get('crew', [])
+            cast = credits.get('cast', [])
+            
+            director = ", ".join([c['name'] for c in crew if c['job'] == 'Director'])
+            writer = ", ".join([c['name'] for c in crew if c['job'] in ['Screenplay', 'Writer']])
+            leading_actors = ", ".join([c['name'] for c in cast[:5]])
+
+            poster_filename = item.poster_path
+            if not poster_filename and details.get('poster_path'):
+                poster_filename = TMDBService.download_poster(details['poster_path'])
+
+            # Certification
+            release_results = details.get('release_dates', {}).get('results', [])
+            us_release = next((r for r in release_results if r['iso_3166_1'] == 'US'), {})
+            certification = next((rd.get('certification') for rd in us_release.get('release_dates', []) if rd.get('certification')), None)
+
+            # Trailer
+            videos = details.get('videos', {}).get('results', [])
+            trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
+            trailer_url = f"https://www.youtube.com/embed/{trailer}" if trailer else None
+
+            # Wikipedia/Wikidata
+            wikidata_id = details.get('external_ids', {}).get('wikidata_id')
+            wikipedia_url = f"https://www.wikidata.org/wiki/{wikidata_id}" if wikidata_id else None
+
+            new_movie = Movie(
+                title=details.get('title'),
+                release_year=release_year,
+                external_id=str(external_id),
+                director=director,
+                writer=writer,
+                leading_actors=leading_actors,
+                plot=details.get('overview'),
+                poster_path=poster_filename,
+                imdb_id=details.get('imdb_id'),
+                user_score=details.get('vote_average'),
+                runtime=details.get('runtime'),
+                certification=certification,
+                budget=details.get('budget'),
+                revenue=details.get('revenue'),
+                trailer_url=trailer_url,
+                wikipedia_url=wikipedia_url,
+                date_watched=now_date,
+                is_revisit=False,
+                is_private=False
+            )
+            db.session.add(new_movie)
+
+            # Check for future goal completion
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='movie', is_completed=False).filter(FutureMediaGoal.title.ilike(new_movie.title)).first()
+            if future:
+                future.is_completed = True
+                flash(f"⭐ Goal Title Completed: {new_movie.title}!")
+
+            flash(f"Tracked Movie: {new_movie.title}!")
+
+        elif category == 'tv':
+            season_number = item.season_number or 1
+            details = TMDBService.get_tv_details(int(external_id), season_number)
+            if not details:
+                print(f"WARNING: [backlog] TMDB details not found during track for TV ID '{external_id}', season '{season_number}'", file=sys.stdout)
+                flash("Error fetching TV details from TMDB.")
+                return redirect(url_for('main.backlog'))
+
+            poster_filename = item.poster_path
+            if not poster_filename and details.get('poster_path'):
+                poster_filename = TMDBService.download_poster(details['poster_path'])
+
+            videos = details.get('videos', {}).get('results', [])
+            trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
+            trailer_url = f"https://www.youtube.com/embed/{trailer}" if trailer else None
+
+            new_season = TVSeason(
+                series_title=details.get('series_name'),
+                season_number=season_number,
+                date_watched=now_date,
+                external_id=str(external_id),
+                network=details.get('network'),
+                episode_count=details.get('episode_count'),
+                poster_path=poster_filename,
+                user_score=details.get('vote_average'),
+                plot=details.get('overview'),
+                trailer_url=trailer_url,
+                is_revisit=False,
+                is_private=False
+            )
+            db.session.add(new_season)
+
+            # Check for future goal completion
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='tv', is_completed=False).filter(FutureMediaGoal.title.ilike(new_season.series_title)).first()
+            if future:
+                future.is_completed = True
+                flash(f"⭐ Goal Title Completed: {new_season.series_title}!")
+
+            flash(f"Tracked TV Season: {new_season.series_title} Season {new_season.season_number}!")
+
+        elif category == 'game':
+            details = IGDBService.get_game_details(int(external_id))
+            if not details:
+                print(f"WARNING: [backlog] IGDB details not found during track for game ID '{external_id}'", file=sys.stdout)
+                flash("Error fetching game details from IGDB.")
+                return redirect(url_for('main.backlog'))
+
+            release_date_ts = details.get('first_release_date')
+            release_year = safe_from_timestamp(release_date_ts).year if release_date_ts else None
+            
+            involved = details.get('involved_companies', [])
+            developers = ", ".join([ic['company']['name'] for ic in involved if ic.get('developer')])
+            publishers = ", ".join([ic['company']['name'] for ic in involved if ic.get('publisher')])
+            
+            poster_filename = item.poster_path
+            if not poster_filename and details.get('cover'):
+                poster_filename = IGDBService.download_cover(details['cover']['url'])
+
+            orig_platforms = [p['name'] for p in details.get('platforms', [])[:3]]
+            default_platform = orig_platforms[0] if orig_platforms else 'PC / Steam Deck'
+            platform_played = item.game_platform or default_platform
+
+            new_game = Game(
+                title=details.get('name'),
+                release_year=release_year,
+                external_id=str(external_id),
+                developer=developers,
+                publisher=publishers,
+                franchise=", ".join([f['name'] for f in details.get('franchises', [])]),
+                summary=details.get('summary'),
+                genres=", ".join([g['name'] for g in details.get('genres', [])]),
+                user_score=details.get('rating'),
+                critic_score=details.get('aggregated_rating'),
+                poster_path=poster_filename,
+                platform_played=platform_played,
+                original_platform=", ".join(orig_platforms),
+                is_revisit=False,
+                date_finished=now_date,
+                status='Finished',
+                is_private=False
+            )
+            db.session.add(new_game)
+
+            # Check for future goal completion
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='game', is_completed=False).filter(FutureMediaGoal.title.ilike(new_game.title)).first()
+            if future:
+                future.is_completed = True
+                flash(f"⭐ Goal Title Completed: {new_game.title}!")
+
+            flash(f"Tracked Game: {new_game.title}!")
+
+        elif category == 'book':
+            source = item.book_source or 'google'
+            title_b, author_b, summary_b, page_count_b, genres_b, release_year_b, poster_filename = None, None, None, None, None, None, None
+
+            if source == 'google':
+                details = GoogleBooksService.get_book_details(external_id)
+                if details:
+                    volume_info = details.get('volumeInfo', {})
+                    title_b = volume_info.get('title')
+                    author_b = ", ".join(volume_info.get('authors', [])) if volume_info.get('authors') else 'Unknown'
+                    summary_b = volume_info.get('description', '')
+                    page_count_b = volume_info.get('pageCount')
+                    genres_b = ", ".join(volume_info.get('categories', [])) if volume_info.get('categories') else ''
+                    release_year_b = int(volume_info.get('publishedDate', '0')[:4]) if volume_info.get('publishedDate') else None
+                    
+                    poster_filename = item.poster_path
+                    if not poster_filename:
+                        image_links = volume_info.get('imageLinks', {})
+                        image_url = image_links.get('extraLarge') or image_links.get('large') or image_links.get('medium') or image_links.get('thumbnail')
+                        if image_url:
+                            poster_filename = GoogleBooksService.download_cover(image_url, external_id)
+            else: # openlibrary
+                details = OpenLibraryService.get_book_details(external_id)
+                if details:
+                    title_b = details.get('title')
+                    author_b = 'Unknown' 
+                    desc = details.get('description', '')
+                    summary_b = desc.get('value', '') if isinstance(desc, dict) else desc
+                    genres_b = ", ".join(details.get('subjects', [])[:5]) if details.get('subjects') else ''
+                    
+                    poster_filename = item.poster_path
+                    if not poster_filename:
+                        covers = details.get('covers', [])
+                        if covers:
+                            poster_filename = OpenLibraryService.download_book_cover(cover_id=covers[0])
+                        else:
+                            poster_filename = OpenLibraryService.download_book_cover(ol_id=external_id)
+
+            if not title_b:
+                print(f"WARNING: [backlog] Book details not found during track for book ID '{external_id}' using source '{source}'", file=sys.stdout)
+                flash(f"Error fetching book details from {source.capitalize()}.")
+                return redirect(url_for('main.backlog'))
+
+            new_book = Book(
+                title=title_b,
+                author=author_b,
+                external_id=str(external_id),
+                summary=summary_b,
+                poster_path=poster_filename,
+                page_count=page_count_b,
+                genres=genres_b,
+                date_finished=now_date,
+                format=item.book_format or 'Paperback',
+                is_revisit=False,
+                is_private=False
+            )
+            db.session.add(new_book)
+
+            # Check for future goal completion
+            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='book', is_completed=False).filter(FutureMediaGoal.title.ilike(new_book.title)).first()
+            if future:
+                future.is_completed = True
+                flash(f"⭐ Goal Title Completed: {new_book.title}!")
+
+            flash(f"Tracked Book: {new_book.title}!")
+
+        db.session.delete(item)
+        db.session.commit()
+        print(f"INFO: [backlog] Successfully tracked backlog item {item_id} and removed from backlog", file=sys.stdout)
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR: [backlog] Exception while tracking backlog item {item_id}: {str(e)}", file=sys.stdout)
+        traceback.print_exc(file=sys.stdout)
+        flash("An error occurred moving the item from your backlog to tracked.")
+        
+    return redirect(url_for('main.backlog'))
 
 

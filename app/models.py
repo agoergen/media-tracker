@@ -121,3 +121,17 @@ class TVSeason(db.Model):
     trailer_url = db.Column(db.String(255))
     imdb_id = db.Column(db.String(20))
     is_private = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
+
+class BacklogItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(50), nullable=False) # 'movie', 'tv', 'game', 'book'
+    title = db.Column(db.String(255), nullable=False)
+    external_id = db.Column(db.String(100), nullable=False)
+    poster_path = db.Column(db.String(255))
+    release_year = db.Column(db.Integer)
+    
+    # Category-specific fields
+    season_number = db.Column(db.Integer) # for TV
+    game_platform = db.Column(db.String(100)) # for Games
+    book_format = db.Column(db.String(100)) # for Books
+    book_source = db.Column(db.String(50)) # for Books ('google' or 'openlibrary')

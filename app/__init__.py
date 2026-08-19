@@ -38,7 +38,7 @@ def create_app(config_class=Config):
     @app.context_processor
     def inject_globals():
         from datetime import datetime
-        from app.models import Movie, TVSeason, Game, Book, Theater, Goal, FutureMediaGoal
+        from app.models import Movie, TVSeason, Game, Book, Theater, Goal, FutureMediaGoal, BacklogItem
         from app.services import safe_from_timestamp
         
         # Build a map of target titles for efficient lookup in templates
@@ -60,6 +60,7 @@ def create_app(config_class=Config):
             'Theater': Theater,
             'Goal': Goal,
             'FutureMediaGoal': FutureMediaGoal,
+            'BacklogItem': BacklogItem,
             'target_map': target_map
         }
 
