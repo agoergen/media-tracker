@@ -117,12 +117,45 @@
 </style>
 
 <div class="backlog-container">
-    <div class="backlog-header">
-        <h1>Up Next</h1>
-        <p style="color: var(--text-muted); margin-top: 8px;">
+    <div class="backlog-header" style="flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem;">
+        <h1 style="margin: 0;">Up Next</h1>
+        <p style="color: var(--text-muted); margin: 0;">
             These are the items planned to read, play, or watch in the short term.
         </p>
     </div>
+
+    <!-- Universal search form on Up Next page -->
+    {% if current_user.is_authenticated %}
+    <form id="upNextSearchForm" method="GET" style="margin-bottom: 2rem; display: flex; gap: 8px; max-width: 800px; width: 100%;">
+        <select id="searchCategory" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: var(--white); color: var(--text-color); cursor: pointer;">
+            <option value="movie">Movies</option>
+            <option value="tv">Television</option>
+            <option value="game">Games</option>
+            <option value="book">Books</option>
+        </select>
+        <input type="text" name="q" placeholder="Search external database to queue..." required
+               style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem; background-color: var(--white); color: var(--text-color);">
+        <button type="submit" class="btn">Search</button>
+    </form>
+    <script>
+        document.getElementById('upNextSearchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const cat = document.getElementById('searchCategory').value;
+            const query = this.querySelector('input[name="q"]').value;
+            let targetUrl = '';
+            if (cat === 'movie') {
+                targetUrl = "{{ url_for('main.search_movie') }}";
+            } else if (cat === 'tv') {
+                targetUrl = "{{ url_for('main.search_tv') }}";
+            } else if (cat === 'game') {
+                targetUrl = "{{ url_for('main.search_game') }}";
+            } else if (cat === 'book') {
+                targetUrl = "{{ url_for('main.search_book') }}";
+            }
+            window.location.href = `${targetUrl}?q=${encodeURIComponent(query)}&up_next=1`;
+        });
+    </script>
+    {% endif %}
 
     <div class="backlog-grid">
         {% for cat in ['movie', 'tv', 'game', 'book'] %}

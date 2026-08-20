@@ -56,3 +56,9 @@
 - Redesigned search templates confirmation panels: replaced the clumsy tabbed interface with a responsive 3-column side-by-side action card grid.
 - Implemented auto-highlighting border and "Recommended" badge on active action card based on search page navigation parameters.
 - Updated `walkthrough.md` with new layout specifications and verified operations.
+
+## 2026-08-20 07:06:00
+- Fixed DOM nesting bug in `book_search.html` (removed duplicate opening div) that caused the confirmation card container to become hidden on selection.
+- Hardened `movie_search.html`, `tv_search.html`, `game_search.html`, and `book_search.html` to pass selection details via `data-*` attributes for safe parsing of titles with quotes and special characters.
+- Added top-level universal category search forms to `backlog.html` (Up Next) and `goals.html` for authenticated users.
+

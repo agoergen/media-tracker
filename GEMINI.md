@@ -6,6 +6,7 @@
   * Before executing modifications, database migrations, package installations, or script runs, you must provide a clear summary of your intended changes and explicitly ask:
     > *"Here's what I'm going to do: [Summary of steps/changes]. Shall I proceed?"*
   * Wait for affirmative user confirmation before modifying files or issuing terminal commands.
+  * Pushes to Github don't require additional confirmation - once the changes are implemented, push to github and state that you've done so.
 * **Separation of Planning vs. Execution:**
   * If a prompt is conceptual, exploratory, or asks "how to approach" a problem, provide design options, trade-offs, and modular steps ONLY. Do not execute commands or edit code.
 * **Modular Execution & Checkpoints:**

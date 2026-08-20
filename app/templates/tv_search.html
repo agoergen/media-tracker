@@ -76,7 +76,10 @@
                 </div>
                 <div style="margin-left: auto;">
                     {% if current_user.is_authenticated %}
-                        <button class="btn btn-secondary" onclick="selectShow('{{ show.id }}', '{{ show.name | replace("'", "\\'") }}')">
+                        <button class="btn btn-secondary" 
+                                data-id="{{ show.id }}" 
+                                data-title="{{ show.name }}" 
+                                onclick="selectShow(this.dataset.id, this.dataset.title)">
                             Select
                         </button>
                     {% endif %}
