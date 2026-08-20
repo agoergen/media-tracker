@@ -211,9 +211,8 @@
                             <label for="up_next_format" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Format:</label>
                             <select id="up_next_format" name="book_format" required 
                                     style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background-color: var(--white); color: var(--text-color);">
-                                <option value="">Select Format...</option>
                                 {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
-                                    <option value="{{ f }}">{{ f }}</option>
+                                    <option value="{{ f }}" {% if f == 'Audiobook' %}selected{% endif %}>{{ f }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -301,6 +300,9 @@
             dateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
             // Sync formats
+            if (formatSelect) formatSelect.value = 'Audiobook';
+            if (upNextFormatSelect) upNextFormatSelect.value = 'Audiobook';
+
             if (formatSelect && upNextFormatSelect) {
                 formatSelect.addEventListener('change', function() {
                     upNextFormatSelect.value = formatSelect.value;

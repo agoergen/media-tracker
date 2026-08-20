@@ -62,3 +62,7 @@
 - Hardened `movie_search.html`, `tv_search.html`, `game_search.html`, and `book_search.html` to pass selection details via `data-*` attributes for safe parsing of titles with quotes and special characters.
 - Added top-level universal category search forms to `backlog.html` (Up Next) and `goals.html` for authenticated users.
 
+## 2026-08-20 07:09:00
+- Set default format to "Audiobook" in both the Track Completed and Queue Up Next action cards on `book_search.html`.
+
+
