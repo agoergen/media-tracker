@@ -40,12 +40,9 @@ coverage.xml
 app.db
 *.db
 
-# Database backup utility and dumps
-backup_db.py
-backup.bat
-manage_volume.py
-volume.bat
+# Backup and volume archive dumps
 backups/
 leisureledger_backup_*.json
 posters_backup_*.zip
+*.dump
 
