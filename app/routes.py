@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, current_app, abort, jsonify
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 import os
@@ -72,6 +72,15 @@ def account():
             return redirect(url_for('main.account'))
 
     return render_template('account.html')
+
+@main.route('/account/toggle-public', methods=['POST'])
+@login_required
+def update_public_status():
+    current_user.is_public = bool(request.form.get('is_public'))
+    db.session.commit()
+    status = "public" if current_user.is_public else "private"
+    flash(f"Your ledger profile is now {status}.")
+    return redirect(url_for('main.account'))
 
 @main.route('/admin/users')
 @login_required
@@ -349,30 +358,21 @@ def goals(view_year=None):
 
 @main.route('/')
 def index():
-    uid = get_active_user_id()
+    if not current_user.is_authenticated:
+        return redirect(url_for('main.login'))
+    uid = current_user.id
 
     # Latest 5 of each category
-    recent_movies_q = Movie.query.filter_by(user_id=uid)
-    recent_games_q = Game.query.filter_by(user_id=uid)
-    recent_tv_q = TVSeason.query.filter_by(user_id=uid)
-    recent_books_q = Book.query.filter_by(user_id=uid)
-    
-    if not current_user.is_authenticated:
-        recent_movies_q = recent_movies_q.filter_by(is_private=False)
-        recent_games_q = recent_games_q.filter_by(is_private=False)
-        recent_tv_q = recent_tv_q.filter_by(is_private=False)
-        recent_books_q = recent_books_q.filter_by(is_private=False)
-
-    recent_movies = recent_movies_q.order_by(Movie.date_watched.desc()).limit(5).all()
+    recent_movies = Movie.query.filter_by(user_id=uid).order_by(Movie.date_watched.desc()).limit(5).all()
     movie_count = Movie.query.filter_by(user_id=uid).count()
     
-    recent_games = recent_games_q.order_by(Game.date_finished.desc()).limit(5).all()
+    recent_games = Game.query.filter_by(user_id=uid).order_by(Game.date_finished.desc()).limit(5).all()
     game_count = Game.query.filter_by(user_id=uid).count()
 
-    recent_tv = recent_tv_q.order_by(TVSeason.date_watched.desc()).limit(5).all()
+    recent_tv = TVSeason.query.filter_by(user_id=uid).order_by(TVSeason.date_watched.desc()).limit(5).all()
     tv_count = TVSeason.query.filter_by(user_id=uid).count()
 
-    recent_books = recent_books_q.order_by(Book.date_finished.desc()).limit(5).all()
+    recent_books = Book.query.filter_by(user_id=uid).order_by(Book.date_finished.desc()).limit(5).all()
     book_count = Book.query.filter_by(user_id=uid).count()
 
     current_year = datetime.now().year
@@ -394,11 +394,7 @@ def index():
     books_new_this_year = Book.query.filter(Book.user_id == uid, db.extract('year', Book.date_finished) == current_year, Book.is_revisit == False).count()
 
     theater_this_year = Theater.query.filter(Theater.user_id == uid, db.extract('year', Theater.date_watched) == current_year).count()
-    
-    recent_theater_q = Theater.query.filter_by(user_id=uid)
-    if not current_user.is_authenticated:
-        recent_theater_q = recent_theater_q.filter_by(is_private=False)
-    recent_theater = recent_theater_q.order_by(Theater.date_watched.desc()).limit(5).all()
+    recent_theater = Theater.query.filter_by(user_id=uid).order_by(Theater.date_watched.desc()).limit(5).all()
     theater_count = Theater.query.filter_by(user_id=uid).count()
     
     current_goal = Goal.query.filter_by(user_id=uid, year=current_year).first()
@@ -436,12 +432,9 @@ def index():
 
 # MOVIE ROUTES
 @main.route('/movies')
+@login_required
 def movies_list():
-    uid = get_active_user_id()
-    query = Movie.query.filter_by(user_id=uid)
-    if not current_user.is_authenticated:
-        query = query.filter_by(is_private=False)
-    all_movies = query.order_by(Movie.date_watched.asc()).all()
+    all_movies = Movie.query.filter_by(user_id=current_user.id).order_by(Movie.date_watched.asc()).all()
     
     # Group by year
     grouped = OrderedDict()
@@ -659,12 +652,9 @@ def delete_movie(movie_id):
     return redirect(url_for('main.movies_list'))
 # TV ROUTES
 @main.route('/tv')
+@login_required
 def tv_list():
-    uid = get_active_user_id()
-    query = TVSeason.query.filter_by(user_id=uid)
-    if not current_user.is_authenticated:
-        query = query.filter_by(is_private=False)
-    all_seasons = query.order_by(TVSeason.date_watched.asc()).all()
+    all_seasons = TVSeason.query.filter_by(user_id=current_user.id).order_by(TVSeason.date_watched.asc()).all()
     
     grouped = OrderedDict()
     for season in all_seasons:
@@ -845,14 +835,11 @@ def delete_tv_season(season_id):
 
 # GAME ROUTES
 @main.route('/games')
+@login_required
 def games_list():
-    uid = get_active_user_id()
-    query = Game.query.filter_by(user_id=uid)
-    if not current_user.is_authenticated:
-        query = query.filter_by(is_private=False)
-    all_games = query.order_by(Game.date_finished.asc()).all()
+    all_games = Game.query.filter_by(user_id=current_user.id).order_by(Game.date_finished.asc()).all()
     
-    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.user_id == uid, Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
+    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.user_id == current_user.id, Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
     franchise_list = [f[0] for f in distinct_franchises]
     
     grouped = OrderedDict()
@@ -1066,12 +1053,9 @@ def delete_game(game_id):
 
 # BOOK ROUTES
 @main.route('/books')
+@login_required
 def books_list():
-    uid = get_active_user_id()
-    query = Book.query.filter_by(user_id=uid)
-    if not current_user.is_authenticated:
-        query = query.filter_by(is_private=False)
-    all_books = query.order_by(Book.date_finished.asc()).all()
+    all_books = Book.query.filter_by(user_id=current_user.id).order_by(Book.date_finished.asc()).all()
     
     grouped = OrderedDict()
     for book in all_books:
@@ -1298,12 +1282,9 @@ def delete_book(book_id):
 
 # THEATER ROUTES
 @main.route('/theater')
+@login_required
 def theater_list():
-    uid = get_active_user_id()
-    query = Theater.query.filter_by(user_id=uid)
-    if not current_user.is_authenticated:
-        query = query.filter_by(is_private=False)
-    all_shows = query.order_by(Theater.date_watched.asc()).all()
+    all_shows = Theater.query.filter_by(user_id=current_user.id).order_by(Theater.date_watched.asc()).all()
     grouped = OrderedDict()
     for show in all_shows:
         year = show.date_watched.year if show.date_watched else "Unknown"
@@ -1699,9 +1680,10 @@ def igdb_test():
     return jsonify(results)
 
 @main.route('/up-next')
+@login_required
 def up_next():
-    uid = get_active_user_id()
-    user_id = current_user.id if current_user.is_authenticated else "anonymous"
+    uid = current_user.id
+    user_id = current_user.id
     print(f"INFO: [up_next] User {user_id} accessed Up Next page", file=sys.stdout)
     try:
         backlog_items = BacklogItem.query.filter_by(user_id=uid).all()
@@ -2299,5 +2281,197 @@ def queue_goal(goal_id):
     
     flash(f"Queued '{target.title}' to your Up Next list!")
     return redirect(url_for('main.goals', view_year=target.year))
+
+
+# PUBLIC PROFILE VANITY ROUTES
+RESERVED_USERNAMES = {
+    'movies', 'tv', 'games', 'books', 'theater', 'up-next', 'metrics', 'goals',
+    'admin', 'login', 'logout', 'account', 'posters', 'static', 'api', 'register'
+}
+
+def get_public_user_or_404(username):
+    if username.lower() in RESERVED_USERNAMES:
+        abort(404)
+    target_user = User.query.filter(User.username.ilike(username)).first_or_404()
+    if not target_user.is_public and (not current_user.is_authenticated or current_user.id != target_user.id):
+        abort(404)
+    return target_user
+
+@main.route('/<string:username>')
+def public_user_dashboard(username):
+    target_user = get_public_user_or_404(username)
+    uid = target_user.id
+    current_year = datetime.now().year
+    is_owner = current_user.is_authenticated and current_user.id == target_user.id
+
+    # Recent items
+    recent_movies_q = Movie.query.filter_by(user_id=uid)
+    recent_games_q = Game.query.filter_by(user_id=uid)
+    recent_tv_q = TVSeason.query.filter_by(user_id=uid)
+    recent_books_q = Book.query.filter_by(user_id=uid)
+    recent_theater_q = Theater.query.filter_by(user_id=uid)
+
+    if not is_owner:
+        recent_movies_q = recent_movies_q.filter_by(is_private=False)
+        recent_games_q = recent_games_q.filter_by(is_private=False)
+        recent_tv_q = recent_tv_q.filter_by(is_private=False)
+        recent_books_q = recent_books_q.filter_by(is_private=False)
+        recent_theater_q = recent_theater_q.filter_by(is_private=False)
+
+    recent_movies = recent_movies_q.order_by(Movie.date_watched.desc()).limit(5).all()
+    movie_count = Movie.query.filter_by(user_id=uid).count()
+    
+    recent_games = recent_games_q.order_by(Game.date_finished.desc()).limit(5).all()
+    game_count = Game.query.filter_by(user_id=uid).count()
+
+    recent_tv = recent_tv_q.order_by(TVSeason.date_watched.desc()).limit(5).all()
+    tv_count = TVSeason.query.filter_by(user_id=uid).count()
+
+    recent_books = recent_books_q.order_by(Book.date_finished.desc()).limit(5).all()
+    book_count = Book.query.filter_by(user_id=uid).count()
+
+    recent_theater = recent_theater_q.order_by(Theater.date_watched.desc()).limit(5).all()
+    theater_count = Theater.query.filter_by(user_id=uid).count()
+
+    # Annual stats
+    movies_this_year = Movie.query.filter(Movie.user_id == uid, db.extract('year', Movie.date_watched) == current_year).count()
+    movies_new_this_year = Movie.query.filter(Movie.user_id == uid, db.extract('year', Movie.date_watched) == current_year, Movie.is_revisit == False).count()
+
+    tv_this_year = TVSeason.query.filter(TVSeason.user_id == uid, db.extract('year', TVSeason.date_watched) == current_year).count()
+    tv_new_this_year = TVSeason.query.filter(TVSeason.user_id == uid, db.extract('year', TVSeason.date_watched) == current_year, TVSeason.is_revisit == False).count()
+
+    games_this_year = Game.query.filter(Game.user_id == uid, db.extract('year', Game.date_finished) == current_year).count()
+    games_new_this_year = Game.query.filter(Game.user_id == uid, db.extract('year', Game.date_finished) == current_year, Game.is_revisit == False).count()
+
+    books_this_year = Book.query.filter(Book.user_id == uid, db.extract('year', Book.date_finished) == current_year).count()
+    books_new_this_year = Book.query.filter(Book.user_id == uid, db.extract('year', Book.date_finished) == current_year, Book.is_revisit == False).count()
+
+    theater_this_year = Theater.query.filter(Theater.user_id == uid, db.extract('year', Theater.date_watched) == current_year).count()
+
+    current_goal = Goal.query.filter_by(user_id=uid, year=current_year).first()
+
+    stars = {
+        "movie": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='movie', is_completed=True).count(),
+        "tv": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='tv', is_completed=True).count(),
+        "game": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='game', is_completed=True).count(),
+        "book": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='book', is_completed=True).count(),
+    }
+
+    return render_template('public_user_index.html',
+                           profile_user=target_user,
+                           recent_movies=recent_movies,
+                           movie_count=movie_count,
+                           movies_this_year=movies_this_year,
+                           movies_new_this_year=movies_new_this_year,
+                           recent_games=recent_games,
+                           game_count=game_count,
+                           games_this_year=games_this_year,
+                           games_new_this_year=games_new_this_year,
+                           recent_tv=recent_tv,
+                           tv_count=tv_count,
+                           tv_this_year=tv_this_year,
+                           tv_new_this_year=tv_new_this_year,
+                           recent_books=recent_books,
+                           book_count=book_count,
+                           books_this_year=books_this_year,
+                           books_new_this_year=books_new_this_year,
+                           recent_theater=recent_theater,
+                           theater_count=theater_count,
+                           theater_this_year=theater_this_year,
+                           current_goal=current_goal,
+                           stars=stars)
+
+@main.route('/<string:username>/movies')
+def public_user_movies(username):
+    target_user = get_public_user_or_404(username)
+    is_owner = current_user.is_authenticated and current_user.id == target_user.id
+    query = Movie.query.filter_by(user_id=target_user.id)
+    if not is_owner:
+        query = query.filter_by(is_private=False)
+    all_movies = query.order_by(Movie.date_watched.asc()).all()
+
+    grouped = OrderedDict()
+    for movie in all_movies:
+        year = movie.date_watched.year if movie.date_watched else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(movie)
+
+    return render_template('movies.html', profile_user=target_user, grouped_movies=grouped, total_count=len(all_movies), now=datetime.now())
+
+@main.route('/<string:username>/tv')
+def public_user_tv(username):
+    target_user = get_public_user_or_404(username)
+    is_owner = current_user.is_authenticated and current_user.id == target_user.id
+    query = TVSeason.query.filter_by(user_id=target_user.id)
+    if not is_owner:
+        query = query.filter_by(is_private=False)
+    all_seasons = query.order_by(TVSeason.date_watched.asc()).all()
+
+    grouped = OrderedDict()
+    for season in all_seasons:
+        year = season.date_watched.year if season.date_watched else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(season)
+
+    return render_template('tv.html', profile_user=target_user, grouped_seasons=grouped, total_count=len(all_seasons), now=datetime.now())
+
+@main.route('/<string:username>/games')
+def public_user_games(username):
+    target_user = get_public_user_or_404(username)
+    is_owner = current_user.is_authenticated and current_user.id == target_user.id
+    query = Game.query.filter_by(user_id=target_user.id)
+    if not is_owner:
+        query = query.filter_by(is_private=False)
+    all_games = query.order_by(Game.date_finished.asc()).all()
+
+    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.user_id == target_user.id, Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
+    franchise_list = [f[0] for f in distinct_franchises]
+
+    grouped = OrderedDict()
+    for game in all_games:
+        year = game.date_finished.year if game.date_finished else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(game)
+
+    return render_template('games.html', profile_user=target_user, grouped_games=grouped, total_count=len(all_games), now=datetime.now(), distinct_franchises=franchise_list)
+
+@main.route('/<string:username>/books')
+def public_user_books(username):
+    target_user = get_public_user_or_404(username)
+    is_owner = current_user.is_authenticated and current_user.id == target_user.id
+    query = Book.query.filter_by(user_id=target_user.id)
+    if not is_owner:
+        query = query.filter_by(is_private=False)
+    all_books = query.order_by(Book.date_finished.asc()).all()
+
+    grouped = OrderedDict()
+    for book in all_books:
+        year = book.date_finished.year if book.date_finished else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(book)
+
+    return render_template('books.html', profile_user=target_user, grouped_books=grouped, total_count=len(all_books), now=datetime.now())
+
+@main.route('/<string:username>/theater')
+def public_user_theater(username):
+    target_user = get_public_user_or_404(username)
+    is_owner = current_user.is_authenticated and current_user.id == target_user.id
+    query = Theater.query.filter_by(user_id=target_user.id)
+    if not is_owner:
+        query = query.filter_by(is_private=False)
+    all_shows = query.order_by(Theater.date_watched.asc()).all()
+
+    grouped = OrderedDict()
+    for show in all_shows:
+        year = show.date_watched.year if show.date_watched else "Unknown"
+        if year not in grouped:
+            grouped[year] = []
+        grouped[year].append(show)
+
+    return render_template('theater.html', profile_user=target_user, grouped_shows=grouped, total_count=len(all_shows), now=datetime.now())
 
 

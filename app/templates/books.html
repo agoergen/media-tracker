@@ -3,13 +3,14 @@
 {% block title %}LeisureLedger: Books{% endblock %}
 
 {% block content %}
+    {% set is_owner = current_user.is_authenticated and (not profile_user or current_user.id == profile_user.id) %}
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
-        <h1>My Books ({{ total_count }})</h1>
+        <h1>{% if profile_user and (not current_user.is_authenticated or current_user.id != profile_user.id) %}{{ profile_user.username }}'s Books{% else %}My Books{% endif %} ({{ total_count }})</h1>
         <button id="filterToggleBtn" class="btn btn-secondary">Filter List</button>
     </div>
 
     <!-- Universal API Search Form -->
-    {% if current_user.is_authenticated %}
+    {% if current_user.is_authenticated and (not profile_user or current_user.id == profile_user.id) %}
     <form action="{{ url_for('main.search_book') }}" method="GET" style="margin-top: 1rem; margin-bottom: 1rem; display: flex; gap: 8px; width: 100%;">
         <input type="text" name="q" placeholder="Search Google Books/Open Library for books to track, queue, or set as goal..." 
                style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 1rem;">
@@ -41,7 +42,7 @@
                             <th>Title</th>
                             <th class="hide-mobile">Rating</th>
                             <th>Finished</th>
-                            {% if current_user.is_authenticated %}
+                            {% if is_owner %}
                                 <th>Actions</th>
                             {% endif %}
                         </tr>
@@ -81,7 +82,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if current_user.is_authenticated %}
+                                {% if is_owner %}
                                     <form action="{{ url_for('main.edit_book', book_id=book.id) }}" method="POST" class="date-form" style="display: flex; flex-direction: column; gap: 5px;">
                                         <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
                                             <input type="date" name="date_finished" value="{{ book.date_finished.strftime('%Y-%m-%d') if book.date_finished else '' }}" style="padding: 2px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 3px; width: 110px;">
@@ -111,7 +112,7 @@
                                     </div>
                                 {% endif %}
                             </td>
-                            {% if current_user.is_authenticated %}
+                            {% if is_owner %}
                                 <td>
                                     <form action="{{ url_for('main.delete_book', book_id=book.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this book?');">
                                         <button type="submit" class="btn btn-delete">Del</button>
@@ -120,7 +121,7 @@
                             {% endif %}
                         </tr>
                         <tr class="movie-details" id="details-{{ book.id }}">
-                            <td colspan="{% if current_user.is_authenticated %}6{% else %}5{% endif %}">
+                            <td colspan="{% if is_owner %}6{% else %}5{% endif %}">
                                 <div class="details-content" style="display: flex; gap: 20px; flex-wrap: wrap;">
                                     <div style="flex: 0 0 185px; margin: 0 auto;">
                                         {% if book.poster_path %}

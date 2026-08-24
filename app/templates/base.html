@@ -23,13 +23,13 @@
                 {% endif %}
             </a>
             <ul class="nav-links">
-                <li><a href="{{ url_for('main.movies_list') }}">Movies</a></li>
-                <li><a href="{{ url_for('main.tv_list') }}">TV</a></li>
-                <li><a href="{{ url_for('main.games_list') }}">Games</a></li>
-                <li><a href="{{ url_for('main.books_list') }}">Books</a></li>
-                <li><a href="{{ url_for('main.theater_list') }}">Theater</a></li>
-                <li><a href="{{ url_for('main.up_next') }}">Up Next</a></li>
                 {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('main.movies_list') }}">Movies</a></li>
+                    <li><a href="{{ url_for('main.tv_list') }}">TV</a></li>
+                    <li><a href="{{ url_for('main.games_list') }}">Games</a></li>
+                    <li><a href="{{ url_for('main.books_list') }}">Books</a></li>
+                    <li><a href="{{ url_for('main.theater_list') }}">Theater</a></li>
+                    <li><a href="{{ url_for('main.up_next') }}">Up Next</a></li>
                     <li><a href="{{ url_for('main.metrics') }}">Metrics</a></li>
                     <li><a href="{{ url_for('main.goals') }}">Goals</a></li>
                     {% if current_user.is_admin %}
@@ -37,6 +37,14 @@
                     {% endif %}
                     <li><a href="{{ url_for('main.account') }}">Account</a></li>
                     <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
+                {% elif profile_user %}
+                    <li><a href="{{ url_for('main.public_user_dashboard', username=profile_user.username) }}">{{ profile_user.username }}'s Ledger</a></li>
+                    <li><a href="{{ url_for('main.public_user_movies', username=profile_user.username) }}">Movies</a></li>
+                    <li><a href="{{ url_for('main.public_user_tv', username=profile_user.username) }}">TV</a></li>
+                    <li><a href="{{ url_for('main.public_user_games', username=profile_user.username) }}">Games</a></li>
+                    <li><a href="{{ url_for('main.public_user_books', username=profile_user.username) }}">Books</a></li>
+                    <li><a href="{{ url_for('main.public_user_theater', username=profile_user.username) }}">Theater</a></li>
+                    <li><a href="{{ url_for('main.login') }}">Login</a></li>
                 {% else %}
                     <li><a href="{{ url_for('main.login') }}">Login</a></li>
                 {% endif %}

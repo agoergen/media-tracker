@@ -39,6 +39,29 @@
             </div>
             <button type="submit" class="btn" style="width: 100%; background: var(--accent); color: #fff; padding: 10px; border-radius: 4px; border: none; font-weight: 600; cursor: pointer;">Update Password</button>
         </form>
+
+        <hr style="margin: 2rem 0; border: 0; border-top: 1px solid var(--border-color);">
+
+        <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">Public Ledger Profile</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">Allow anyone to view your media ledger and statistics via your personal public URL without logging in.</p>
+        
+        <form method="POST" action="{{ url_for('main.update_public_status') }}" style="margin-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+                <input type="checkbox" id="is_public" name="is_public" value="1" {% if current_user.is_public %}checked{% endif %} onchange="this.form.submit()" style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="is_public" style="font-size: 0.95rem; font-weight: 500; cursor: pointer;">Share my media ledger publicly</label>
+            </div>
+        </form>
+
+        {% if current_user.is_public %}
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 1rem; border-radius: 6px;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: #166534; text-transform: uppercase; margin-bottom: 0.4rem;">Your Public Ledger URL</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <input type="text" readonly value="{{ request.host_url.rstrip('/') }}/{{ current_user.username }}" id="publicUrlInput" style="flex: 1; padding: 8px 10px; font-size: 0.85rem; border: 1px solid #86efac; border-radius: 4px; background: #fff; color: #15803d; font-family: monospace;">
+                <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('publicUrlInput').value); alert('Public link copied to clipboard!');" class="btn btn-secondary" style="padding: 8px 12px; font-size: 0.8rem; cursor: pointer;">Copy</button>
+                <a href="{{ url_for('main.public_user_dashboard', username=current_user.username) }}" target="_blank" class="btn" style="padding: 8px 12px; font-size: 0.8rem; text-decoration: none;">View</a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

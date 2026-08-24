@@ -122,3 +122,13 @@
 
 ## 2026-08-24 14:01:00
 - Fixed dashboard total count display in `app/templates/index.html` for Books and Theater: replaced direct un-scoped ORM calls (`Book.query.count()`, `Theater.query.count()`) with scoped `book_count` and `theater_count` variables passed from `app/routes.py`.
+
+## 2026-08-24 14:10:00
+- Enforced strict authentication boundary:
+  - Root `/` and all media listing pages (`/movies`, `/tv`, `/games`, `/books`, `/theater`, `/up-next`) now strictly redirect unauthenticated visitors directly to `/login`.
+- Implemented Public Ledger Profiles & Vanity URL system:
+  - Added `is_public` boolean column to `User` model with Alembic migration `f2b3c4d5e6a7`.
+  - Added Public Ledger sharing toggle and shareable link with clipboard copy in `/account` settings.
+  - Implemented public vanity routes (`/<username>`, `/<username>/movies`, `/<username>/tv`, `/<username>/games`, `/<username>/books`, `/<username>/theater`).
+  - Created `public_user_index.html` dashboard and updated media templates to cleanly render public items while hiding private entries (`is_private=True`), search forms, and edit/delete controls.
+  - Added collision protection with reserved application routes.

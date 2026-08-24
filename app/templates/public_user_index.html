@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}{{ profile_user.username }}'s Ledger{% endblock %}
+
+{% block content %}
+    <div class="dashboard-hero">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-top: 1rem;">
+            <div>
+                <h1 style="margin-bottom: 0.25rem;">{{ profile_user.username }}'s Ledger</h1>
+                <p style="color: var(--text-muted); font-size: 1.15rem;">Public media tracking log and personal collection.</p>
+            </div>
+            {% if not current_user.is_authenticated %}
+            <div>
+                <a href="{{ url_for('main.login') }}" class="btn btn-secondary" style="font-size: 0.85rem;">Login to LeisureLedger</a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="stats-grid" style="margin-top: 2rem;">
+            <!-- Movies -->
+            <a href="{{ url_for('main.public_user_movies', username=profile_user.username) }}" class="stat-card">
+                <h3>Movies</h3>
+                <span class="count">{{ movie_count }}</span>
+                <span class="label">{{ movies_this_year }} watched in {{ datetime.now().year }}</span>
+                {% if current_goal and current_goal.movie_goal > 0 %}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                            <span>New Media</span>
+                            <span>{{ movies_new_this_year }} / {{ current_goal.movie_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar {% if movies_new_this_year >= current_goal.movie_goal %}complete{% endif %}" 
+                                 style="width: {{ [100, (movies_new_this_year / current_goal.movie_goal * 100)]|min }}%"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">
+                            <span>All Media</span>
+                            <span>{{ movies_this_year }} / {{ current_goal.movie_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar revisit" 
+                                 style="width: {{ [100, (movies_this_year / current_goal.movie_goal * 100)]|min }}%"></div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 4px; color: #f1c40f; font-size: 1rem;">
+                            {% for i in range([3, stars.movie]|min) %}⭐{% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </a>
+            
+            <!-- Television -->
+            <a href="{{ url_for('main.public_user_tv', username=profile_user.username) }}" class="stat-card">
+                <h3>Television</h3>
+                <span class="count">{{ tv_count }}</span>
+                <span class="label">{{ tv_this_year }} seasons in {{ datetime.now().year }}</span>
+                {% if current_goal and current_goal.tv_goal > 0 %}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                            <span>New Media</span>
+                            <span>{{ tv_new_this_year }} / {{ current_goal.tv_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar {% if tv_new_this_year >= current_goal.tv_goal %}complete{% endif %}" 
+                                 style="width: {{ [100, (tv_new_this_year / current_goal.tv_goal * 100)]|min }}%"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">
+                            <span>All Media</span>
+                            <span>{{ tv_this_year }} / {{ current_goal.tv_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar revisit" 
+                                 style="width: {{ [100, (tv_this_year / current_goal.tv_goal * 100)]|min }}%"></div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 4px; color: #f1c40f; font-size: 1rem;">
+                            {% for i in range([3, stars.tv]|min) %}⭐{% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </a>
+            
+            <!-- Games -->
+            <a href="{{ url_for('main.public_user_games', username=profile_user.username) }}" class="stat-card">
+                <h3>Games</h3>
+                <span class="count">{{ game_count }}</span>
+                <span class="label">{{ games_this_year }} finished in {{ datetime.now().year }}</span>
+                {% if current_goal and current_goal.game_goal > 0 %}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                            <span>New Media</span>
+                            <span>{{ games_new_this_year }} / {{ current_goal.game_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar {% if games_new_this_year >= current_goal.game_goal %}complete{% endif %}" 
+                                 style="width: {{ [100, (games_new_this_year / current_goal.game_goal * 100)]|min }}%"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">
+                            <span>All Media</span>
+                            <span>{{ games_this_year }} / {{ current_goal.game_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar revisit" 
+                                 style="width: {{ [100, (games_this_year / current_goal.game_goal * 100)]|min }}%"></div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 4px; color: #f1c40f; font-size: 1rem;">
+                            {% for i in range([3, stars.game]|min) %}⭐{% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </a>
+
+            <!-- Books -->
+            <a href="{{ url_for('main.public_user_books', username=profile_user.username) }}" class="stat-card">
+                <h3>Books</h3>
+                <span class="count">{{ book_count }}</span>
+                <span class="label">{{ books_this_year }} books in {{ datetime.now().year }}</span>
+                {% if current_goal and current_goal.book_goal > 0 %}
+                    <div style="margin-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                            <span>New Media</span>
+                            <span>{{ books_new_this_year }} / {{ current_goal.book_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar {% if books_new_this_year >= current_goal.book_goal %}complete{% endif %}" 
+                                 style="width: {{ [100, (books_new_this_year / current_goal.book_goal * 100)]|min }}%"></div>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 8px;">
+                            <span>All Media</span>
+                            <span>{{ books_this_year }} / {{ current_goal.book_goal }}</span>
+                        </div>
+                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                            <div class="progress-bar revisit" 
+                                 style="width: {{ [100, (books_this_year / current_goal.book_goal * 100)]|min }}%"></div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 4px; color: #f1c40f; font-size: 1rem;">
+                            {% for i in range([3, stars.book]|min) %}⭐{% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </a>
+
+            <!-- Theater -->
+            <a href="{{ url_for('main.public_user_theater', username=profile_user.username) }}" class="stat-card">
+                <h3>Theater</h3>
+                <span class="count">{{ theater_count }}</span>
+                <span class="label">{{ theater_this_year }} shows in {{ datetime.now().year }}</span>
+            </a>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 3rem; margin-top: 2rem;">
+        <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Movies</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for movie in recent_movies %}
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if movie.poster_path %}
+                        <img src="{{ url_for('main.serve_poster', filename=movie.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 500;">{{ movie.title }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ movie.date_watched.strftime('%b %d, %Y') }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); font-size: 0.9rem;">No public movies logged yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent TV</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for tv in recent_tv %}
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if tv.poster_path %}
+                        <img src="{{ url_for('main.serve_poster', filename=tv.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 500;">{{ tv.series_title }} (Season {{ tv.season_number }})</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ tv.date_watched.strftime('%b %d, %Y') }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); font-size: 0.9rem;">No public TV shows logged yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Games</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for game in recent_games %}
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if game.poster_path %}
+                        <img src="{{ url_for('main.serve_poster', filename=game.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 500;">{{ game.title }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ game.date_finished.strftime('%b %d, %Y') }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); font-size: 0.9rem;">No public games logged yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Books</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for book in recent_books %}
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if book.poster_path %}
+                        <img src="{{ url_for('main.serve_poster', filename=book.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 500;">{{ book.title }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ book.date_finished.strftime('%b %d, %Y') }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); font-size: 0.9rem;">No public books logged yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section>
+            <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Recent Theater</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for theater in recent_theater %}
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    {% if theater.poster_path %}
+                        <img src="{{ url_for('main.serve_poster', filename=theater.poster_path.lstrip('/')) }}" style="width: 40px; border-radius: 4px;">
+                    {% endif %}
+                    <div>
+                        <div style="font-weight: 500;">{{ theater.title }}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">{{ theater.date_watched.strftime('%b %d, %Y') }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <p style="color: var(--text-muted); font-size: 0.9rem;">No public theater logged yet.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+{% endblock %}
