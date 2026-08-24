@@ -424,11 +424,13 @@ def index():
                          tv_count=tv_count,
                          tv_this_year=tv_this_year,
                          tv_new_this_year=tv_new_this_year,
+                         recent_books=recent_books,
+                         book_count=book_count,
                          books_this_year=books_this_year,
                          books_new_this_year=books_new_this_year,
-                         recent_books=recent_books,
-                         theater_this_year=theater_this_year,
                          recent_theater=recent_theater,
+                         theater_count=theater_count,
+                         theater_this_year=theater_this_year,
                          current_goal=current_goal,
                          stars=stars)
 

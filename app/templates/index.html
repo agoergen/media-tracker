@@ -142,7 +142,7 @@
             <!-- Books -->
             <a href="{{ url_for('main.books_list') }}" class="stat-card">
                 <h3>Books</h3>
-                <span class="count">{{ Book.query.count() }}</span>
+                <span class="count">{{ book_count }}</span>
                 <span class="label">{{ books_this_year }} books in {{ datetime.now().year }}</span>
                 {% if current_goal and current_goal.book_goal > 0 %}
                     <div style="margin-top: 1rem;">
@@ -174,7 +174,7 @@
             <!-- Theater -->
             <a href="{{ url_for('main.theater_list') }}" class="stat-card">
                 <h3>Theater</h3>
-                <span class="count">{{ Theater.query.count() }}</span>
+                <span class="count">{{ theater_count }}</span>
                 <span class="label">{{ theater_this_year }} shows in {{ datetime.now().year }}</span>
             </a>
         </div>

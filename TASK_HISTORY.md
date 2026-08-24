@@ -119,3 +119,6 @@
   - Top viewport warning banner (`⚠️ DEV ENVIRONMENT — Non-Production Instance`).
   - Navbar logo brand badge (`DEV` / `STAGING`).
   - Automatic detection in `config.py` using Railway environment variables.
+
+## 2026-08-24 14:01:00
+- Fixed dashboard total count display in `app/templates/index.html` for Books and Theater: replaced direct un-scoped ORM calls (`Book.query.count()`, `Theater.query.count()`) with scoped `book_count` and `theater_count` variables passed from `app/routes.py`.
