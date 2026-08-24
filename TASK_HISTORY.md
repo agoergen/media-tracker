@@ -101,3 +101,6 @@
 - Built User Account Settings page (`/account`) allowing users to change their own passwords.
 - Added navigation links for Admin and Account in `base.html`.
 - Verified authentication, permission boundaries, and template rendering with automated test suite.
+
+## 2026-08-24 13:50:00
+- Implemented automatic PostgreSQL primary key sequence synchronization in `app/__init__.py` on application startup and in `backup_db.py` on restore completion to prevent duplicate key collisions (`user_pkey`) after database dumps/restores.

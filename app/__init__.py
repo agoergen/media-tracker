@@ -35,6 +35,19 @@ def create_app(config_class=Config):
     from app.routes import main
     app.register_blueprint(main)
 
+    # Synchronize PostgreSQL primary key sequences on startup to prevent ID collisions
+    import sqlalchemy as sa
+    with app.app_context():
+        if db.engine.dialect.name == 'postgresql':
+            tables = ['user', 'movie', 'game', 'book', 'theater', 'tv_season', 'goal', 'future_media_goal', 'backlog_item', 'invite_token']
+            with db.engine.connect() as conn:
+                for tbl in tables:
+                    try:
+                        conn.execute(sa.text(f"SELECT setval(pg_get_serial_sequence('\"{tbl}\"', 'id'), COALESCE((SELECT MAX(id) FROM \"{tbl}\"), 1));"))
+                        conn.commit()
+                    except Exception:
+                        pass
+
     @app.context_processor
     def inject_globals():
         from datetime import datetime

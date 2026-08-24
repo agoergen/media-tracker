@@ -324,6 +324,18 @@ def restore(filename=None):
                     db.session.add(inst)
             
             db.session.commit()
+
+            # Synchronize PostgreSQL primary key sequences after restore
+            if db.engine.dialect.name == 'postgresql':
+                print("Synchronizing database sequences...")
+                with db.engine.connect() as conn:
+                    for tbl in ['user', 'movie', 'game', 'book', 'theater', 'tv_season', 'goal', 'future_media_goal', 'backlog_item', 'invite_token']:
+                        try:
+                            conn.execute(sa.text(f"SELECT setval(pg_get_serial_sequence('\"{tbl}\"', 'id'), COALESCE((SELECT MAX(id) FROM \"{tbl}\"), 1));"))
+                            conn.commit()
+                        except Exception:
+                            pass
+
             print("\nRestore completed successfully!")
         except Exception as e:
             db.session.rollback()
