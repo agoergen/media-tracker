@@ -81,3 +81,11 @@
 
 ## 2026-08-24 13:22:00
 - Tracked `manage_volume.py`, `volume.bat`, `backup_db.py`, and `backup.bat` in Git repository so they are included in Railway deployment builds for remote container executions.
+
+## 2026-08-24 13:28:00
+- Completed Module 1 of Multi-User Support: Schema updates & Alembic migration (`e1a2b3c4d5e6`).
+- Added `is_admin` to `User` model with automatic migration upgrade promoting existing user(s) to Admin.
+- Added `InviteToken` model supporting single-use token onboarding for closed registration.
+- Added `user_id` foreign keys, indices, and constraints across `Movie`, `Game`, `Book`, `Theater`, `TVSeason`, `Goal`, `FutureMediaGoal`, and `BacklogItem`.
+- Safely backfilled `user_id = 1` for all existing records.
+- Verified migration upgrade and data integrity on local database.

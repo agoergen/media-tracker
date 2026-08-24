@@ -1,11 +1,13 @@
 from app import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -13,8 +15,17 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+class InviteToken(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    used_at = db.Column(db.DateTime, nullable=True)
+    used_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    is_revoked = db.Column(db.Boolean, default=False, server_default='false', nullable=False)
+
 class Movie(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     title = db.Column(db.String(255), nullable=False)
     date_watched = db.Column(db.Date)
     release_year = db.Column(db.Integer)
@@ -38,6 +49,7 @@ class Movie(db.Model):
 
 class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     title = db.Column(db.String(255), nullable=False)
     date_finished = db.Column(db.Date)
     release_year = db.Column(db.Integer)
@@ -59,6 +71,7 @@ class Game(db.Model):
 
 class Book(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     title = db.Column(db.String(255), nullable=False)
     date_finished = db.Column(db.Date)
     release_year = db.Column(db.Integer)
@@ -76,6 +89,7 @@ class Book(db.Model):
 
 class Theater(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     title = db.Column(db.Text, nullable=False)
     date_watched = db.Column(db.Date)
     is_revisit = db.Column(db.Boolean, default=False)
@@ -90,16 +104,18 @@ class Theater(db.Model):
 
 class Goal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     year = db.Column(db.Integer, nullable=False)
     movie_goal = db.Column(db.Integer, default=0)
     tv_goal = db.Column(db.Integer, default=0)
     game_goal = db.Column(db.Integer, default=0)
     book_goal = db.Column(db.Integer, default=0)
     
-    __table_args__ = (db.UniqueConstraint('year', name='unique_year_goal'),)
+    __table_args__ = (db.UniqueConstraint('user_id', 'year', name='unique_user_year_goal'),)
 
 class FutureMediaGoal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     year = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String(50), nullable=False) # movie, tv, game, book
     title = db.Column(db.String(255), nullable=False)
@@ -110,6 +126,7 @@ class FutureMediaGoal(db.Model):
 
 class TVSeason(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     series_title = db.Column(db.String(255), nullable=False)
     season_number = db.Column(db.Integer)
     date_watched = db.Column(db.Date)
@@ -127,6 +144,7 @@ class TVSeason(db.Model):
 
 class BacklogItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     category = db.Column(db.String(50), nullable=False) # 'movie', 'tv', 'game', 'book'
     title = db.Column(db.String(255), nullable=False)
     external_id = db.Column(db.String(100), nullable=False)
