@@ -5,7 +5,10 @@
 {% block content %}
     {% set is_owner = current_user.is_authenticated and (not profile_user or current_user.id == profile_user.id) %}
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
-        <h1>{% if profile_user and (not current_user.is_authenticated or current_user.id != profile_user.id) %}{{ profile_user.username }}'s Theater{% else %}My Theater{% endif %} ({{ total_count }})</h1>
+        <div>
+            <h1 style="margin-bottom: 0.25rem;">{% if profile_user and (not current_user.is_authenticated or current_user.id != profile_user.id) %}{{ profile_user.username }}'s Theater{% else %}My Theater{% endif %} ({{ total_count }})</h1>
+            <p style="color: var(--text-muted); font-size: 1.15rem; margin-top: 0.25rem;">Whatcha watchin?</p>
+        </div>
         <button id="filterToggleBtn" class="btn btn-secondary">Filter List</button>
     </div>
 

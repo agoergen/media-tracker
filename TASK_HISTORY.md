@@ -135,3 +135,9 @@
 
 ## 2026-08-24 14:15:00
 - Updated dashboard hero header in `app/templates/index.html` to display personalized greeting: `Welcome back, <username>.`
+
+## 2026-08-24 14:18:00
+- Added category subtitle taglines below page headings matching the hero style:
+  - Movies, TV, Theater: `Whatcha watchin?`
+  - Games: `Whatcha playin?`
+  - Books: `Whatcha readin?`
