@@ -104,3 +104,11 @@
 
 ## 2026-08-24 13:50:00
 - Implemented automatic PostgreSQL primary key sequence synchronization in `app/__init__.py` on application startup and in `backup_db.py` on restore completion to prevent duplicate key collisions (`user_pkey`) after database dumps/restores.
+
+## 2026-08-24 13:56:00
+- Completed Phase 3 of Multi-User Support: Full Query Isolation & Scoped CRUD Operations.
+- Scoped ledger queries across all media categories (`Movie`, `TVSeason`, `Game`, `Book`, `Theater`) to `active_user_id` / `current_user.id`.
+- Scoped homepage dashboard (`index`), `up_next` queue, `metrics`, and `goals` stats to the authenticated user.
+- Enforced strict IDOR protection on all record edit, replacement, and deletion endpoints (`/movies/edit/<id>`, `/tv/delete/<id>`, `/up-next/delete/<id>`, etc.).
+- Scoped target map lookup in `inject_globals` context processor to active user.
+- Passed 100% of end-to-end multi-user isolation, IDOR, and privilege boundary automated tests.

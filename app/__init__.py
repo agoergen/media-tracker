@@ -57,9 +57,15 @@ def create_app(config_class=Config):
         # Build a map of target titles for efficient lookup in templates
         # Format: {(year, category, title.lower()): True}
         try:
-            all_targets = FutureMediaGoal.query.all()
+            from flask_login import current_user
+            if current_user.is_authenticated:
+                all_targets = FutureMediaGoal.query.filter_by(user_id=current_user.id).all()
+            else:
+                admin_user = User.query.filter_by(is_admin=True).order_by(User.id.asc()).first()
+                admin_uid = admin_user.id if admin_user else 1
+                all_targets = FutureMediaGoal.query.filter_by(user_id=admin_uid).all()
             target_map = {(tg.year, tg.category, tg.title.lower()): True for tg in all_targets}
-        except:
+        except Exception:
             target_map = {}
 
         return {

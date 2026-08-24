@@ -39,6 +39,12 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def get_active_user_id():
+    if current_user.is_authenticated:
+        return current_user.id
+    admin_user = User.query.filter_by(is_admin=True).order_by(User.id.asc()).first()
+    return admin_user.id if admin_user else 1
+
 @main.route('/logout')
 @login_required
 def logout():
@@ -200,7 +206,7 @@ def goals(view_year=None):
             game_goal = int(request.form.get('game_goal', 0))
             book_goal = int(request.form.get('book_goal', 0))
             
-            goal = Goal.query.filter_by(year=view_year).first()
+            goal = Goal.query.filter_by(user_id=current_user.id, year=view_year).first()
             if not goal:
                 goal = Goal(user_id=current_user.id, year=view_year)
                 db.session.add(goal)
@@ -224,7 +230,7 @@ def goals(view_year=None):
 
         elif action == 'delete_future_goal':
             goal_id = request.form.get('goal_id')
-            f_goal = FutureMediaGoal.query.get(goal_id)
+            f_goal = FutureMediaGoal.query.filter_by(id=goal_id, user_id=current_user.id).first()
             if f_goal:
                 db.session.delete(f_goal)
                 db.session.commit()
@@ -232,28 +238,32 @@ def goals(view_year=None):
 
         elif action == 'validate_targets':
             # Manual check: Scan ledger for matches to targets for the view_year
-            future_goals = FutureMediaGoal.query.filter_by(year=view_year).all()
+            future_goals = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=view_year).all()
             completed_count = 0
             for fg in future_goals:
                 prev_status = fg.is_completed
                 # Check corresponding table
                 if fg.category == 'movie':
                     match = Movie.query.filter(
+                        Movie.user_id == current_user.id,
                         db.extract('year', Movie.date_watched) == view_year,
                         db.or_(Movie.external_id == fg.external_id, Movie.title.ilike(fg.title)) if fg.external_id else Movie.title.ilike(fg.title)
                     ).first()
                 elif fg.category == 'tv':
                     match = TVSeason.query.filter(
+                        TVSeason.user_id == current_user.id,
                         db.extract('year', TVSeason.date_watched) == view_year,
                         db.or_(TVSeason.external_id == fg.external_id, TVSeason.series_title.ilike(fg.title)) if fg.external_id else TVSeason.series_title.ilike(fg.title)
                     ).first()
                 elif fg.category == 'game':
                     match = Game.query.filter(
+                        Game.user_id == current_user.id,
                         db.extract('year', Game.date_finished) == view_year,
                         db.or_(Game.external_id == fg.external_id, Game.title.ilike(fg.title)) if fg.external_id else Game.title.ilike(fg.title)
                     ).first()
                 elif fg.category == 'book':
                     match = Book.query.filter(
+                        Book.user_id == current_user.id,
                         db.extract('year', Book.date_finished) == view_year,
                         db.or_(Book.external_id == fg.external_id, Book.title.ilike(fg.title)) if fg.external_id else Book.title.ilike(fg.title)
                     ).first()
@@ -276,6 +286,7 @@ def goals(view_year=None):
             db.extract('year', date_field).label('year'), 
             db.func.count(model.id).label('count')
         ).filter(
+            model.user_id == current_user.id,
             date_field.isnot(None),
             db.extract('year', date_field) < view_year
         ).group_by('year').all()
@@ -299,8 +310,8 @@ def goals(view_year=None):
     stats['books'] = get_category_stats(Book, Book.date_finished)
 
     # Current state for the viewed year
-    current_goal = Goal.query.filter_by(year=view_year).first()
-    future_goals = FutureMediaGoal.query.filter_by(year=view_year).all()
+    current_goal = Goal.query.filter_by(user_id=current_user.id, year=view_year).first()
+    future_goals = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=view_year).all()
     
     grouped_future = {"movie": [], "tv": [], "game": [], "book": []}
     for fg in future_goals:
@@ -310,14 +321,14 @@ def goals(view_year=None):
     years_with_media = set()
     for model, field in [(Movie, Movie.date_watched), (TVSeason, TVSeason.date_watched), 
                          (Game, Game.date_finished), (Book, Book.date_finished)]:
-        res = db.session.query(db.extract('year', field)).filter(field.isnot(None)).distinct().all()
+        res = db.session.query(db.extract('year', field)).filter(model.user_id == current_user.id, field.isnot(None)).distinct().all()
         years_with_media.update([int(r[0]) for r in res])
     
     years_with_media.add(datetime.now().year)
     nav_years = sorted(list(years_with_media), reverse=True)
 
     # Build a lookup set of queued backlog items to display queued status badge
-    backlog_items = BacklogItem.query.all()
+    backlog_items = BacklogItem.query.filter_by(user_id=current_user.id).all()
     queued_set = {}
     for item in backlog_items:
         if item.external_id:
@@ -326,10 +337,10 @@ def goals(view_year=None):
 
     # Build backlog counts for limit checks
     backlog_counts = {
-        'movie': BacklogItem.query.filter_by(category='movie').count(),
-        'tv': BacklogItem.query.filter_by(category='tv').count(),
-        'game': BacklogItem.query.filter_by(category='game').count(),
-        'book': BacklogItem.query.filter_by(category='book').count()
+        'movie': BacklogItem.query.filter_by(user_id=current_user.id, category='movie').count(),
+        'tv': BacklogItem.query.filter_by(user_id=current_user.id, category='tv').count(),
+        'game': BacklogItem.query.filter_by(user_id=current_user.id, category='game').count(),
+        'book': BacklogItem.query.filter_by(user_id=current_user.id, category='book').count()
     }
 
     return render_template('goals.html', stats=stats, current_goal=current_goal, 
@@ -338,11 +349,13 @@ def goals(view_year=None):
 
 @main.route('/')
 def index():
+    uid = get_active_user_id()
+
     # Latest 5 of each category
-    recent_movies_q = Movie.query
-    recent_games_q = Game.query
-    recent_tv_q = TVSeason.query
-    recent_books_q = Book.query
+    recent_movies_q = Movie.query.filter_by(user_id=uid)
+    recent_games_q = Game.query.filter_by(user_id=uid)
+    recent_tv_q = TVSeason.query.filter_by(user_id=uid)
+    recent_books_q = Book.query.filter_by(user_id=uid)
     
     if not current_user.is_authenticated:
         recent_movies_q = recent_movies_q.filter_by(is_private=False)
@@ -351,49 +364,51 @@ def index():
         recent_books_q = recent_books_q.filter_by(is_private=False)
 
     recent_movies = recent_movies_q.order_by(Movie.date_watched.desc()).limit(5).all()
-    movie_count = Movie.query.count()
+    movie_count = Movie.query.filter_by(user_id=uid).count()
     
     recent_games = recent_games_q.order_by(Game.date_finished.desc()).limit(5).all()
-    game_count = Game.query.count()
+    game_count = Game.query.filter_by(user_id=uid).count()
 
     recent_tv = recent_tv_q.order_by(TVSeason.date_watched.desc()).limit(5).all()
-    tv_count = TVSeason.query.count()
+    tv_count = TVSeason.query.filter_by(user_id=uid).count()
 
     recent_books = recent_books_q.order_by(Book.date_finished.desc()).limit(5).all()
+    book_count = Book.query.filter_by(user_id=uid).count()
 
     current_year = datetime.now().year
     
     # Movies
-    movies_this_year = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year).count()
-    movies_new_this_year = Movie.query.filter(db.extract('year', Movie.date_watched) == current_year, Movie.is_revisit == False).count()
+    movies_this_year = Movie.query.filter(Movie.user_id == uid, db.extract('year', Movie.date_watched) == current_year).count()
+    movies_new_this_year = Movie.query.filter(Movie.user_id == uid, db.extract('year', Movie.date_watched) == current_year, Movie.is_revisit == False).count()
     
     # Games
-    games_this_year = Game.query.filter(db.extract('year', Game.date_finished) == current_year).count()
-    games_new_this_year = Game.query.filter(db.extract('year', Game.date_finished) == current_year, Game.is_revisit == False).count()
+    games_this_year = Game.query.filter(Game.user_id == uid, db.extract('year', Game.date_finished) == current_year).count()
+    games_new_this_year = Game.query.filter(Game.user_id == uid, db.extract('year', Game.date_finished) == current_year, Game.is_revisit == False).count()
     
     # TV
-    tv_this_year = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == current_year).count()
-    tv_new_this_year = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == current_year, TVSeason.is_revisit == False).count()
+    tv_this_year = TVSeason.query.filter(TVSeason.user_id == uid, db.extract('year', TVSeason.date_watched) == current_year).count()
+    tv_new_this_year = TVSeason.query.filter(TVSeason.user_id == uid, db.extract('year', TVSeason.date_watched) == current_year, TVSeason.is_revisit == False).count()
     
     # Books
-    books_this_year = Book.query.filter(db.extract('year', Book.date_finished) == current_year).count()
-    books_new_this_year = Book.query.filter(db.extract('year', Book.date_finished) == current_year, Book.is_revisit == False).count()
+    books_this_year = Book.query.filter(Book.user_id == uid, db.extract('year', Book.date_finished) == current_year).count()
+    books_new_this_year = Book.query.filter(Book.user_id == uid, db.extract('year', Book.date_finished) == current_year, Book.is_revisit == False).count()
 
-    theater_this_year = Theater.query.filter(db.extract('year', Theater.date_watched) == current_year).count()
+    theater_this_year = Theater.query.filter(Theater.user_id == uid, db.extract('year', Theater.date_watched) == current_year).count()
     
-    recent_theater_q = Theater.query
+    recent_theater_q = Theater.query.filter_by(user_id=uid)
     if not current_user.is_authenticated:
         recent_theater_q = recent_theater_q.filter_by(is_private=False)
     recent_theater = recent_theater_q.order_by(Theater.date_watched.desc()).limit(5).all()
+    theater_count = Theater.query.filter_by(user_id=uid).count()
     
-    current_goal = Goal.query.filter_by(year=current_year).first()
+    current_goal = Goal.query.filter_by(user_id=uid, year=current_year).first()
 
     # Completed Future Goals (Stars)
     stars = {
-        "movie": FutureMediaGoal.query.filter_by(year=current_year, category='movie', is_completed=True).count(),
-        "tv": FutureMediaGoal.query.filter_by(year=current_year, category='tv', is_completed=True).count(),
-        "game": FutureMediaGoal.query.filter_by(year=current_year, category='game', is_completed=True).count(),
-        "book": FutureMediaGoal.query.filter_by(year=current_year, category='book', is_completed=True).count(),
+        "movie": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='movie', is_completed=True).count(),
+        "tv": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='tv', is_completed=True).count(),
+        "game": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='game', is_completed=True).count(),
+        "book": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='book', is_completed=True).count(),
     }
 
     return render_template('index.html', 
@@ -420,7 +435,8 @@ def index():
 # MOVIE ROUTES
 @main.route('/movies')
 def movies_list():
-    query = Movie.query
+    uid = get_active_user_id()
+    query = Movie.query.filter_by(user_id=uid)
     if not current_user.is_authenticated:
         query = query.filter_by(is_private=False)
     all_movies = query.order_by(Movie.date_watched.asc()).all()
@@ -502,7 +518,7 @@ def add_movie(tmdb_id):
             poster_filename = TMDBService.download_poster(details['poster_path'])
 
         if replace_id:
-            movie = Movie.query.get_or_404(replace_id)
+            movie = Movie.query.filter_by(id=replace_id, user_id=current_user.id).first_or_404()
             movie.title = details.get('title')
             movie.release_year = release_year
             movie.external_id = str(tmdb_id)
@@ -578,7 +594,7 @@ def add_movie(tmdb_id):
             db.session.add(new_movie)
             
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='movie', is_completed=False).filter(
+            future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=datetime.now().year, category='movie', is_completed=False).filter(
                 db.or_(FutureMediaGoal.external_id == str(tmdb_id), FutureMediaGoal.title.ilike(new_movie.title))
             ).first()
             if future:
@@ -596,7 +612,7 @@ def add_movie(tmdb_id):
 @main.route('/movies/edit/<int:movie_id>', methods=['POST'])
 @login_required
 def edit_movie(movie_id):
-    movie = Movie.query.get_or_404(movie_id)
+    movie = Movie.query.filter_by(id=movie_id, user_id=current_user.id).first_or_404()
     
     date_str = request.form.get('date_watched')
     if date_str:
@@ -617,7 +633,7 @@ def edit_movie(movie_id):
 @main.route('/movies/delete/<int:movie_id>', methods=['POST'])
 @login_required
 def delete_movie(movie_id):
-    movie = Movie.query.get_or_404(movie_id)
+    movie = Movie.query.filter_by(id=movie_id, user_id=current_user.id).first_or_404()
     title = movie.title
     db.session.delete(movie)
     db.session.commit()
@@ -625,25 +641,25 @@ def delete_movie(movie_id):
     # Re-evaluate future goal status
     current_year = datetime.now().year
     still_exists = Movie.query.filter(
+        Movie.user_id == current_user.id,
         db.extract('year', Movie.date_watched) == current_year,
         db.or_(Movie.external_id == str(movie.external_id), Movie.title.ilike(title))
     ).first()
     if not still_exists:
-        future = FutureMediaGoal.query.filter_by(year=current_year, category='movie', is_completed=True).filter(
+        future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=current_year, category='movie', is_completed=True).filter(
             db.or_(FutureMediaGoal.external_id == str(movie.external_id), FutureMediaGoal.title.ilike(title))
         ).first()
         if future:
             future.is_completed = False
             db.session.commit()
 
-    flash(f"Removed {title} from your tracker.")
+    flash(f"Deleted {title} from tracker.")
     return redirect(url_for('main.movies_list'))
-
-
 # TV ROUTES
 @main.route('/tv')
 def tv_list():
-    query = TVSeason.query
+    uid = get_active_user_id()
+    query = TVSeason.query.filter_by(user_id=uid)
     if not current_user.is_authenticated:
         query = query.filter_by(is_private=False)
     all_seasons = query.order_by(TVSeason.date_watched.asc()).all()
@@ -682,9 +698,9 @@ def search_tv():
     return render_template('tv_search.html', 
                          results=results, 
                          query=query, 
-                         replace_id=replace_id,
-                         pre_date=pre_date,
-                         pre_loc=pre_loc,
+                         replace_id=replace_id, 
+                         pre_date=pre_date, 
+                         pre_loc=pre_loc, 
                          pre_rewatch=pre_rewatch,
                          pre_season=pre_season,
                          up_next=up_next,
@@ -714,7 +730,7 @@ def add_tv_season(series_id):
             poster_filename = TMDBService.download_poster(details['poster_path'])
 
         if replace_id:
-            season = TVSeason.query.get_or_404(replace_id)
+            season = TVSeason.query.filter_by(id=replace_id, user_id=current_user.id).first_or_404()
             season.series_title = details.get('series_name')
             season.season_number = season_number
             season.external_id = str(series_id)
@@ -762,7 +778,7 @@ def add_tv_season(series_id):
             db.session.add(new_season)
             
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='tv', is_completed=False).filter(
+            future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=datetime.now().year, category='tv', is_completed=False).filter(
                 db.or_(FutureMediaGoal.external_id == str(series_id), FutureMediaGoal.title.ilike(new_season.series_title))
             ).first()
             if future:
@@ -780,7 +796,7 @@ def add_tv_season(series_id):
 @main.route('/tv/edit/<int:season_id>', methods=['POST'])
 @login_required
 def edit_tv_season(season_id):
-    season = TVSeason.query.get_or_404(season_id)
+    season = TVSeason.query.filter_by(id=season_id, user_id=current_user.id).first_or_404()
     
     date_str = request.form.get('date_watched')
     if date_str:
@@ -801,7 +817,7 @@ def edit_tv_season(season_id):
 @main.route('/tv/delete/<int:season_id>', methods=['POST'])
 @login_required
 def delete_tv_season(season_id):
-    season = TVSeason.query.get_or_404(season_id)
+    season = TVSeason.query.filter_by(id=season_id, user_id=current_user.id).first_or_404()
     series_title = season.series_title
     display_title = f"{season.series_title} S{season.season_number}"
     db.session.delete(season)
@@ -810,30 +826,31 @@ def delete_tv_season(season_id):
     # Re-evaluate future goal status
     current_year = datetime.now().year
     still_exists = TVSeason.query.filter(
+        TVSeason.user_id == current_user.id,
         db.extract('year', TVSeason.date_watched) == current_year,
         db.or_(TVSeason.external_id == str(season.external_id), TVSeason.series_title.ilike(series_title))
     ).first()
     if not still_exists:
-        future = FutureMediaGoal.query.filter_by(year=current_year, category='tv', is_completed=True).filter(
+        future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=current_year, category='tv', is_completed=True).filter(
             db.or_(FutureMediaGoal.external_id == str(season.external_id), FutureMediaGoal.title.ilike(series_title))
         ).first()
         if future:
             future.is_completed = False
             db.session.commit()
-
-    flash(f"Removed {display_title} from your tracker.")
+    flash(f"Deleted {display_title} from tracker.")
     return redirect(url_for('main.tv_list'))
 
 
 # GAME ROUTES
 @main.route('/games')
 def games_list():
-    query = Game.query
+    uid = get_active_user_id()
+    query = Game.query.filter_by(user_id=uid)
     if not current_user.is_authenticated:
         query = query.filter_by(is_private=False)
     all_games = query.order_by(Game.date_finished.asc()).all()
     
-    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
+    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.user_id == uid, Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
     franchise_list = [f[0] for f in distinct_franchises]
     
     grouped = OrderedDict()
@@ -864,7 +881,7 @@ def search_game():
     goal = request.args.get('goal')
     goal_year = request.args.get('goal_year')
 
-    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
+    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.user_id == current_user.id, Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
     franchise_list = [f[0] for f in distinct_franchises]
     
     if request.method == 'POST':
@@ -929,7 +946,7 @@ def add_game(igdb_id):
             cover_filename = IGDBService.download_cover(details['cover']['url'])
 
         if replace_id:
-            game = Game.query.get_or_404(replace_id)
+            game = Game.query.filter_by(id=replace_id, user_id=current_user.id).first_or_404()
             game.title = details.get('name')
             game.release_year = release_year
             game.external_id = str(igdb_id)
@@ -980,7 +997,7 @@ def add_game(igdb_id):
             db.session.add(new_game)
             
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='game', is_completed=False).filter(
+            future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=datetime.now().year, category='game', is_completed=False).filter(
                 db.or_(FutureMediaGoal.external_id == str(igdb_id), FutureMediaGoal.title.ilike(new_game.title))
             ).first()
             if future:
@@ -998,7 +1015,7 @@ def add_game(igdb_id):
 @main.route('/games/edit/<int:game_id>', methods=['POST'])
 @login_required
 def edit_game(game_id):
-    game = Game.query.get_or_404(game_id)
+    game = Game.query.filter_by(id=game_id, user_id=current_user.id).first_or_404()
     
     date_str = request.form.get('date_finished')
     if date_str:
@@ -1021,7 +1038,7 @@ def edit_game(game_id):
 @main.route('/games/delete/<int:game_id>', methods=['POST'])
 @login_required
 def delete_game(game_id):
-    game = Game.query.get_or_404(game_id)
+    game = Game.query.filter_by(id=game_id, user_id=current_user.id).first_or_404()
     title = game.title
     db.session.delete(game)
     db.session.commit()
@@ -1029,25 +1046,27 @@ def delete_game(game_id):
     # Re-evaluate future goal status
     current_year = datetime.now().year
     still_exists = Game.query.filter(
+        Game.user_id == current_user.id,
         db.extract('year', Game.date_finished) == current_year,
         db.or_(Game.external_id == str(game.external_id), Game.title.ilike(title))
     ).first()
     if not still_exists:
-        future = FutureMediaGoal.query.filter_by(year=current_year, category='game', is_completed=True).filter(
+        future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=current_year, category='game', is_completed=True).filter(
             db.or_(FutureMediaGoal.external_id == str(game.external_id), FutureMediaGoal.title.ilike(title))
         ).first()
         if future:
             future.is_completed = False
             db.session.commit()
 
-    flash(f"Removed {title} from your tracker.")
+    flash(f"Deleted {title} from tracker.")
     return redirect(url_for('main.games_list'))
 
 
 # BOOK ROUTES
 @main.route('/books')
 def books_list():
-    query = Book.query
+    uid = get_active_user_id()
+    query = Book.query.filter_by(user_id=uid)
     if not current_user.is_authenticated:
         query = query.filter_by(is_private=False)
     all_books = query.order_by(Book.date_finished.asc()).all()
@@ -1174,7 +1193,7 @@ def add_book(book_id):
         date_finished = datetime.now().date()
 
     if replace_id:
-        book = Book.query.get_or_404(replace_id)
+        book = Book.query.filter_by(id=replace_id, user_id=current_user.id).first_or_404()
         book.title = title
         book.author = author
         book.external_id = book_id
@@ -1215,7 +1234,7 @@ def add_book(book_id):
         db.session.add(new_book)
         
         # Check for future goal completion
-        future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='book', is_completed=False).filter(
+        future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=datetime.now().year, category='book', is_completed=False).filter(
             db.or_(FutureMediaGoal.external_id == str(book_id), FutureMediaGoal.title.ilike(new_book.title))
         ).first()
         if future:
@@ -1230,7 +1249,7 @@ def add_book(book_id):
 @main.route('/books/edit/<int:book_id>', methods=['POST'])
 @login_required
 def edit_book(book_id):
-    book = Book.query.get_or_404(book_id)
+    book = Book.query.filter_by(id=book_id, user_id=current_user.id).first_or_404()
     
     date_str = request.form.get('date_finished')
     if date_str:
@@ -1252,7 +1271,7 @@ def edit_book(book_id):
 @main.route('/books/delete/<int:book_id>', methods=['POST'])
 @login_required
 def delete_book(book_id):
-    book = Book.query.get_or_404(book_id)
+    book = Book.query.filter_by(id=book_id, user_id=current_user.id).first_or_404()
     title = book.title
     db.session.delete(book)
     db.session.commit()
@@ -1260,24 +1279,26 @@ def delete_book(book_id):
     # Re-evaluate future goal status
     current_year = datetime.now().year
     still_exists = Book.query.filter(
+        Book.user_id == current_user.id,
         db.extract('year', Book.date_finished) == current_year,
         db.or_(Book.external_id == str(book.external_id), Book.title.ilike(title))
     ).first()
     if not still_exists:
-        future = FutureMediaGoal.query.filter_by(year=current_year, category='book', is_completed=True).filter(
+        future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=current_year, category='book', is_completed=True).filter(
             db.or_(FutureMediaGoal.external_id == str(book.external_id), FutureMediaGoal.title.ilike(title))
         ).first()
         if future:
             future.is_completed = False
             db.session.commit()
 
-    flash(f"Removed {title} from your tracker.")
+    flash(f"Deleted {title} from tracker.")
     return redirect(url_for('main.books_list'))
 
 # THEATER ROUTES
 @main.route('/theater')
 def theater_list():
-    query = Theater.query
+    uid = get_active_user_id()
+    query = Theater.query.filter_by(user_id=uid)
     if not current_user.is_authenticated:
         query = query.filter_by(is_private=False)
     all_shows = query.order_by(Theater.date_watched.asc()).all()
@@ -1377,7 +1398,7 @@ def add_theater_ibdb(slug_id):
 
     if update_id and update_id.strip():
         # SYNC MODE: Update existing record
-        show = Theater.query.get_or_404(int(update_id))
+        show = Theater.query.filter_by(id=int(update_id), user_id=current_user.id).first_or_404()
         show.title = title
         show.date_watched = date_watched
         show.location = location
@@ -1428,7 +1449,7 @@ def get_theater_posters():
 @main.route('/theater/delete/<int:show_id>', methods=['POST'])
 @login_required
 def delete_theater(show_id):
-    show = Theater.query.get_or_404(show_id)
+    show = Theater.query.filter_by(id=show_id, user_id=current_user.id).first_or_404()
     title = show.title
     db.session.delete(show)
     db.session.commit()
@@ -1470,11 +1491,11 @@ def trigger_backfill_books():
 @main.route('/metrics/<string:view_year>')
 @login_required
 def metrics(view_year=None):
-    # Fetch all items
-    all_books = Book.query.all()
-    all_games = Game.query.all()
-    all_tv = TVSeason.query.all()
-    all_movies = Movie.query.all()
+    # Fetch all items for logged-in user
+    all_books = Book.query.filter_by(user_id=current_user.id).all()
+    all_games = Game.query.filter_by(user_id=current_user.id).all()
+    all_tv = TVSeason.query.filter_by(user_id=current_user.id).all()
+    all_movies = Movie.query.filter_by(user_id=current_user.id).all()
 
     # Determine unique years with data
     data_years = set()
@@ -1677,10 +1698,11 @@ def igdb_test():
 
 @main.route('/up-next')
 def up_next():
+    uid = get_active_user_id()
     user_id = current_user.id if current_user.is_authenticated else "anonymous"
     print(f"INFO: [up_next] User {user_id} accessed Up Next page", file=sys.stdout)
     try:
-        backlog_items = BacklogItem.query.all()
+        backlog_items = BacklogItem.query.filter_by(user_id=uid).all()
         grouped = {
             'movie': [],
             'tv': [],
@@ -1693,7 +1715,7 @@ def up_next():
                 
         # Build set of goals for the current year to highlight on the Up Next page
         current_year = datetime.now().year
-        goals = FutureMediaGoal.query.filter_by(year=current_year).all()
+        goals = FutureMediaGoal.query.filter_by(user_id=uid, year=current_year).all()
         goals_set = {}
         for g in goals:
             if g.external_id:
@@ -1720,7 +1742,7 @@ def add_up_next_item(category, external_id):
 
     # Check limit of 10
     try:
-        count = BacklogItem.query.filter_by(category=category).count()
+        count = BacklogItem.query.filter_by(user_id=current_user.id, category=category).count()
         if count >= 10:
             print(f"WARNING: [up_next] User {user_id} attempted to add '{external_id}' to '{category}' Up Next, but the limit of 10 has been reached.", file=sys.stdout)
             flash(f"Your {category.upper()} Up Next list is full! (Limit is 10 items)")
@@ -1735,7 +1757,7 @@ def add_up_next_item(category, external_id):
         book_source = None
 
         if category == 'movie':
-            existing = BacklogItem.query.filter_by(category='movie', external_id=str(external_id)).first()
+            existing = BacklogItem.query.filter_by(user_id=current_user.id, category='movie', external_id=str(external_id)).first()
             if existing:
                 flash("This movie is already on your Up Next list!")
                 return redirect(url_for('main.up_next'))
@@ -1750,7 +1772,7 @@ def add_up_next_item(category, external_id):
                 print(f"WARNING: [up_next] TMDB details not found for movie ID '{external_id}'", file=sys.stdout)
         elif category == 'tv':
             season_number = int(request.form.get('season_number', 1))
-            existing = BacklogItem.query.filter_by(category='tv', external_id=str(external_id), season_number=season_number).first()
+            existing = BacklogItem.query.filter_by(user_id=current_user.id, category='tv', external_id=str(external_id), season_number=season_number).first()
             if existing:
                 flash(f"Season {season_number} of this show is already on your Up Next list!")
                 return redirect(url_for('main.up_next'))
@@ -1763,7 +1785,7 @@ def add_up_next_item(category, external_id):
             else:
                 print(f"WARNING: [up_next] TMDB details not found for TV ID '{external_id}', season '{season_number}'", file=sys.stdout)
         elif category == 'game':
-            existing = BacklogItem.query.filter_by(category='game', external_id=str(external_id)).first()
+            existing = BacklogItem.query.filter_by(user_id=current_user.id, category='game', external_id=str(external_id)).first()
             if existing:
                 flash("This game is already on your Up Next list!")
                 return redirect(url_for('main.up_next'))
@@ -1779,7 +1801,7 @@ def add_up_next_item(category, external_id):
             else:
                 print(f"WARNING: [up_next] IGDB details not found for game ID '{external_id}'", file=sys.stdout)
         elif category == 'book':
-            existing = BacklogItem.query.filter_by(category='book', external_id=str(external_id)).first()
+            existing = BacklogItem.query.filter_by(user_id=current_user.id, category='book', external_id=str(external_id)).first()
             if existing:
                 flash("This book is already on your Up Next list!")
                 return redirect(url_for('main.up_next'))
@@ -1844,11 +1866,11 @@ def add_up_next_item(category, external_id):
 @login_required
 def delete_up_next_item(item_id):
     user_id = current_user.id
+    item = BacklogItem.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
+    title = item.title
+    category = item.category
+    print(f"INFO: [up_next] User {user_id} deleting Up Next item {item_id} ('{title}', '{category}')", file=sys.stdout)
     try:
-        item = BacklogItem.query.get_or_404(item_id)
-        title = item.title
-        category = item.category
-        print(f"INFO: [up_next] User {user_id} deleting Up Next item {item_id} ('{title}', '{category}')", file=sys.stdout)
         db.session.delete(item)
         db.session.commit()
         print(f"INFO: [up_next] Successfully deleted Up Next item {item_id}", file=sys.stdout)
@@ -1864,7 +1886,7 @@ def delete_up_next_item(item_id):
 @login_required
 def track_up_next_item(item_id):
     user_id = current_user.id
-    item = BacklogItem.query.get_or_404(item_id)
+    item = BacklogItem.query.filter_by(id=item_id, user_id=current_user.id).first_or_404()
     category = item.category
     external_id = item.external_id
     title = item.title
@@ -1932,7 +1954,7 @@ def track_up_next_item(item_id):
             db.session.add(new_movie)
 
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='movie', is_completed=False).filter(
+            future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=datetime.now().year, category='movie', is_completed=False).filter(
                 db.or_(FutureMediaGoal.external_id == str(external_id), FutureMediaGoal.title.ilike(new_movie.title))
             ).first()
             if future:
@@ -1975,7 +1997,7 @@ def track_up_next_item(item_id):
             db.session.add(new_season)
 
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='tv', is_completed=False).filter(
+            future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=datetime.now().year, category='tv', is_completed=False).filter(
                 db.or_(FutureMediaGoal.external_id == str(external_id), FutureMediaGoal.title.ilike(new_season.series_title))
             ).first()
             if future:
@@ -2029,7 +2051,7 @@ def track_up_next_item(item_id):
             db.session.add(new_game)
 
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='game', is_completed=False).filter(
+            future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=datetime.now().year, category='game', is_completed=False).filter(
                 db.or_(FutureMediaGoal.external_id == str(external_id), FutureMediaGoal.title.ilike(new_game.title))
             ).first()
             if future:
@@ -2098,7 +2120,7 @@ def track_up_next_item(item_id):
             db.session.add(new_book)
 
             # Check for future goal completion
-            future = FutureMediaGoal.query.filter_by(year=datetime.now().year, category='book', is_completed=False).filter(
+            future = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=datetime.now().year, category='book', is_completed=False).filter(
                 db.or_(FutureMediaGoal.external_id == str(external_id), FutureMediaGoal.title.ilike(new_book.title))
             ).first()
             if future:
@@ -2189,14 +2211,14 @@ def add_goal_target(category, external_id):
         flash(f"Error fetching details from the API for {category}.")
         return redirect(request.referrer or url_for('main.goals', view_year=target_year))
 
-    # Check duplicate
-    existing = FutureMediaGoal.query.filter_by(year=target_year, category=category, external_id=str(external_id)).first()
+    # Check duplicate for user
+    existing = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=target_year, category=category, external_id=str(external_id)).first()
     if existing:
         flash(f"'{title}' is already set as a {category} target for {target_year}!")
         return redirect(url_for('main.goals', view_year=target_year))
 
     # Check if there's already a string-only match or create a new one
-    existing_by_title = FutureMediaGoal.query.filter_by(year=target_year, category=category, is_completed=False).filter(FutureMediaGoal.title.ilike(title)).first()
+    existing_by_title = FutureMediaGoal.query.filter_by(user_id=current_user.id, year=target_year, category=category, is_completed=False).filter(FutureMediaGoal.title.ilike(title)).first()
     if existing_by_title:
         existing_by_title.external_id = str(external_id)
         existing_by_title.poster_path = poster_path
@@ -2220,13 +2242,13 @@ def add_goal_target(category, external_id):
     # Check if target is already completed in the ledger
     match = None
     if category == 'movie':
-        match = Movie.query.filter(db.extract('year', Movie.date_watched) == target_year, db.or_(Movie.external_id == str(external_id), Movie.title.ilike(title))).first()
+        match = Movie.query.filter(Movie.user_id == current_user.id, db.extract('year', Movie.date_watched) == target_year, db.or_(Movie.external_id == str(external_id), Movie.title.ilike(title))).first()
     elif category == 'tv':
-        match = TVSeason.query.filter(db.extract('year', TVSeason.date_watched) == target_year, db.or_(TVSeason.external_id == str(external_id), TVSeason.series_title.ilike(title))).first()
+        match = TVSeason.query.filter(TVSeason.user_id == current_user.id, db.extract('year', TVSeason.date_watched) == target_year, db.or_(TVSeason.external_id == str(external_id), TVSeason.series_title.ilike(title))).first()
     elif category == 'game':
-        match = Game.query.filter(db.extract('year', Game.date_finished) == target_year, db.or_(Game.external_id == str(external_id), Game.title.ilike(title))).first()
+        match = Game.query.filter(Game.user_id == current_user.id, db.extract('year', Game.date_finished) == target_year, db.or_(Game.external_id == str(external_id), Game.title.ilike(title))).first()
     elif category == 'book':
-        match = Book.query.filter(db.extract('year', Book.date_finished) == target_year, db.or_(Book.external_id == str(external_id), Book.title.ilike(title))).first()
+        match = Book.query.filter(Book.user_id == current_user.id, db.extract('year', Book.date_finished) == target_year, db.or_(Book.external_id == str(external_id), Book.title.ilike(title))).first()
 
     if match:
         new_target.is_completed = True
@@ -2241,7 +2263,7 @@ def add_goal_target(category, external_id):
 @login_required
 def queue_goal(goal_id):
     user_id = current_user.id
-    target = FutureMediaGoal.query.get_or_404(goal_id)
+    target = FutureMediaGoal.query.filter_by(id=goal_id, user_id=current_user.id).first_or_404()
     
     print(f"INFO: [goals] User {user_id} queueing goal target ID {goal_id} ({target.title}) to Up Next", file=sys.stdout)
     
@@ -2250,13 +2272,13 @@ def queue_goal(goal_id):
         return redirect(url_for('main.goals', view_year=target.year))
         
     # Check if already in backlog
-    existing = BacklogItem.query.filter_by(category=target.category, external_id=target.external_id).first()
+    existing = BacklogItem.query.filter_by(user_id=current_user.id, category=target.category, external_id=target.external_id).first()
     if existing:
         flash(f"'{target.title}' is already on your Up Next list!")
         return redirect(url_for('main.goals', view_year=target.year))
         
     # Check space limit in backlog
-    count = BacklogItem.query.filter_by(category=target.category).count()
+    count = BacklogItem.query.filter_by(user_id=current_user.id, category=target.category).count()
     if count >= 10:
         flash(f"Your {target.category.upper()} Up Next list is full! (Limit is 10 items)")
         return redirect(url_for('main.goals', view_year=target.year))
