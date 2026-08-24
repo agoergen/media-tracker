@@ -148,3 +148,10 @@
   - Added sub-option toggle checkbox in `/account` settings (`Include "Up Next" queue on my public profile`).
   - Added public vanity route `/<username>/up-next` and updated `backlog.html` to support read-only visitor mode (hiding queue search forms, track buttons, and remove buttons).
   - Added dynamic Up Next card to `public_user_index.html` and public navbar link in `base.html` when `is_up_next_public` is enabled.
+
+## 2026-08-24 14:29:00
+- Merged `dev` branch to `main` and pushed to `origin/main` (Phase 5 Production Rollout):
+  - Automatically triggered Railway Production deployment.
+  - Procfile automatically executes `flask db upgrade` on startup applying migrations `e1a2b3c4d5e6`, `f2b3c4d5e6a7`, and `b4d5e6f7a8b9`.
+  - Backfills all historical media to primary admin user (`user_id=1`).
+  - Switched back to `dev` for ongoing work.
