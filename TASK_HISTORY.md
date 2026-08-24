@@ -69,3 +69,7 @@
 - Fixed `backup.bat` to invoke `.venv\Scripts\python.exe` directly, preventing `ModuleNotFoundError: No module named 'dotenv'` when system Python is in PATH.
 - Added argument forwarding `%*` to `backup.bat` to support `--restore` and custom flags.
 - Updated `backup_db.py` to include `BacklogItem` model in both `backup()` and `restore()` dictionary mappings.
+
+## 2026-08-24 13:00:00
+- Added interactive main menu to `backup_db.py` (`1. Backup`, `2. Restore`, `3. Exit`).
+- Implemented automatic backup file discovery and numbered selection from `./backups/` for streamlined restore into dev databases.
