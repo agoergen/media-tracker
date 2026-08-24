@@ -65,4 +65,7 @@
 ## 2026-08-20 07:09:00
 - Set default format to "Audiobook" in both the Track Completed and Queue Up Next action cards on `book_search.html`.
 
-
+## 2026-08-24 12:40:00
+- Fixed `backup.bat` to invoke `.venv\Scripts\python.exe` directly, preventing `ModuleNotFoundError: No module named 'dotenv'` when system Python is in PATH.
+- Added argument forwarding `%*` to `backup.bat` to support `--restore` and custom flags.
+- Updated `backup_db.py` to include `BacklogItem` model in both `backup()` and `restore()` dictionary mappings.
