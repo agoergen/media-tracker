@@ -22,9 +22,13 @@
                 {% if current_user.is_authenticated %}
                     <li><a href="{{ url_for('main.metrics') }}">Metrics</a></li>
                     <li><a href="{{ url_for('main.goals') }}">Goals</a></li>
+                    {% if current_user.is_admin %}
+                        <li><a href="{{ url_for('main.admin_users') }}">Admin</a></li>
+                    {% endif %}
+                    <li><a href="{{ url_for('main.account') }}">Account</a></li>
                     <li><a href="{{ url_for('main.logout') }}">Logout</a></li>
                 {% else %}
-                    <li><a href="{{ url_for('main.login') }}">Admin</a></li>
+                    <li><a href="{{ url_for('main.login') }}">Login</a></li>
                 {% endif %}
             </ul>
         </div>

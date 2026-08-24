@@ -28,11 +28,161 @@ def login():
         flash('Invalid username or password')
     return render_template('login.html')
 
+from functools import wraps
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not getattr(current_user, 'is_admin', False):
+            flash("Administrator privileges required.", "error")
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @main.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
+
+@main.route('/account', methods=['GET', 'POST'])
+@login_required
+def account():
+    if request.method == 'POST':
+        current_password = request.form.get('current_password', '')
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if not current_user.check_password(current_password):
+            flash("Current password is incorrect.")
+        elif new_password != confirm_password:
+            flash("New passwords do not match.")
+        elif len(new_password) < 6:
+            flash("New password must be at least 6 characters.")
+        else:
+            current_user.set_password(new_password)
+            db.session.commit()
+            flash("Password updated successfully!")
+            return redirect(url_for('main.account'))
+
+    return render_template('account.html')
+
+@main.route('/admin/users')
+@login_required
+@admin_required
+def admin_users():
+    users = User.query.order_by(User.id.asc()).all()
+    users_data = []
+    for u in users:
+        movies_count = Movie.query.filter_by(user_id=u.id).count()
+        tv_count = TVSeason.query.filter_by(user_id=u.id).count()
+        games_count = Game.query.filter_by(user_id=u.id).count()
+        books_count = Book.query.filter_by(user_id=u.id).count()
+        theater_count = Theater.query.filter_by(user_id=u.id).count()
+        total_media = movies_count + tv_count + games_count + books_count + theater_count
+        users_data.append({
+            'user': u,
+            'movies': movies_count,
+            'tv': tv_count,
+            'games': games_count,
+            'books': books_count,
+            'theater': theater_count,
+            'total_media': total_media
+        })
+    return render_template('admin_users.html', users=users_data)
+
+@main.route('/admin/users/create', methods=['POST'])
+@login_required
+@admin_required
+def admin_create_user():
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+    confirm_password = request.form.get('confirm_password', '')
+    is_admin = request.form.get('is_admin') == 'on'
+
+    if not username or not password:
+        flash("Username and password are required.")
+        return redirect(url_for('main.admin_users'))
+
+    if len(password) < 6:
+        flash("Password must be at least 6 characters.")
+        return redirect(url_for('main.admin_users'))
+
+    if password != confirm_password:
+        flash("Passwords do not match.")
+        return redirect(url_for('main.admin_users'))
+
+    if User.query.filter_by(username=username).first():
+        flash(f"Username '{username}' already exists.")
+        return redirect(url_for('main.admin_users'))
+
+    new_user = User(username=username, is_admin=is_admin)
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+
+    flash(f"Successfully created account for '{username}'!")
+    return redirect(url_for('main.admin_users'))
+
+@main.route('/admin/users/<int:user_id>/reset-password', methods=['POST'])
+@login_required
+@admin_required
+def admin_reset_password(user_id):
+    user = User.query.get_or_404(user_id)
+    new_password = request.form.get('new_password', '')
+
+    if len(new_password) < 6:
+        flash("New password must be at least 6 characters.")
+        return redirect(url_for('main.admin_users'))
+
+    user.set_password(new_password)
+    db.session.commit()
+
+    flash(f"Password reset for '{user.username}'.")
+    return redirect(url_for('main.admin_users'))
+
+@main.route('/admin/users/<int:user_id>/toggle-role', methods=['POST'])
+@login_required
+@admin_required
+def admin_toggle_role(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.id == current_user.id:
+        flash("You cannot modify your own administrator role.")
+        return redirect(url_for('main.admin_users'))
+
+    user.is_admin = not user.is_admin
+    db.session.commit()
+
+    role_name = "Administrator" if user.is_admin else "Member"
+    flash(f"Updated role for '{user.username}' to {role_name}.")
+    return redirect(url_for('main.admin_users'))
+
+@main.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if user.id == current_user.id:
+        flash("You cannot delete your own account.")
+        return redirect(url_for('main.admin_users'))
+
+    # Clean up all user data
+    Movie.query.filter_by(user_id=user.id).delete()
+    TVSeason.query.filter_by(user_id=user.id).delete()
+    Game.query.filter_by(user_id=user.id).delete()
+    Book.query.filter_by(user_id=user.id).delete()
+    Theater.query.filter_by(user_id=user.id).delete()
+    Goal.query.filter_by(user_id=user.id).delete()
+    FutureMediaGoal.query.filter_by(user_id=user.id).delete()
+    BacklogItem.query.filter_by(user_id=user.id).delete()
+
+    db.session.delete(user)
+    db.session.commit()
+
+    flash(f"User '{user.username}' and all associated records deleted.")
+    return redirect(url_for('main.admin_users'))
 
 @main.route('/goals', methods=['GET', 'POST'])
 @main.route('/goals/<int:view_year>', methods=['GET', 'POST'])

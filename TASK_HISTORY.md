@@ -93,3 +93,11 @@
 ## 2026-08-24 13:35:00
 - Updated all 14 model instantiation points across `app/routes.py` (`Movie`, `TVSeason`, `Game`, `Book`, `Theater`, `Goal`, `FutureMediaGoal`, `BacklogItem`) to pass `user_id=current_user.id`.
 - Verified insertion and deletion operations.
+
+## 2026-08-24 13:43:00
+- Completed Phase 2 of Multi-User Support: Direct Admin User Management & Account Settings.
+- Implemented `@admin_required` access control decorator in `app/routes.py`.
+- Built Admin User Management dashboard (`/admin/users`) with user creation, password reset, role promotion/demotion, and account deletion with data cleanup.
+- Built User Account Settings page (`/account`) allowing users to change their own passwords.
+- Added navigation links for Admin and Account in `base.html`.
+- Verified authentication, permission boundaries, and template rendering with automated test suite.
