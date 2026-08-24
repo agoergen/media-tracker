@@ -89,3 +89,7 @@
 - Added `user_id` foreign keys, indices, and constraints across `Movie`, `Game`, `Book`, `Theater`, `TVSeason`, `Goal`, `FutureMediaGoal`, and `BacklogItem`.
 - Safely backfilled `user_id = 1` for all existing records.
 - Verified migration upgrade and data integrity on local database.
+
+## 2026-08-24 13:35:00
+- Updated all 14 model instantiation points across `app/routes.py` (`Movie`, `TVSeason`, `Game`, `Book`, `Theater`, `Goal`, `FutureMediaGoal`, `BacklogItem`) to pass `user_id=current_user.id`.
+- Verified insertion and deletion operations.

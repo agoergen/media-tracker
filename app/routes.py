@@ -52,7 +52,7 @@ def goals(view_year=None):
             
             goal = Goal.query.filter_by(year=view_year).first()
             if not goal:
-                goal = Goal(year=view_year)
+                goal = Goal(user_id=current_user.id, year=view_year)
                 db.session.add(goal)
                 
             goal.movie_goal = movie_goal
@@ -67,7 +67,7 @@ def goals(view_year=None):
             category = request.form.get('category')
             title = request.form.get('title', '').strip()
             if title and category:
-                new_future = FutureMediaGoal(year=view_year, category=category, title=title)
+                new_future = FutureMediaGoal(user_id=current_user.id, year=view_year, category=category, title=title)
                 db.session.add(new_future)
                 db.session.commit()
                 flash(f"Added '{title}' to your {view_year} {category} targets!")
@@ -395,6 +395,7 @@ def add_movie(tmdb_id):
             flash(f"Refreshed details for {movie.title}!")
         else:
             new_movie = Movie(
+                user_id=current_user.id,
                 title=details.get('title'),
                 date_watched=date_watched,
                 release_year=release_year,
@@ -589,6 +590,7 @@ def add_tv_season(series_id):
             flash(f"Refreshed details for {season.series_title} S{season.season_number}!")
         else:
             new_season = TVSeason(
+                user_id=current_user.id,
                 series_title=details.get('series_name'),
                 season_number=season_number,
                 date_watched=date_watched,
@@ -805,6 +807,7 @@ def add_game(igdb_id):
             flash(f"Refreshed details for {game.title}!")
         else:
             new_game = Game(
+                user_id=current_user.id,
                 title=details.get('name'),
                 release_year=release_year,
                 external_id=str(igdb_id),
@@ -1044,6 +1047,7 @@ def add_book(book_id):
         flash(f"Refreshed details for {book.title}!")
     else:
         new_book = Book(
+            user_id=current_user.id,
             title=title,
             author=author,
             external_id=book_id,
@@ -1243,6 +1247,7 @@ def add_theater_ibdb(slug_id):
         # ADD MODE: Create new record
         print(f"DEBUG: Creating new show with poster: {poster_filename}")
         new_show = Theater(
+            user_id=current_user.id,
             title=title,
             date_watched=date_watched,
             location=location,
@@ -1662,6 +1667,7 @@ def add_up_next_item(category, external_id):
             return redirect(request.referrer or url_for('main.up_next'))
 
         new_item = BacklogItem(
+            user_id=current_user.id,
             category=category,
             title=title,
             external_id=str(external_id),
@@ -1752,6 +1758,7 @@ def track_up_next_item(item_id):
             wikipedia_url = f"https://www.wikidata.org/wiki/{wikidata_id}" if wikidata_id else None
 
             new_movie = Movie(
+                user_id=current_user.id,
                 title=details.get('title'),
                 release_year=release_year,
                 external_id=str(external_id),
@@ -1801,6 +1808,7 @@ def track_up_next_item(item_id):
             trailer_url = f"https://www.youtube.com/embed/{trailer}" if trailer else None
 
             new_season = TVSeason(
+                user_id=current_user.id,
                 series_title=details.get('series_name'),
                 season_number=season_number,
                 date_watched=now_date,
@@ -1849,6 +1857,7 @@ def track_up_next_item(item_id):
             platform_played = item.game_platform or default_platform
 
             new_game = Game(
+                user_id=current_user.id,
                 title=details.get('name'),
                 release_year=release_year,
                 external_id=str(external_id),
@@ -1923,6 +1932,7 @@ def track_up_next_item(item_id):
                 return redirect(url_for('main.up_next'))
 
             new_book = Book(
+                user_id=current_user.id,
                 title=title_b,
                 author=author_b,
                 external_id=str(external_id),
@@ -2046,6 +2056,7 @@ def add_goal_target(category, external_id):
         return redirect(url_for('main.goals', view_year=target_year))
 
     new_target = FutureMediaGoal(
+        user_id=current_user.id,
         year=target_year,
         category=category,
         title=title,
@@ -2102,6 +2113,7 @@ def queue_goal(goal_id):
         
     # Create backlog item
     item = BacklogItem(
+        user_id=current_user.id,
         category=target.category,
         title=target.title,
         external_id=target.external_id,
