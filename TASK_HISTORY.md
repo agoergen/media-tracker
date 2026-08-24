@@ -73,3 +73,8 @@
 ## 2026-08-24 13:00:00
 - Added interactive main menu to `backup_db.py` (`1. Backup`, `2. Restore`, `3. Exit`).
 - Implemented automatic backup file discovery and numbered selection from `./backups/` for streamlined restore into dev databases.
+
+## 2026-08-24 13:09:00
+- Implemented `manage_volume.py` and `volume.bat` utility for out-of-band persistent storage management.
+- Supports ZIP poster backup export/import, source API air-gapped re-fetching, and direct out-of-band downloading of media assets from production URL.
+- Updated `.gitignore` to track volume maintenance tools and backup archives.

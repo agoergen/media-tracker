@@ -43,6 +43,9 @@ app.db
 # Database backup utility and dumps
 backup_db.py
 backup.bat
+manage_volume.py
+volume.bat
 backups/
 leisureledger_backup_*.json
+posters_backup_*.zip
 
