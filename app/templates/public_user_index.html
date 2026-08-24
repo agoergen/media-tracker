@@ -147,6 +147,15 @@
                 <span class="count">{{ theater_count }}</span>
                 <span class="label">{{ theater_this_year }} shows in {{ datetime.now().year }}</span>
             </a>
+
+            <!-- Up Next (Optional) -->
+            {% if profile_user.is_up_next_public %}
+            <a href="{{ url_for('main.public_user_up_next', username=profile_user.username) }}" class="stat-card">
+                <h3>Up Next</h3>
+                <span class="count">{{ up_next_count }}</span>
+                <span class="label">Items planned in queue</span>
+            </a>
+            {% endif %}
         </div>
     </div>
 

@@ -45,11 +45,17 @@
         <h2 style="font-size: 1.25rem; margin-bottom: 0.5rem;">Public Ledger Profile</h2>
         <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">Allow anyone to view your media ledger and statistics via your personal public URL without logging in.</p>
         
-        <form method="POST" action="{{ url_for('main.update_public_status') }}" style="margin-bottom: 1rem;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+        <form method="POST" action="{{ url_for('main.update_public_status') }}" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
                 <input type="checkbox" id="is_public" name="is_public" value="1" {% if current_user.is_public %}checked{% endif %} onchange="this.form.submit()" style="width: 18px; height: 18px; cursor: pointer;">
                 <label for="is_public" style="font-size: 0.95rem; font-weight: 500; cursor: pointer;">Share my media ledger publicly</label>
             </div>
+            {% if current_user.is_public %}
+            <div style="display: flex; align-items: center; gap: 10px; margin-left: 28px; margin-bottom: 1rem;">
+                <input type="checkbox" id="is_up_next_public" name="is_up_next_public" value="1" {% if current_user.is_up_next_public %}checked{% endif %} onchange="this.form.submit()" style="width: 16px; height: 16px; cursor: pointer;">
+                <label for="is_up_next_public" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer;">Include "Up Next" queue on my public profile</label>
+            </div>
+            {% endif %}
         </form>
 
         {% if current_user.is_public %}

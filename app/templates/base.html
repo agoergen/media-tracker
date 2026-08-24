@@ -44,6 +44,9 @@
                     <li><a href="{{ url_for('main.public_user_games', username=profile_user.username) }}">Games</a></li>
                     <li><a href="{{ url_for('main.public_user_books', username=profile_user.username) }}">Books</a></li>
                     <li><a href="{{ url_for('main.public_user_theater', username=profile_user.username) }}">Theater</a></li>
+                    {% if profile_user.is_up_next_public %}
+                        <li><a href="{{ url_for('main.public_user_up_next', username=profile_user.username) }}">Up Next</a></li>
+                    {% endif %}
                     <li><a href="{{ url_for('main.login') }}">Login</a></li>
                 {% else %}
                     <li><a href="{{ url_for('main.login') }}">Login</a></li>

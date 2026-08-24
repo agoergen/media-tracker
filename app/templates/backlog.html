@@ -3,6 +3,7 @@
 {% block title %}LeisureLedger: Backlog{% endblock %}
 
 {% block content %}
+{% set is_owner = current_user.is_authenticated and (not profile_user or current_user.id == profile_user.id) %}
 <style>
     .backlog-container {
         margin-top: 2rem;
@@ -118,14 +119,14 @@
 
 <div class="backlog-container">
     <div class="backlog-header" style="flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-bottom: 1.5rem;">
-        <h1 style="margin: 0;">Up Next</h1>
+        <h1 style="margin: 0;">{% if profile_user and (not current_user.is_authenticated or current_user.id != profile_user.id) %}{{ profile_user.username }}'s Up Next{% else %}Up Next{% endif %}</h1>
         <p style="color: var(--text-muted); margin: 0;">
-            These are the items planned to read, play, or watch in the short term.
+            These are the items {% if profile_user and profile_user.id != current_user.id %}{{ profile_user.username }} plans{% else %}planned{% endif %} to read, play, or watch in the short term.
         </p>
     </div>
 
     <!-- Universal search form on Up Next page -->
-    {% if current_user.is_authenticated %}
+    {% if is_owner %}
     <form id="upNextSearchForm" method="GET" style="margin-bottom: 2rem; display: flex; gap: 8px; max-width: 800px; width: 100%;">
         <select id="searchCategory" style="padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: var(--white); color: var(--text-color); cursor: pointer;">
             <option value="movie">Movies</option>
@@ -179,7 +180,7 @@
                     <span class="count">{{ grouped[cat]|length }}/10</span>
                 </div>
                 
-                {% if current_user.is_authenticated %}
+                {% if is_owner %}
                     {% if grouped[cat]|length < 10 %}
                         <form action="{{ search_url }}" method="GET" style="margin-bottom: 1rem; width: 100%;">
                             <input type="hidden" name="up_next" value="1">
@@ -219,7 +220,7 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                    {% if current_user.is_authenticated %}
+                                    {% if is_owner %}
                                         <div class="backlog-item-actions">
                                             <form action="{{ url_for('main.track_up_next_item', item_id=item.id) }}" method="POST" class="action-form">
                                                 <button type="submit" class="btn action-btn-small" style="background: var(--success);" title="Move to tracked list (as completed today)">Track</button>

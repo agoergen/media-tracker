@@ -77,9 +77,10 @@ def account():
 @login_required
 def update_public_status():
     current_user.is_public = bool(request.form.get('is_public'))
+    current_user.is_up_next_public = bool(request.form.get('is_up_next_public')) if current_user.is_public else False
     db.session.commit()
     status = "public" if current_user.is_public else "private"
-    flash(f"Your ledger profile is now {status}.")
+    flash(f"Your ledger profile settings have been updated ({status}).")
     return redirect(url_for('main.account'))
 
 @main.route('/admin/users')
@@ -2357,6 +2358,8 @@ def public_user_dashboard(username):
         "book": FutureMediaGoal.query.filter_by(user_id=uid, year=current_year, category='book', is_completed=True).count(),
     }
 
+    up_next_count = BacklogItem.query.filter_by(user_id=uid).count()
+
     return render_template('public_user_index.html',
                            profile_user=target_user,
                            recent_movies=recent_movies,
@@ -2378,8 +2381,37 @@ def public_user_dashboard(username):
                            recent_theater=recent_theater,
                            theater_count=theater_count,
                            theater_this_year=theater_this_year,
+                           up_next_count=up_next_count,
                            current_goal=current_goal,
                            stars=stars)
+
+@main.route('/<string:username>/up-next')
+def public_user_up_next(username):
+    target_user = get_public_user_or_404(username)
+    is_owner = current_user.is_authenticated and current_user.id == target_user.id
+    if not target_user.is_up_next_public and not is_owner:
+        abort(404)
+        
+    backlog_items = BacklogItem.query.filter_by(user_id=target_user.id).all()
+    grouped = {
+        'movie': [],
+        'tv': [],
+        'game': [],
+        'book': []
+    }
+    for item in backlog_items:
+        if item.category in grouped:
+            grouped[item.category].append(item)
+
+    current_year = datetime.now().year
+    goals = FutureMediaGoal.query.filter_by(user_id=target_user.id, year=current_year).all()
+    goals_set = {}
+    for g in goals:
+        if g.external_id:
+            goals_set[(g.category, g.external_id)] = True
+        goals_set[(g.category, g.title.lower())] = True
+
+    return render_template('backlog.html', profile_user=target_user, grouped=grouped, goals_set=goals_set)
 
 @main.route('/<string:username>/movies')
 def public_user_movies(username):
