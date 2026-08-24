@@ -80,7 +80,9 @@ def create_app(config_class=Config):
             'Goal': Goal,
             'FutureMediaGoal': FutureMediaGoal,
             'BacklogItem': BacklogItem,
-            'target_map': target_map
+            'target_map': target_map,
+            'is_prod': app.config.get('IS_PROD', False),
+            'env_name': app.config.get('ENV_NAME', 'DEV')
         }
 
     return app

@@ -112,3 +112,10 @@
 - Enforced strict IDOR protection on all record edit, replacement, and deletion endpoints (`/movies/edit/<id>`, `/tv/delete/<id>`, `/up-next/delete/<id>`, etc.).
 - Scoped target map lookup in `inject_globals` context processor to active user.
 - Passed 100% of end-to-end multi-user isolation, IDOR, and privilege boundary automated tests.
+
+## 2026-08-24 13:58:00
+- Added Non-Production environment indicators:
+  - Browser tab title prefix (e.g. `[DEV] LeisureLedger`).
+  - Top viewport warning banner (`⚠️ DEV ENVIRONMENT — Non-Production Instance`).
+  - Navbar logo brand badge (`DEV` / `STAGING`).
+  - Automatic detection in `config.py` using Railway environment variables.

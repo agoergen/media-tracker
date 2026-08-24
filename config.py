@@ -32,3 +32,8 @@ class Config:
     
     # Persistent storage for posters
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(os.path.abspath(os.path.dirname(__file__)), 'app', 'static', 'posters')
+
+    # Environment Detection
+    _railway_env = os.environ.get('RAILWAY_ENVIRONMENT_NAME') or os.environ.get('ENVIRONMENT') or ''
+    IS_PROD = _railway_env.lower() == 'production'
+    ENV_NAME = _railway_env if _railway_env else ('Local Dev' if not os.environ.get('DATABASE_URL') else 'Development')
