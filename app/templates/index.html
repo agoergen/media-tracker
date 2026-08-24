@@ -4,7 +4,7 @@
 
 {% block content %}
     <div class="dashboard-hero">
-        <h1>Welcome back.</h1>
+        <h1>Welcome back, {{ current_user.username }}.</h1>
         <p style="color: var(--text-muted); font-size: 1.25rem;">Track your journey through cinema, television, gaming, literature, and the arts.</p>
         
         {% if current_user.is_authenticated %}

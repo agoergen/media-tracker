@@ -132,3 +132,6 @@
   - Implemented public vanity routes (`/<username>`, `/<username>/movies`, `/<username>/tv`, `/<username>/games`, `/<username>/books`, `/<username>/theater`).
   - Created `public_user_index.html` dashboard and updated media templates to cleanly render public items while hiding private entries (`is_private=True`), search forms, and edit/delete controls.
   - Added collision protection with reserved application routes.
+
+## 2026-08-24 14:15:00
+- Updated dashboard hero header in `app/templates/index.html` to display personalized greeting: `Welcome back, <username>.`
