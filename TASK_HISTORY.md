@@ -3,8 +3,9 @@
 ## Current Backlog
 - None. All tasks completed.
 
-## 2026-08-25 15:44:00
+## 2026-08-25 15:47:00
 - Refined Help & User Guide content (`app/templates/help.html`):
+  - Added user note on Stage Theater artwork explaining limited coverage, Wikipedia follow-up image searches, and custom image upload support.
   - Removed internal design context card ("Private Storage & Isolation").
   - Removed technical column name `(is_private)` from Per-Item Privacy Toggle heading.
   - Removed "Administrator Controls" card and refactored section into "Account & Profile Settings".
