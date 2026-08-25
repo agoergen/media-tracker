@@ -3,6 +3,13 @@
 ## Current Backlog
 - None. All tasks completed.
 
+## 2026-08-25 15:51:00
+- Merged `dev` branch into `main` and pushed to `origin/main` (Production Rollout):
+  - Released authenticated Help & User Guide page (`/help`) to Production.
+  - Exposes "📖 User Guide & Help" button on home page dashboard hero exclusively for logged-in users.
+  - Automatically triggered Railway Production deployment.
+  - Switched back to `dev` for ongoing work.
+
 ## 2026-08-25 15:47:00
 - Refined Help & User Guide content (`app/templates/help.html`):
   - Added user note on Stage Theater artwork explaining limited coverage, Wikipedia follow-up image searches, and custom image upload support.
