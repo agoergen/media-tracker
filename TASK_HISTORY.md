@@ -3,13 +3,12 @@
 ## Current Backlog
 - None. All tasks completed.
 
-## 2026-08-25 15:37:00
-- Created Help & User Guide page (`/help`) for authenticated users.
-- Built comprehensive documentation template (`app/templates/help.html`) covering Core Philosophy, Universal Search, the 3 Action Cards, Media Ledgers, Up Next Queue, Annual Goals & Stars, Metrics & Benchmarks, Privacy & Public Profiles, and Account/Administration.
-- Added quick-jump navigation chips, section subcards, and custom responsive styling in `app/static/style.css`.
-- Added "📖 User Guide & Help" button in `app/templates/index.html` hero header, rendered exclusively for logged-in users.
-- Added `@main.route('/help')` route protected with `@login_required` in `app/routes.py`.
-- Verified access control, template rendering, and homepage integration with automated test suite.
+## 2026-08-25 15:44:00
+- Refined Help & User Guide content (`app/templates/help.html`):
+  - Removed internal design context card ("Private Storage & Isolation").
+  - Removed technical column name `(is_private)` from Per-Item Privacy Toggle heading.
+  - Removed "Administrator Controls" card and refactored section into "Account & Profile Settings".
+  - Verified clean template rendering and pushed to `origin/dev`.
 
 ## 2026-08-19 15:49:00
 - Completed implementation of the Backlog feature (both Phase 1 and Phase 2).
