@@ -4,8 +4,19 @@
 
 {% block content %}
     <div class="dashboard-hero">
-        <h1>Welcome back, {{ current_user.username }}.</h1>
-        <p style="color: var(--text-muted); font-size: 1.25rem;">Track your journey through cinema, television, gaming, literature, and the arts.</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1 style="margin-bottom: 0.5rem;">Welcome back, {{ current_user.username }}.</h1>
+                <p style="color: var(--text-muted); font-size: 1.25rem;">Track your journey through cinema, television, gaming, literature, and the arts.</p>
+            </div>
+            {% if current_user.is_authenticated %}
+            <div>
+                <a href="{{ url_for('main.help_guide') }}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 10px 16px; border-radius: 8px; text-decoration: none; font-weight: 500;">
+                    <span>📖</span> User Guide &amp; Help
+                </a>
+            </div>
+            {% endif %}
+        </div>
         
         {% if current_user.is_authenticated %}
         <form id="homepageSearchForm" method="GET" style="margin-top: 2rem; margin-bottom: 2rem; display: flex; gap: 8px; max-width: 800px; width: 100%;">

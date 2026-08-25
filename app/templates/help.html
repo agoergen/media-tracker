@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block title %}LeisureLedger: User Guide &amp; Help{% endblock %}
+
+{% block content %}
+<div class="help-page" style="max-width: 900px; margin: 2rem auto; padding-bottom: 4rem;">
+    <!-- Header -->
+    <div style="margin-bottom: 2.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: 0.25rem;">Documentation &amp; Reference</div>
+            <h1 style="margin-bottom: 0.5rem;">User Guide &amp; App Handbook</h1>
+            <p style="color: var(--text-muted); font-size: 1.15rem;">Everything you need to know about tracking, queueing, goals, metrics, and privacy in LeisureLedger.</p>
+        </div>
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary" style="text-decoration: none; font-size: 0.9rem; padding: 8px 14px; border-radius: 8px;">
+            &larr; Back to Home
+        </a>
+    </div>
+
+    <!-- Quick Navigation Bar -->
+    <div class="help-toc" style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 3rem;">
+        <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 0.75rem; color: var(--text-main);">Quick Navigation</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <a href="#core-philosophy" class="help-nav-chip">Core Philosophy</a>
+            <a href="#universal-search" class="help-nav-chip">Universal Search &amp; Actions</a>
+            <a href="#media-ledgers" class="help-nav-chip">Media Ledgers</a>
+            <a href="#up-next" class="help-nav-chip">Up Next Queue</a>
+            <a href="#goals-stars" class="help-nav-chip">Annual Goals &amp; Stars</a>
+            <a href="#metrics-insights" class="help-nav-chip">Metrics &amp; Insights</a>
+            <a href="#privacy-profiles" class="help-nav-chip">Privacy &amp; Public Profiles</a>
+            <a href="#account-admin" class="help-nav-chip">Account &amp; Administration</a>
+        </div>
+    </div>
+
+    <!-- Section 1: Core Philosophy -->
+    <section id="core-philosophy" class="help-section" style="margin-bottom: 3.5rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">📖</span>
+            <h2 style="font-size: 1.6rem;">1. Core Philosophy &amp; Architecture</h2>
+        </div>
+        <p style="margin-bottom: 1rem; line-height: 1.7; color: var(--text-main);">
+            <strong>LeisureLedger</strong> is designed as a focused, distraction-free personal ledger for cinema, television, video games, literature, and the performing arts. Unlike algorithmic social networks with endless feeds, LeisureLedger centers on <em>intentional media consumption</em>, chronological logging, annual goal-setting, and rich historical metrics.
+        </p>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">⏳ Ascending Chronology</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Media lists sort in ascending order (oldest to newest) to preserve a true chronological timeline of your year.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">📦 Collapsed by Default</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Detailed summaries, posters, and technical metadata stay cleanly collapsed until you click to expand them.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">🔒 Private Storage &amp; Isolation</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Media posters are cached locally on persistent storage, and your data is fully isolated to your personal account.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2: Universal Search & 3 Action Cards -->
+    <section id="universal-search" class="help-section" style="margin-bottom: 3.5rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">🔍</span>
+            <h2 style="font-size: 1.6rem;">2. Universal Search &amp; The 3 Action Cards</h2>
+        </div>
+        <p style="margin-bottom: 1rem; line-height: 1.7;">
+            You can search external databases directly from the <strong>Homepage Hero</strong>, any media listing page, the <strong>Up Next</strong> queue, or the <strong>Goals</strong> screen.
+        </p>
+
+        <div style="background: var(--card-bg); border-left: 4px solid var(--accent); padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;">
+            <strong>Integrated Metadata Sources:</strong>
+            <ul style="margin-left: 1.5rem; margin-top: 0.5rem; font-size: 0.95rem; color: var(--text-main);">
+                <li><strong>Movies &amp; Television:</strong> The Movie Database (TMDB) API</li>
+                <li><strong>Video Games:</strong> Twitch Internet Game Database (IGDB) API</li>
+                <li><strong>Books:</strong> Google Books API (with OpenLibrary fallback)</li>
+                <li><strong>Stage Theater:</strong> Internet Broadway Database (IBDB) &amp; Wikipedia/Wikidata</li>
+            </ul>
+        </div>
+
+        <h3 style="font-size: 1.2rem; margin-top: 1.5rem; margin-bottom: 0.75rem;">The 3 Action Cards Workflow</h3>
+        <p style="margin-bottom: 1rem; line-height: 1.6; color: var(--text-muted);">
+            Whenever you search and select a title, LeisureLedger displays three side-by-side action cards. Depending on where you originated your search, the recommended action will automatically highlight:
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
+            <div class="help-action-card">
+                <div class="help-badge" style="background: #e0e7ff; color: #3730a3;">1. Track Completed</div>
+                <h4 style="margin: 0.5rem 0 0.25rem;">Log Completed Entry</h4>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                    Immediately logs the title into your official ledger. Record completion date, revisit status, custom formats/platforms, rating, and notes.
+                </p>
+                <div style="font-size: 0.8rem; color: var(--text-muted); background: #f3f4f6; padding: 6px 10px; border-radius: 6px;">
+                    <strong>Best for:</strong> Media you have just watched, played, read, or attended.
+                </div>
+            </div>
+
+            <div class="help-action-card">
+                <div class="help-badge" style="background: #fef3c7; color: #92400e;">2. Queue Up Next</div>
+                <h4 style="margin: 0.5rem 0 0.25rem;">Add to Backlog Queue</h4>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                    Places the title on your active "Up Next" queue without logging completion. Holds your place until you finish it.
+                </p>
+                <div style="font-size: 0.8rem; color: var(--text-muted); background: #f3f4f6; padding: 6px 10px; border-radius: 6px;">
+                    <strong>Best for:</strong> Short-term queue (max 10 titles) you plan to experience soon.
+                </div>
+            </div>
+
+            <div class="help-action-card">
+                <div class="help-badge" style="background: #fce7f3; color: #9d174d;">3. Set as Goal Target</div>
+                <h4 style="margin: 0.5rem 0 0.25rem;">Designate Target Title</h4>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                    Anchors the title as one of your 3 annual challenge targets for the category. Earns a ⭐ star upon completion.
+                </p>
+                <div style="font-size: 0.8rem; color: var(--text-muted); background: #f3f4f6; padding: 6px 10px; border-radius: 6px;">
+                    <strong>Best for:</strong> Annual reading/gaming/viewing milestones and challenges.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Media Ledgers -->
+    <section id="media-ledgers" class="help-section" style="margin-bottom: 3.5rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">🎬</span>
+            <h2 style="font-size: 1.6rem;">3. Media Ledgers &amp; Tracking Mechanics</h2>
+        </div>
+        <p style="margin-bottom: 1rem; line-height: 1.7;">
+            LeisureLedger organizes your media into five specialized categories. Each category contains customized fields, statistics, and filters:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+            <div class="help-subcard">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.25rem;">🎥 Movies</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    Tracks release year, directors, writers, leading cast, runtime, certification ratings, box office financials, and viewing platforms (e.g. Theater, 4K Blu-ray, Netflix, Apple TV).
+                </p>
+            </div>
+
+            <div class="help-subcard">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.25rem;">📺 Television</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    Tracks TV series by <em>individual seasons</em>. Stores season episode counts, original network (e.g. HBO, FX, Netflix), release year, and personal scores.
+                </p>
+            </div>
+
+            <div class="help-subcard">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.25rem;">🎮 Video Games</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    Tracks completion date, platform played (e.g. PC, Switch, PS5), franchise name, developers, publishers, genre tags, and completion variants (e.g. Main Story, 100% Completion, DLC Expansion).
+                </p>
+            </div>
+
+            <div class="help-subcard">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.25rem;">📚 Books &amp; Literature</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    Tracks authors, page counts, StoryGraph/Goodreads ratings, genre tags, and media format (<strong>Audiobook</strong>, <strong>Ebook</strong>, <strong>Physical</strong>, <strong>Graphic Novel</strong>).
+                </p>
+            </div>
+
+            <div class="help-subcard">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.25rem;">🎭 Stage Theater</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">
+                    Tracks live theatrical plays and musicals. Stores original Broadway theater, location/venue attended (default: <em>Orpheum</em>), show type (Musical/Play), runtime, and synopsis.
+                </p>
+            </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); padding: 1.25rem; border-radius: 8px; margin-top: 1.5rem;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">🔄 Revisit / Rewatch / Replay / Reread Tracking</div>
+            <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;">
+                Whenever you rewatch a movie/show, replay a game, or reread a book, check the <strong>"Revisit"</strong> box. Revisit tracking separates brand-new discoveries from beloved re-experiences, powering the dual-progress bar system and revisit rate metrics.
+            </p>
+        </div>
+    </section>
+
+    <!-- Section 4: Up Next Queue -->
+    <section id="up-next" class="help-section" style="margin-bottom: 3.5rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">📋</span>
+            <h2 style="font-size: 1.6rem;">4. The "Up Next" Backlog Queue</h2>
+        </div>
+        <p style="margin-bottom: 1rem; line-height: 1.7;">
+            The <strong>Up Next</strong> queue (accessible via the navigation bar) is your active holding area for media you intend to consume in the near future.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">🎯 Strict 10-Item Limit</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Each category is capped at 10 active items. This prevents backlog inflation and forces conscious curation of what you actually plan to experience next.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">⚡ Single-Click Tracking</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    When you finish an item on your queue, simply click the <strong>Track</strong> button on its card to instantly log it into your ledger with today's date.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">⭐ Goal Correlation Badge</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    If a queued item is also one of your active annual goal targets, it is highlighted with a gold star marker (⭐ Target Title).
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 5: Goals & Stars -->
+    <section id="goals-stars" class="help-section" style="margin-bottom: 3.5rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">🎯</span>
+            <h2 style="font-size: 1.6rem;">5. Annual Goals &amp; The Star Reward System</h2>
+        </div>
+        <p style="margin-bottom: 1rem; line-height: 1.7;">
+            Goals in LeisureLedger are bound to individual calendar years (e.g. {{ datetime.now().year }}). You can set both numerical volume goals and specific priority targets.
+        </p>
+
+        <h3 style="font-size: 1.2rem; margin-top: 1.25rem; margin-bottom: 0.75rem;">Understanding the Dual-Progress Bars</h3>
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.25rem;">
+                    <span style="display: inline-block; width: 12px; height: 12px; background: var(--text-main); border-radius: 2px;"></span>
+                    <strong>New Media Progress Bar (Dark / Green)</strong>
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+                    Counts only brand-new media entries (excluding revisits). This is your <em>primary goal driver</em>. When this bar fills, your annual goal is complete!
+                </div>
+            </div>
+
+            <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 0.25rem;">
+                    <span style="display: inline-block; width: 12px; height: 12px; background: var(--danger); border-radius: 2px;"></span>
+                    <strong>All Media Progress Bar (Red)</strong>
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+                    Counts total media items logged during the year including all revisits, rewatches, replays, and rereads.
+                </div>
+            </div>
+        </div>
+
+        <h3 style="font-size: 1.2rem; margin-top: 1.25rem; margin-bottom: 0.75rem;">Target Titles &amp; Star Badges (⭐ ⭐ ⭐)</h3>
+        <p style="font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1rem;">
+            Assign up to <strong>3 specific target titles</strong> per category for the year. Whenever you track a target title, you earn a star badge on your dashboard.
+        </p>
+
+        <div class="help-subcard">
+            <div style="font-weight: 600; margin-bottom: 0.25rem;">🔄 "Validate All Targets" Button</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+                If you tracked a title before creating a goal target, or if a title didn't immediately mark complete, click <strong>"Validate All Targets"</strong> on the Goals page. The backend will retroactively cross-reference all logged titles for that year and award your earned stars.
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 6: Metrics & Historical Benchmarks -->
+    <section id="metrics-insights" class="help-section" style="margin-bottom: 3.5rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">📊</span>
+            <h2 style="font-size: 1.6rem;">6. Metrics &amp; Historical Benchmarks</h2>
+        </div>
+        <p style="margin-bottom: 1rem; line-height: 1.7;">
+            The <strong>Metrics</strong> page provides deep analytical breakdowns of your media consumption habits across individual years or <em>All Time</em>:
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">📚 Book Formats &amp; Authors</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Visual distribution of Audiobook vs Physical vs Ebook reads, co-author counts, and total pages consumed.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">🎮 Game Platforms &amp; Franchises</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Breakdowns of platforms played (PC, Switch, PlayStation, Xbox) and your top completed gaming franchises.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">📺 TV Episodes &amp; Revisit Rates</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Exact total episode counts, season rewatches, and provider distributions.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">📈 Historical Benchmarks</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Compares your current year pace against your historical annual average and personal record peak year.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 7: Privacy & Public Profiles -->
+    <section id="privacy-profiles" class="help-section" style="margin-bottom: 3.5rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">🔒</span>
+            <h2 style="font-size: 1.6rem;">7. Privacy Controls &amp; Public Profiles</h2>
+        </div>
+        <p style="margin-bottom: 1rem; line-height: 1.7;">
+            LeisureLedger gives you full granular control over what is visible to the public:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1rem;">
+            <div class="help-subcard">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.35rem;">🔐 Per-Item Privacy Toggle (<code>is_private</code>)</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;">
+                    When logging or editing any movie, show, game, book, or stage performance, you can check <strong>"Keep this entry private"</strong>. Private items are completely hidden from public visitors and shareable profiles. However, your private ledger totals and goal calculations remain 100% accurate.
+                </p>
+            </div>
+
+            <div class="help-subcard">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.35rem;">🌐 Shareable Public Profile URL</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;">
+                    In your <strong>Account Settings</strong> (<code>/account</code>), you can toggle <em>"Make my ledger profile publicly accessible"</em>. This creates a clean public URL (<code>/&lt;your-username&gt;</code>) that you can share with friends. Visitors can view your public ledger and annual statistics without needing an account.
+                </p>
+            </div>
+
+            <div class="help-subcard">
+                <h3 style="font-size: 1.1rem; margin-bottom: 0.35rem;">📋 Public "Up Next" Sharing</h3>
+                <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;">
+                    You can optionally enable <em>"Include 'Up Next' queue on my public profile"</em> to let visitors see what movies, books, and games you are planning to experience next.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 8: Account & Administration -->
+    <section id="account-admin" class="help-section" style="margin-bottom: 2rem;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">⚙️</span>
+            <h2 style="font-size: 1.6rem;">8. Account Settings &amp; Administration</h2>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">🔑 Password Management</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Change your password securely from the <strong>Account</strong> page at any time.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">🛡️ Session Persistence</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Logins are persisted securely across browser sessions via persistent cookies, so you stay logged in.
+                </div>
+            </div>
+            <div class="help-subcard">
+                <div style="font-weight: 600; margin-bottom: 0.35rem;">👑 Administrator Controls</div>
+                <div style="font-size: 0.9rem; color: var(--text-muted);">
+                    Administrators have access to the <strong>Admin</strong> panel (<code>/admin/users</code>) to create new users, reset passwords, and manage accounts.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Action -->
+    <div style="border-top: 1px solid var(--border-color); padding-top: 2rem; margin-top: 3rem; text-align: center;">
+        <a href="{{ url_for('main.index') }}" class="btn" style="padding: 12px 24px; font-size: 1rem; text-decoration: none; border-radius: 8px; display: inline-block;">
+            Return to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

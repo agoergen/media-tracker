@@ -51,6 +51,11 @@ def logout():
     logout_user()
     return redirect(url_for('main.index'))
 
+@main.route('/help')
+@login_required
+def help_guide():
+    return render_template('help.html')
+
 @main.route('/account', methods=['GET', 'POST'])
 @login_required
 def account():
