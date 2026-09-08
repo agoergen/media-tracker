@@ -223,16 +223,15 @@
                                     {% if is_owner %}
                                         <div class="backlog-item-actions">
                                             <button type="button" class="btn action-btn-small" style="background: var(--success);"
-                                                    onclick="openTrackModal({
-                                                        id: {{ item.id }},
-                                                        category: '{{ item.category }}',
-                                                        title: {{ item.title|tojson }},
-                                                        posterUrl: '{{ url_for('main.serve_poster', filename=item.poster_path.lstrip('/')) if item.poster_path else '' }}',
-                                                        releaseYear: '{{ item.release_year or '' }}',
-                                                        seasonNumber: {{ item.season_number or 1 }},
-                                                        gamePlatform: {{ (item.game_platform or '')|tojson }},
-                                                        bookFormat: {{ (item.book_format or '')|tojson }}
-                                                    })"
+                                                    data-id="{{ item.id }}"
+                                                    data-category="{{ item.category }}"
+                                                    data-title="{{ item.title }}"
+                                                    data-poster="{{ url_for('main.serve_poster', filename=item.poster_path.lstrip('/')) if item.poster_path else '' }}"
+                                                    data-year="{{ item.release_year or '' }}"
+                                                    data-season="{{ item.season_number or 1 }}"
+                                                    data-platform="{{ item.game_platform or '' }}"
+                                                    data-format="{{ item.book_format or '' }}"
+                                                    onclick="openTrackModal(this)"
                                                     title="Move to tracked list">
                                                 Track
                                             </button>
@@ -374,7 +373,18 @@
 </div>
 
 <script>
-    function openTrackModal(item) {
+    function openTrackModal(el) {
+        const item = {
+            id: el.dataset.id,
+            category: el.dataset.category,
+            title: el.dataset.title,
+            posterUrl: el.dataset.poster,
+            releaseYear: el.dataset.year,
+            seasonNumber: el.dataset.season ? parseInt(el.dataset.season, 10) : 1,
+            gamePlatform: el.dataset.platform,
+            bookFormat: el.dataset.format
+        };
+
         const modal = document.getElementById('trackModalOverlay');
         const form = document.getElementById('trackModalForm');
         const heading = document.getElementById('modalHeading');

@@ -3,6 +3,12 @@
 ## Current Backlog
 - None. All tasks completed.
 
+## 2026-09-08 16:56:00
+- Hardened Up Next modal triggers in `app/templates/backlog.html`:
+  - Replaced inline JavaScript object parameters in `onclick` with HTML `data-*` attributes (`data-id`, `data-category`, `data-title`, `data-poster`, `data-year`, `data-season`, `data-platform`, `data-format`).
+  - Fixed `Uncaught SyntaxError: Unexpected end of input` caused by quote collisions in rendered HTML attributes.
+  - Successfully tested and pushed to `origin/dev`.
+
 ## 2026-09-08 16:50:00
 - Implemented Metadata Confirmation Modal for Up Next tracking:
   - Updated `app/templates/backlog.html` to trigger an inline confirmation modal on "Track" button click instead of an immediate blind POST.
