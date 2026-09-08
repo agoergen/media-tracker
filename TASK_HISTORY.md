@@ -3,6 +3,12 @@
 ## Current Backlog
 - None. All tasks completed.
 
+## 2026-09-08 17:04:00
+- Merged `dev` branch into `main` and pushed to `origin/main` (Production Rollout):
+  - Released Up Next tracking metadata confirmation modal and backend metadata persistence to Production.
+  - Automatically triggered Railway Production deployment.
+  - Switched back to `dev` for ongoing work.
+
 ## 2026-09-08 16:56:00
 - Hardened Up Next modal triggers in `app/templates/backlog.html`:
   - Replaced inline JavaScript object parameters in `onclick` with HTML `data-*` attributes (`data-id`, `data-category`, `data-title`, `data-poster`, `data-year`, `data-season`, `data-platform`, `data-format`).
