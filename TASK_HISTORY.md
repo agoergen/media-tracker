@@ -3,6 +3,14 @@
 ## Current Backlog
 - None. All tasks completed.
 
+## 2026-09-08 16:50:00
+- Implemented Metadata Confirmation Modal for Up Next tracking:
+  - Updated `app/templates/backlog.html` to trigger an inline confirmation modal on "Track" button click instead of an immediate blind POST.
+  - Modal prompts for completion date (`date_watched` / `date_finished`), revisit toggle (rewatch / replay / reread), privacy toggle (`is_private`), and category-specific fields (Movie/TV provider location, TV season number, Game platform, franchise & playthrough variant, Book format & StoryGraph rating).
+  - Updated `track_up_next_item` in `app/routes.py` to parse and persist all submitted metadata attributes when instantiating new media records.
+  - Passed `distinct_franchises` and `now` to `backlog.html` across authenticated and public profile routes.
+  - Verified with automated test suite covering all four categories and pushed to `origin/dev`.
+
 ## 2026-08-25 15:51:00
 - Merged `dev` branch into `main` and pushed to `origin/main` (Production Rollout):
   - Released authenticated Help & User Guide page (`/help`) to Production.

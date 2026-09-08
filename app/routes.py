@@ -1712,7 +1712,10 @@ def up_next():
                 goals_set[(g.category, g.external_id)] = True
             goals_set[(g.category, g.title.lower())] = True
 
-        return render_template('backlog.html', grouped=grouped, goals_set=goals_set)
+        distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.user_id == current_user.id, Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
+        franchise_list = [f[0] for f in distinct_franchises]
+
+        return render_template('backlog.html', grouped=grouped, goals_set=goals_set, distinct_franchises=franchise_list, now=datetime.now())
     except Exception as e:
         print(f"ERROR: [up_next] Failed to retrieve Up Next items: {str(e)}", file=sys.stdout)
         traceback.print_exc(file=sys.stdout)
@@ -1882,7 +1885,15 @@ def track_up_next_item(item_id):
     title = item.title
     
     print(f"INFO: [up_next] User {user_id} converting Up Next item {item_id} ('{title}', '{category}') to tracked", file=sys.stdout)
-    now_date = datetime.now().date()
+    
+    date_str = request.form.get('date_watched') or request.form.get('date_finished')
+    try:
+        completion_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else datetime.now().date()
+    except ValueError:
+        completion_date = datetime.now().date()
+
+    is_rewatch = True if request.form.get('is_rewatch') == 'on' else False
+    is_private = True if request.form.get('is_private') == 'on' else False
 
     try:
         if category == 'movie':
@@ -1919,6 +1930,8 @@ def track_up_next_item(item_id):
             wikidata_id = details.get('external_ids', {}).get('wikidata_id')
             wikipedia_url = f"https://www.wikidata.org/wiki/{wikidata_id}" if wikidata_id else None
 
+            watched_at = request.form.get('watched_at')
+
             new_movie = Movie(
                 user_id=current_user.id,
                 title=details.get('title'),
@@ -1937,9 +1950,10 @@ def track_up_next_item(item_id):
                 revenue=details.get('revenue'),
                 trailer_url=trailer_url,
                 wikipedia_url=wikipedia_url,
-                date_watched=now_date,
-                is_revisit=False,
-                is_private=False
+                date_watched=completion_date,
+                provider=watched_at,
+                is_revisit=is_rewatch,
+                is_private=is_private
             )
             db.session.add(new_movie)
 
@@ -1954,7 +1968,12 @@ def track_up_next_item(item_id):
             flash(f"Tracked Movie: {new_movie.title}!")
 
         elif category == 'tv':
-            season_number = item.season_number or 1
+            season_number_input = request.form.get('season_number')
+            try:
+                season_number = int(season_number_input) if season_number_input else (item.season_number or 1)
+            except ValueError:
+                season_number = item.season_number or 1
+
             details = TMDBService.get_tv_details(int(external_id), season_number)
             if not details:
                 print(f"WARNING: [up_next] TMDB details not found during track for TV ID '{external_id}', season '{season_number}'", file=sys.stdout)
@@ -1969,20 +1988,22 @@ def track_up_next_item(item_id):
             trailer = next((v['key'] for v in videos if v['type'] == 'Trailer' and v['site'] == 'YouTube'), None)
             trailer_url = f"https://www.youtube.com/embed/{trailer}" if trailer else None
 
+            watched_at = request.form.get('watched_at')
+
             new_season = TVSeason(
                 user_id=current_user.id,
                 series_title=details.get('series_name'),
                 season_number=season_number,
-                date_watched=now_date,
+                date_watched=completion_date,
                 external_id=str(external_id),
-                network=details.get('network'),
+                network=watched_at or details.get('network'),
                 episode_count=details.get('episode_count'),
                 poster_path=poster_filename,
                 user_score=details.get('vote_average'),
                 plot=details.get('overview'),
                 trailer_url=trailer_url,
-                is_revisit=False,
-                is_private=False
+                is_revisit=is_rewatch,
+                is_private=is_private
             )
             db.session.add(new_season)
 
@@ -2016,7 +2037,9 @@ def track_up_next_item(item_id):
 
             orig_platforms = [p['name'] for p in details.get('platforms', [])[:3]]
             default_platform = orig_platforms[0] if orig_platforms else 'PC / Steam Deck'
-            platform_played = item.game_platform or default_platform
+            platform_played = request.form.get('platform_played') or item.game_platform or default_platform
+            franchise_input = request.form.get('franchise')
+            variant = request.form.get('variant')
 
             new_game = Game(
                 user_id=current_user.id,
@@ -2025,7 +2048,7 @@ def track_up_next_item(item_id):
                 external_id=str(external_id),
                 developer=developers,
                 publisher=publishers,
-                franchise=", ".join([f['name'] for f in details.get('franchises', [])]),
+                franchise=franchise_input or ", ".join([f['name'] for f in details.get('franchises', [])]),
                 summary=details.get('summary'),
                 genres=", ".join([g['name'] for g in details.get('genres', [])]),
                 user_score=details.get('rating'),
@@ -2033,10 +2056,11 @@ def track_up_next_item(item_id):
                 poster_path=poster_filename,
                 platform_played=platform_played,
                 original_platform=", ".join(orig_platforms),
-                is_revisit=False,
-                date_finished=now_date,
+                is_revisit=is_rewatch,
+                variant=variant,
+                date_finished=completion_date,
                 status='Finished',
-                is_private=False
+                is_private=is_private
             )
             db.session.add(new_game)
 
@@ -2093,6 +2117,9 @@ def track_up_next_item(item_id):
                 flash(f"Error fetching book details from {source.capitalize()}.")
                 return redirect(url_for('main.up_next'))
 
+            book_format = request.form.get('format') or item.book_format or 'Paperback'
+            rating = request.form.get('rating', type=float)
+
             new_book = Book(
                 user_id=current_user.id,
                 title=title_b,
@@ -2102,10 +2129,12 @@ def track_up_next_item(item_id):
                 poster_path=poster_filename,
                 page_count=page_count_b,
                 genres=genres_b,
-                date_finished=now_date,
-                format=item.book_format or 'Paperback',
-                is_revisit=False,
-                is_private=False
+                release_year=release_year_b,
+                date_finished=completion_date,
+                format=book_format,
+                storygraph_rating=rating,
+                is_revisit=is_rewatch,
+                is_private=is_private
             )
             db.session.add(new_book)
 
@@ -2416,7 +2445,10 @@ def public_user_up_next(username):
             goals_set[(g.category, g.external_id)] = True
         goals_set[(g.category, g.title.lower())] = True
 
-    return render_template('backlog.html', profile_user=target_user, grouped=grouped, goals_set=goals_set)
+    distinct_franchises = db.session.query(Game.franchise).distinct().filter(Game.user_id == target_user.id, Game.franchise.isnot(None), Game.franchise != '').order_by(Game.franchise).all()
+    franchise_list = [f[0] for f in distinct_franchises]
+
+    return render_template('backlog.html', profile_user=target_user, grouped=grouped, goals_set=goals_set, distinct_franchises=franchise_list, now=datetime.now())
 
 @main.route('/<string:username>/movies')
 def public_user_movies(username):

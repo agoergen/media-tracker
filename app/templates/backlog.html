@@ -222,9 +222,20 @@
                                     </div>
                                     {% if is_owner %}
                                         <div class="backlog-item-actions">
-                                            <form action="{{ url_for('main.track_up_next_item', item_id=item.id) }}" method="POST" class="action-form">
-                                                <button type="submit" class="btn action-btn-small" style="background: var(--success);" title="Move to tracked list (as completed today)">Track</button>
-                                            </form>
+                                            <button type="button" class="btn action-btn-small" style="background: var(--success);"
+                                                    onclick="openTrackModal({
+                                                        id: {{ item.id }},
+                                                        category: '{{ item.category }}',
+                                                        title: {{ item.title|tojson }},
+                                                        posterUrl: '{{ url_for('main.serve_poster', filename=item.poster_path.lstrip('/')) if item.poster_path else '' }}',
+                                                        releaseYear: '{{ item.release_year or '' }}',
+                                                        seasonNumber: {{ item.season_number or 1 }},
+                                                        gamePlatform: {{ (item.game_platform or '')|tojson }},
+                                                        bookFormat: {{ (item.book_format or '')|tojson }}
+                                                    })"
+                                                    title="Move to tracked list">
+                                                Track
+                                            </button>
                                             <form action="{{ url_for('main.delete_up_next_item', item_id=item.id) }}" method="POST" class="action-form">
                                                 <button type="submit" class="btn btn-secondary action-btn-small" style="color: var(--danger); border-color: var(--border-color);" title="Remove from Up Next">Remove</button>
                                             </form>
@@ -241,4 +252,234 @@
         {% endfor %}
     </div>
 </div>
+
+{% if is_owner %}
+<!-- Track Confirmation Modal (Hidden by default) -->
+<div id="trackModalOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;">
+    <div style="background: var(--white); border: 1px solid var(--border-color); border-radius: 12px; width: 100%; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); overflow: hidden; margin: auto;">
+        <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modalHeading" style="margin: 0; font-size: 1.2rem; font-weight: 600;">Track Media</h3>
+            <button type="button" onclick="closeTrackModal()" style="background: none; border: none; font-size: 1.4rem; line-height: 1; color: var(--text-muted); cursor: pointer; padding: 0 4px;">&times;</button>
+        </div>
+        
+        <form id="trackModalForm" method="POST" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+            <!-- Header preview: Poster + Title + Category badge -->
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <img id="modalPoster" src="" alt="Cover" style="width: 48px; height: 72px; border-radius: 4px; object-fit: cover; background: #eee; display: none;">
+                <div id="modalNoPoster" style="width: 48px; height: 72px; border-radius: 4px; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #999; text-align: center; padding: 2px;">No Cover</div>
+                <div style="min-width: 0; flex: 1;">
+                    <div id="modalTitle" style="font-weight: 600; font-size: 1rem; color: var(--text-main); line-height: 1.3;"></div>
+                    <div id="modalSubtitle" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 3px;"></div>
+                </div>
+            </div>
+
+            <!-- TV Season Number Input -->
+            <div id="fieldGroupTVSeason" class="form-group" style="display: none;">
+                <label for="modalSeasonNumber" style="display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500;">Season Number:</label>
+                <input type="number" id="modalSeasonNumber" name="season_number" value="1" min="1" required
+                       style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background: var(--white); color: var(--text-color);">
+            </div>
+
+            <!-- Date Input (Watched On / Finished On) -->
+            <div class="form-group">
+                <label id="modalDateLabel" for="modalDateWatched" style="display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500;">Watched On:</label>
+                <input type="date" id="modalDateWatched" name="date_watched" required
+                       style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background: var(--white); color: var(--text-color);">
+            </div>
+
+            <!-- Movie / TV Provider Location -->
+            <div id="fieldGroupProvider" class="form-group" style="display: none;">
+                <label for="modalWatchedAt" style="display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500;">Watched At / Provider:</label>
+                <select id="modalWatchedAt" name="watched_at"
+                        style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background: var(--white); color: var(--text-color);">
+                    <option value="">Select Location / Provider...</option>
+                    {% for loc in ['Theater', 'Netflix', 'Nebula', 'Paramount+', 'Hulu', 'Disney Plus', 'Apple TV+', 'Prime Video', 'Peacock', 'HBO Max', 'Max', 'Shudder', 'YouTube', 'Google TV', 'VOD', 'Plex', 'Crackle', 'Roku Channel', 'Tubi', 'Patreon', 'Blu-Ray', 'Other'] %}
+                        <option value="{{ loc }}">{{ loc }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Game Platform -->
+            <div id="fieldGroupGamePlatform" class="form-group" style="display: none;">
+                <label for="modalPlatformPlayed" style="display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500;">Platform Played:</label>
+                <select id="modalPlatformPlayed" name="platform_played"
+                        style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background: var(--white); color: var(--text-color);">
+                    <option value="">Select Platform...</option>
+                    {% for plat in ['PC / Steam Deck', 'Playstation 5', 'Playstation 4', 'Playstation 3', 'Nintendo Switch', 'Switch 2', 'Analogue Pocket', 'Retro Handheld', 'SNES', 'NES', 'Arcade', 'Genesis', 'Other'] %}
+                        <option value="{{ plat }}">{{ plat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Game Franchise & Variant -->
+            <div id="fieldGroupGameExtras" style="display: none; flex-direction: column; gap: 1rem;">
+                <div class="form-group">
+                    <label for="modalFranchise" style="display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500;">Franchise:</label>
+                    <input type="text" id="modalFranchise" name="franchise" list="franchise-options" placeholder="Select or type new..."
+                           style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background: var(--white); color: var(--text-color);">
+                    <datalist id="franchise-options">
+                        {% for franchise in distinct_franchises %}
+                            <option value="{{ franchise }}">
+                        {% endfor %}
+                    </datalist>
+                </div>
+                <div class="form-group">
+                    <label for="modalVariant" style="display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500;">Variant / Modifier:</label>
+                    <select id="modalVariant" name="variant"
+                            style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background: var(--white); color: var(--text-color);">
+                        <option value="">Standard Playthrough</option>
+                        {% for v in ['Modded', 'Completionist Run', 'Hard Mode', 'Best Ending', 'Abbreviated', 'Part of a Collection', 'Alternative Playstyle'] %}
+                            <option value="{{ v }}">{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Book Format & Rating -->
+            <div id="fieldGroupBookExtras" style="display: none; flex-direction: column; gap: 1rem;">
+                <div class="form-group">
+                    <label for="modalFormat" style="display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500;">Format:</label>
+                    <select id="modalFormat" name="format"
+                            style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background: var(--white); color: var(--text-color);">
+                        <option value="">Select Format...</option>
+                        {% for f in ['Paperback', 'Hardcover', 'Kindle', 'Audiobook', 'Graphic Novel', 'Other'] %}
+                            <option value="{{ f }}">{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modalRating" style="display: block; margin-bottom: 0.4rem; font-size: 0.9rem; font-weight: 500;">StoryGraph Rating:</label>
+                    <input type="number" step="0.05" id="modalRating" name="rating" placeholder="e.g. 4.25"
+                           style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.95rem; box-sizing: border-box; background: var(--white); color: var(--text-color);">
+                </div>
+            </div>
+
+            <!-- Checkboxes (Revisit & Private) -->
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 0.25rem;">
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem;">
+                    <input type="checkbox" id="modalIsRewatch" name="is_rewatch"> <span id="modalRewatchLabel">This is a rewatch</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; font-size: 0.9rem;">
+                    <input type="checkbox" id="modalIsPrivate" name="is_private"> Private entry (only show when logged in)
+                </label>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div style="display: flex; gap: 10px; margin-top: 0.75rem;">
+                <button type="submit" class="btn btn-success" style="flex: 1; padding: 10px; font-size: 0.95rem;">Confirm & Track</button>
+                <button type="button" class="btn btn-secondary" onclick="closeTrackModal()" style="padding: 10px 16px; font-size: 0.95rem;">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openTrackModal(item) {
+        const modal = document.getElementById('trackModalOverlay');
+        const form = document.getElementById('trackModalForm');
+        const heading = document.getElementById('modalHeading');
+        const poster = document.getElementById('modalPoster');
+        const noPoster = document.getElementById('modalNoPoster');
+        const title = document.getElementById('modalTitle');
+        const subtitle = document.getElementById('modalSubtitle');
+        const dateLabel = document.getElementById('modalDateLabel');
+        const dateInput = document.getElementById('modalDateWatched');
+        const rewatchLabel = document.getElementById('modalRewatchLabel');
+        const isRewatch = document.getElementById('modalIsRewatch');
+        const isPrivate = document.getElementById('modalIsPrivate');
+
+        // Field groups
+        const tvGroup = document.getElementById('fieldGroupTVSeason');
+        const providerGroup = document.getElementById('fieldGroupProvider');
+        const gamePlatGroup = document.getElementById('fieldGroupGamePlatform');
+        const gameExtraGroup = document.getElementById('fieldGroupGameExtras');
+        const bookExtraGroup = document.getElementById('fieldGroupBookExtras');
+
+        form.action = `/up-next/track/${item.id}`;
+
+        // Reset defaults
+        isRewatch.checked = false;
+        isPrivate.checked = false;
+        
+        // Set date to today YYYY-MM-DD
+        const today = new Date();
+        dateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        // Poster
+        if (item.posterUrl) {
+            poster.src = item.posterUrl;
+            poster.style.display = 'block';
+            noPoster.style.display = 'none';
+        } else {
+            poster.style.display = 'none';
+            noPoster.style.display = 'flex';
+        }
+
+        title.innerText = item.title;
+
+        // Hide all category-specific groups first
+        tvGroup.style.display = 'none';
+        providerGroup.style.display = 'none';
+        gamePlatGroup.style.display = 'none';
+        gameExtraGroup.style.display = 'none';
+        bookExtraGroup.style.display = 'none';
+
+        if (item.category === 'movie') {
+            heading.innerText = 'Track Movie';
+            subtitle.innerText = item.releaseYear ? `Movie (${item.releaseYear})` : 'Movie';
+            dateLabel.innerText = 'Watched On:';
+            rewatchLabel.innerText = 'This is a rewatch';
+            providerGroup.style.display = 'block';
+            document.getElementById('modalWatchedAt').value = '';
+        } else if (item.category === 'tv') {
+            heading.innerText = 'Track TV Season';
+            subtitle.innerText = item.releaseYear ? `TV (${item.releaseYear})` : 'TV';
+            dateLabel.innerText = 'Finished On:';
+            rewatchLabel.innerText = 'This is a rewatch';
+            tvGroup.style.display = 'block';
+            providerGroup.style.display = 'block';
+            document.getElementById('modalSeasonNumber').value = item.seasonNumber || 1;
+            document.getElementById('modalWatchedAt').value = '';
+        } else if (item.category === 'game') {
+            heading.innerText = 'Track Game';
+            subtitle.innerText = item.releaseYear ? `Game (${item.releaseYear})` : 'Game';
+            dateLabel.innerText = 'Finished On:';
+            rewatchLabel.innerText = 'This is a replay';
+            gamePlatGroup.style.display = 'block';
+            gameExtraGroup.style.display = 'flex';
+            document.getElementById('modalPlatformPlayed').value = item.gamePlatform || 'PC / Steam Deck';
+            document.getElementById('modalFranchise').value = '';
+            document.getElementById('modalVariant').value = '';
+        } else if (item.category === 'book') {
+            heading.innerText = 'Track Book';
+            subtitle.innerText = item.releaseYear ? `Book (${item.releaseYear})` : 'Book';
+            dateLabel.innerText = 'Finished On:';
+            rewatchLabel.innerText = 'This is a reread';
+            bookExtraGroup.style.display = 'flex';
+            document.getElementById('modalFormat').value = item.bookFormat || 'Paperback';
+            document.getElementById('modalRating').value = '';
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    function closeTrackModal() {
+        document.getElementById('trackModalOverlay').style.display = 'none';
+    }
+
+    // Close when clicking backdrop
+    document.getElementById('trackModalOverlay').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTrackModal();
+        }
+    });
+
+    // Close with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeTrackModal();
+        }
+    });
+</script>
+{% endif %}
 {% endblock %}
