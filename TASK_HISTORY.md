@@ -3,6 +3,11 @@
 ## Current Backlog
 - None. All tasks completed.
 
+## 2026-09-23 07:18:00
+- Updated Home Page hero tagline (`app/templates/index.html`):
+  - Changed subtitle text from "Track your journey through cinema, television, gaming, literature, and the arts." to "Watch.  Play.  Read.  Track."
+  - Applied directly to `main` branch and pushed to `origin/main` for production rollout.
+
 ## 2026-09-08 17:04:00
 - Merged `dev` branch into `main` and pushed to `origin/main` (Production Rollout):
   - Released Up Next tracking metadata confirmation modal and backend metadata persistence to Production.
