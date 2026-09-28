@@ -3,6 +3,12 @@
 ## Current Backlog
 - None. All tasks completed.
 
+## 2026-09-28 10:50:00
+- Created standalone PythonAnywhere outbound API connectivity diagnostic script (`poc_pa_checker.py`):
+  - Tests connectivity against all 11 external API, CDN, and scraping endpoints used by LeisureLedger (TMDB, Twitch/IGDB, Google Books, OpenLibrary, IBDB, Wikipedia, and Wikimedia).
+  - Supports CLI execution in PythonAnywhere Bash Console and web dashboard execution via Flask WSGI.
+  - Verified clean execution and status classification locally.
+
 ## 2026-09-23 07:18:00
 - Updated Home Page hero tagline (`app/templates/index.html`):
   - Changed subtitle text from "Track your journey through cinema, television, gaming, literature, and the arts." to "Watch.  Play.  Read.  Track."
