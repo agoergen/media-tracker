@@ -3,6 +3,12 @@
 ## Current Backlog
 - None. All tasks completed.
 
+## 2026-09-28 11:08:00
+- Resolved Railway production startup crash caused by missing `psycopg` driver:
+  - Updated `config.py` to explicitly normalize `DATABASE_URL` / `POSTGRES_URL` connection strings to `postgresql+psycopg2://`.
+  - Added `psycopg[binary]>=3.1.18` to `requirements.txt` to guarantee dual-driver compatibility across PostgreSQL dialects.
+  - Deployed directly to `origin/main` for production rollout.
+
 ## 2026-09-28 10:50:00
 - Created standalone PythonAnywhere outbound API connectivity diagnostic script (`poc_pa_checker.py`):
   - Tests connectivity against all 11 external API, CDN, and scraping endpoints used by LeisureLedger (TMDB, Twitch/IGDB, Google Books, OpenLibrary, IBDB, Wikipedia, and Wikimedia).
